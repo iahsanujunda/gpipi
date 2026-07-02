@@ -132,24 +132,56 @@ Unzip into the project root (alongside `docs/`), open in IntelliJ, confirm `./gr
 
 ---
 
-## 0.4 Secrets via Env Vars
+## 0.4 Secrets via Env Vars (dotenv + `.env.example`)
 
-Reference the environment in `application.conf` — never hardcode:
+Reference the environment in `application.conf` — never hardcode. Note the key name matches your `.env` (`SLACK_BOT_OAUTH_TOKEN`):
 
 ```hocon
 slack {
     signingSecret = ${?SLACK_SIGNING_SECRET}
-    botToken = ${?SLACK_BOT_TOKEN}
+    botToken = ${?SLACK_BOT_OAUTH_TOKEN}
 }
 ```
 
-**Locally:** set these in the IntelliJ run configuration's Environment Variables (Ktor doesn't read `.env` natively). Populate them with the **dev app's** credentials from 0.2.
+**Locally:** Ktor does **not** read `.env` natively, so load it into JVM system properties at the very top of `main()`, *before* Ktor reads config — then HOCON's `${?VAR}` resolves normally with zero call-site coupling:
+
+```kotlin
+// build.gradle.kts
+implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")  // confirm current version
+```
+
+```kotlin
+fun main() {
+    dotenv {
+        ignoreIfMissing = true     // prod (Render) has no .env — real env vars are already set
+        systemProperties = true    // populate System properties so HOCON ${?VAR} picks them up
+    }
+    io.ktor.server.netty.EngineMain.main(arrayOf())
+}
+```
+
+`ignoreIfMissing = true` is load-bearing: on Render there's no `.env`, the platform injects real env vars, and dotenv quietly does nothing. Do **not** sprinkle `dotenv.get(...)` through the code — that couples every call site to `.env` existing and breaks on Render. Load once, into system properties, then read through Ktor's normal config everywhere.
+
+**Reproducibility — commit `.env.example`, never `.env`:**
+
+```bash
+# .env.example — copy to .env and fill in. Never commit .env.
+SLACK_SIGNING_SECRET=        # Slack app → Basic Information → App Credentials
+SLACK_BOT_OAUTH_TOKEN=       # Slack app → OAuth & Permissions → Bot User OAuth Token (xoxb-)
+# Not needed unless distributing the app to other workspaces:
+# SLACK_CLIENT_ID=           # public identifier, not secret
+# SLACK_CLIENT_SECRET=       # secret — treat like signing secret
+# SLACK_APP_ID=              # public identifier, not secret
+```
 
 **Later on Render:** same variable names, populated with the **prod app's** credentials. The code never branches on environment — it verifies against whatever secret it was given and replies with whatever token it was given.
 
-- [ ] `application.conf` references `SLACK_SIGNING_SECRET` and `SLACK_BOT_TOKEN` via env
-- [ ] IntelliJ run config populated with dev app credentials
+- [ ] `application.conf` references `SLACK_SIGNING_SECRET` and `SLACK_BOT_OAUTH_TOKEN` via env
+- [ ] dotenv loader wired at top of `main()` (`systemProperties = true`, `ignoreIfMissing = true`)
+- [ ] `.env` populated with dev app credentials; `.env` in `.gitignore`
+- [ ] `.env.example` committed (keys + source comments, no values); **not** gitignored
 - [ ] App reads the values at startup (log a boolean "secret present", never the value)
+
 
 ---
 
@@ -204,7 +236,7 @@ With `./gradlew run` and `tailscale funnel --bg 8080` both up, open `https://<yo
 - [ ] Dev Slack app created and installed; **Signing Secret** and **bot token** in hand
 - [ ] Slack scopes `app_mentions:read` + `chat:write` granted
 - [ ] Ktor 3.x project scaffolded, `./gradlew run` serves :8080 locally
-- [ ] Secrets wired via env vars (dev credentials in the IntelliJ run config)
+- [ ] Secrets wired via dotenv + `.env` (gitignored); `.env.example` committed
 - [ ] Tailscale Funnel running with a stable public `ts.net` URL
 - [ ] Default Ktor page verified reachable through Funnel from an external device
 
@@ -218,7 +250,7 @@ Not part of Iteration 0 — adding any of these now is just surface area to debu
 |------|-----------|
 | Slack Event Subscriptions Request URL + `app_mention` subscription | Iteration 1 (needs the route to echo the challenge) |
 | `/slack/events` route, signature verification, async ack | Iteration 1 |
-| Supabase / Postgres, jOOQ, Flyway migrations | Iteration 2 |
+| Supabase / Postgres, Exposed tables + Flyway migrations | Iteration 2 |
 | Prod Slack app (real workspace, Render URL) | Iteration 1 deploy step |
 | Render deployment | End of Iteration 1 (after the skeleton runs clean locally) |
 | OpenRouter key + client wiring | Iteration 2 |

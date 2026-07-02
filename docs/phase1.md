@@ -1,6 +1,6 @@
 # Household Budget Bot — Iteration Plan
 
-_Slack-Native Expense Capture · Stack: Slack · Ktor · Supabase (Postgres) · OpenRouter (Qwen3) · Render (Starter web service + static site)_
+_Slack-Native Expense Capture · Stack: Slack · Ktor · Supabase (Postgres) via Exposed (JDBC) · Flyway · OpenRouter (Qwen3) · Render (Starter web service + static site)_
 
 ---
 
@@ -165,7 +165,38 @@ Socket Mode (WebSocket initiated from the server) avoids needing a public URL, b
 
 The moment this ships, the nightly recap dies. Categories are hardcoded in the prompt for now — DB-driven categories come in iteration 3.
 
+### 2.0 Persistence Setup (Exposed + Flyway)
+
+Dependencies (add to `build.gradle.kts` — confirm current version + the `v1` coordinates on the Exposed docs, which moved to a `v1` package namespace):
+
+```
+org.jetbrains.exposed:exposed-core
+org.jetbrains.exposed:exposed-jdbc          # blocking JDBC path (not R2DBC)
+org.jetbrains.exposed:exposed-java-time     # timestamp column support
+org.postgresql:postgresql                   # JDBC driver
+com.zaxxer:HikariCP                          # connection pool
+org.flywaydb:flyway-core                     # migrations
+org.flywaydb:flyway-database-postgresql
+```
+
+**Schema source of truth = Flyway SQL migrations.** Exposed `Table` objects *mirror* the migrations by hand — they're the query mapping, not the schema authority. This is the one ergonomic cost vs jOOQ (which generated the Kotlin from the schema); at this schema size it's trivial and gives full control. Do **not** use `SchemaUtils.create`/`createMissingTablesAndColumns` as your prod schema mechanism — it's convenient for a throwaway local DB but not migration-safe. Flyway owns DDL; Exposed owns queries.
+
+Connection, once at startup:
+
+```kotlin
+val ds = HikariDataSource(HikariConfig().apply {
+    jdbcUrl = config.property("db.url").getString()   // from env: DATABASE_URL
+    maximumPoolSize = 3
+    // Supabase pooler (Supavisor, transaction mode) — disable JDBC prepared-statement
+    // caching or use the session-mode port, same as the janken-elo setup.
+})
+Flyway.configure().dataSource(ds).load().migrate()     // migrations run before first query
+Database.connect(ds)                                    // Exposed binds to the pool
+```
+
 ### 2.1 Schema (initial)
+
+Flyway migration `V1__inbound_and_expense.sql`:
 
 ```sql
 -- Capture EVERY @ai message here, including failures. This is the debugging
@@ -197,11 +228,51 @@ create table expense (
 );
 ```
 
+Exposed `Table` objects mirroring the above (query mapping):
+
+```kotlin
+object InboundMessages : UUIDTable("inbound_message") {
+    val eventId     = text("event_id").uniqueIndex()
+    val userId      = text("user_id")
+    val channelId   = text("channel_id")
+    val text        = text("text").nullable()
+    val slackTs     = text("slack_ts")
+    val status      = text("status").default("RECEIVED")
+    val failReason  = text("fail_reason").nullable()
+    val receivedAt  = timestamp("received_at").defaultExpression(CurrentTimestamp)
+}
+
+object Expenses : UUIDTable("expense") {
+    val inboundMessageId = reference("inbound_message_id", InboundMessages)
+    val userId    = text("user_id")
+    val amount    = long("amount")
+    val currency  = text("currency").default("JPY")
+    val category  = text("category")
+    val merchant  = text("merchant").nullable()
+    val note      = text("note").nullable()
+    val spentAt   = timestamp("spent_at").defaultExpression(CurrentTimestamp)
+    val source    = text("source").default("SLACK")
+    val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
+}
+```
+
 > Amount stored as integer JPY. If multi-currency is ever needed, migrate to `amount_minor bigint` + per-currency minor-unit handling. Not now.
 >
 > **`inbound_message` is the single source of truth for raw text** — `expense` (and later `categorization_event`) reference it by FK rather than copying the string around. Storing every message, not just successful ones, is what makes prompt tuning and model swaps measurable later: re-run the stored inputs against a new pipeline and compare.
 >
-> **Dedup and capture are the same write.** Insert the row at the start of async processing with `ON CONFLICT (event_id) DO NOTHING RETURNING id` — if nothing comes back, it's a Slack retry and you skip (status effectively `SKIPPED`). Same idempotency discipline as PokeOps `processed_mutation_ids`, now doing double duty as the audit log.
+> **Dedup and capture are the same write**, and Exposed makes this a one-liner: `insertIgnoreAndGetId { }` returns `null` when the unique `event_id` already exists (a Slack retry), so a null return *is* the skip signal — no separate existence check.
+>
+> ```kotlin
+> // status effectively SKIPPED on a retry (null id → return early)
+> val id: EntityID<UUID>? = InboundMessages.insertIgnoreAndGetId {
+>     it[eventId]   = e.eventId
+>     it[userId]    = e.user
+>     it[channelId] = e.channel
+>     it[text]      = e.text
+>     it[slackTs]   = e.ts
+> }
+> ```
+> Same idempotency discipline as PokeOps `processed_mutation_ids`, now doing double duty as the audit log.
 
 ### 2.2 Extraction Schema (OpenRouter `json_schema`, strict)
 
@@ -266,24 +337,37 @@ Categories:
 
 ### 2.5 Reply
 
+All DB access goes through one helper so the transaction style is uniform — this matters because Exposed forbids mixing blocking `transaction {}` and suspended transactions in the same path:
+
+```kotlin
+// The single DB entry point. newSuspendedTransaction dispatches to IO and manages
+// Exposed's thread-local correctly across suspension. Repos do raw table ops INSIDE this.
+suspend fun <T> dbQuery(block: suspend () -> T): T =
+    newSuspendedTransaction(Dispatchers.IO) { block() }
+```
+
 ```kotlin
 suspend fun handleEvent(e: SlackEnvelope) {
     // Capture + dedup in one write. Null id back = retry of an already-seen event.
-    val msgId = inboundRepo.captureOrSkip(e) ?: return   // ON CONFLICT (event_id) DO NOTHING RETURNING id
+    val msgId = dbQuery { inboundRepo.captureOrSkip(e) } ?: return   // insertIgnoreAndGetId → null on conflict
 
     val x = try {
-        openRouter.extract(e.text)
+        openRouter.extract(e.text)                                    // suspend, non-blocking — outside the tx
     } catch (ex: ExtractionException) {
-        inboundRepo.markFailed(msgId, reason = ex.message)          // status = FAILED_PARSE, text kept
+        dbQuery { inboundRepo.markFailed(msgId, reason = ex.message) } // status = FAILED_PARSE, text kept
         slack.postMessage(e.channel, "Couldn't read that one — mind rephrasing?")
         return
     }
 
-    expenseRepo.insert(x, inboundMessageId = msgId, userId = e.user)
-    inboundRepo.markRecorded(msgId)                                 // status = RECORDED
+    dbQuery {                                                         // one transaction for the write pair
+        expenseRepo.insert(x, inboundMessageId = msgId, userId = e.user)
+        inboundRepo.markRecorded(msgId)                               // status = RECORDED
+    }
     slack.postMessage(e.channel, "Recorded ✓  ¥${x.amount} · ${x.category}")
 }
 ```
+
+> Note the LLM call sits **outside** any `dbQuery` block — never hold a DB transaction open across a network call to OpenRouter. Open the transaction only around the actual writes.
 
 > The `catch` is why capture-everything pays off immediately: a `FAILED_PARSE` row keeps the exact input that broke, so you can inspect it while tuning the prompt instead of guessing what the user typed.
 
@@ -291,7 +375,7 @@ suspend fun handleEvent(e: SlackEnvelope) {
 
 - [ ] `inbound_message` + `expense` tables created in Supabase
 - [ ] Every `@ai` message captured to `inbound_message` before processing
-- [ ] Capture + dedup is a single `ON CONFLICT DO NOTHING RETURNING` write; retries skip
+- [ ] Capture + dedup is a single `insertIgnoreAndGetId` write (null id on conflict → skip); retries skip
 - [ ] OpenRouter call returns schema-valid JSON for the reference inputs
 - [ ] JP, EN, and mixed input all extract correctly (test `イトーヨーカドー`, `conbini`, `¥1,500`)
 - [ ] Expense row written referencing `inbound_message_id`, with amount/category/merchant/spent_at
@@ -410,23 +494,27 @@ Changing the dropdown fires `block_actions`; clicking Confirm fires `block_actio
 
 ### 4.3 Atomic Confirm Write
 
-The expense insert, the `categorization_event` insert, the `inbound_message` status transition to `RECORDED`, and (iter 5) the hint upsert are **one transaction**. Only after commit returns do you call `chat.postMessage` to confirm. (Capture + dedup already happened up front in iter 2 — the confirm step just flips status and writes the labeled event.)
+The expense insert, the `categorization_event` insert, the `inbound_message` status transition to `RECORDED`, and (iter 5) the hint upsert are **one flat transaction**. Only after it returns do you call `chat.postMessage` to confirm. (Capture + dedup already happened up front in iter 2 — the confirm step just flips status and writes the labeled event.)
 
 ```kotlin
 suspend fun onConfirm(draft: ExpenseDraft, finalCategoryId: UUID) {
-    dsl.transaction { cfg ->                        // jOOQ transaction
-        val expenseId = expenseRepo.insert(cfg, draft, finalCategoryId)
-        categorizationEventRepo.insert(cfg, draft, expenseId,
+    dbQuery {                                          // single flat newSuspendedTransaction — do NOT nest
+        val expenseId = expenseRepo.insert(draft, finalCategoryId)
+        categorizationEventRepo.insert(draft, expenseId,
                                        predicted = draft.predictedCategoryId,
                                        final = finalCategoryId)
-        inboundRepo.markRecorded(cfg, draft.inboundMessageId)   // status = RECORDED
+        inboundRepo.markRecorded(draft.inboundMessageId)   // status = RECORDED
     }
-    // Post to Slack AFTER commit returns — do not fire from inside the tx.
+    // Post to Slack AFTER the transaction block returns.
     slack.postMessage(draft.channel, "Recorded ✓  ¥${draft.amount} · ${categoryName(finalCategoryId)}")
 }
 ```
 
-> **AFTER_COMMIT trap (your `@JooqTest` scar tissue):** don't publish a domain event inside the transaction and post to Slack from an `AFTER_COMMIT` listener without knowing that `@JooqTest` rolls back and never fires `AFTER_COMMIT`. Simplest correct shape here: post to Slack from the caller *after* `transaction { }` returns successfully. Keep the DB write and the Slack side-effect on opposite sides of the commit boundary.
+> **Exposed transaction discipline (replaces the old Spring `@JooqTest`/`AFTER_COMMIT` concern — that machinery doesn't exist here).** Two footguns to avoid, both of which would bite exactly at this multi-step write:
+> - **Keep it one flat transaction.** Don't nest suspended transactions — an inner `newSuspendedTransaction` may *not* roll back when the outer block throws, so a nested design can silently half-commit. All four steps live directly inside the single `dbQuery` block.
+> - **Don't mix styles.** Every DB call in a request path goes through `dbQuery` (suspended). Mixing a blocking `transaction {}` with suspended ones causes "connection is closed" errors.
+>
+> The Slack side-effect stays *outside* the transaction: post only after `dbQuery { }` returns successfully. There's no event bus or commit-phase listener to route through — the boundary is just "DB work inside, network side-effect after."
 
 ### Definition of Done
 
@@ -457,17 +545,29 @@ create table merchant_category_hint (
 );
 ```
 
-### 5.2 Upsert on Confirm (inside the same transaction as iter 4)
+### 5.2 Upsert on Confirm (inside the same `dbQuery` block as iter 4)
+
+Exposed has a native `upsert` with an `onUpdate` clause — no raw SQL needed:
 
 ```kotlin
-fun upsertHint(cfg: Configuration, merchant: String?, categoryId: UUID) {
+// Called inside onConfirm's dbQuery { } — same transaction as the expense + event writes.
+fun upsertHint(merchant: String?, categoryId: UUID) {
     val norm = merchant?.lowercase()?.trim() ?: return
-    hintRepo.upsert(cfg, norm, categoryId)   // ON CONFLICT (normalized_merchant)
-    //   DO UPDATE SET category_id = excluded.category_id,
-    //                 confirm_count = merchant_category_hint.confirm_count + 1,
-    //                 last_confirmed_at = now()
+    MerchantCategoryHints.upsert(
+        MerchantCategoryHints.normalizedMerchant,      // conflict key
+        onUpdate = {
+            it[MerchantCategoryHints.categoryId] = categoryId
+            it[MerchantCategoryHints.confirmCount] = MerchantCategoryHints.confirmCount + 1
+            it[MerchantCategoryHints.lastConfirmedAt] = CurrentTimestamp
+        }
+    ) {
+        it[normalizedMerchant] = norm
+        it[MerchantCategoryHints.categoryId] = categoryId
+    }
 }
 ```
+
+Since it runs inside the iter-4 `dbQuery` block, the hint upsert commits atomically with the expense and the labeled event — a confirmed categorization and its learned mapping are never out of sync.
 
 ### 5.3 Injection
 
@@ -583,7 +683,7 @@ Reserve genuine text-to-SQL (read-only role, LIMIT-capped) for the long tail, if
 ## Appendix — Cross-Cutting Notes
 
 ### Idempotency
-Slack retries on any non-200 within 3s and includes `X-Slack-Retry-Num`. Dedup on `inbound_message.event_id` via `ON CONFLICT (event_id) DO NOTHING RETURNING id` at capture time — a null return means it's a retry, skip it. The header check in iter 1 is a fast early-out; the DB unique constraint is the real guarantee. Same discipline as PokeOps `processed_mutation_ids` / `SELECT FOR UPDATE`.
+Slack retries on any non-200 within 3s and includes `X-Slack-Retry-Num`. Dedup on `inbound_message.event_id` via Exposed's `insertIgnoreAndGetId { }` at capture time — a `null` return means the unique `event_id` already exists (a retry), so skip. The header check in iter 1 is a fast early-out; the DB unique constraint is the real guarantee. Same discipline as PokeOps `processed_mutation_ids` / `SELECT FOR UPDATE`.
 
 ### Message capture (store everything)
 Every `@ai` message is persisted to `inbound_message`, including failures. Rationale: `FAILED_PARSE` rows are the debugging corpus for prompt tuning; the full set is a replay corpus for evaluating a new prompt or model against real historical inputs; `NON_EXPENSE` rows (iter 8) become intent-classifier training data. `inbound_message` is the single source of truth for raw text — `expense` and `categorization_event` reference it by FK rather than duplicating the string.
@@ -597,8 +697,17 @@ This is defensible where the corporate equivalent isn't, and it's worth being pr
 ### Retention (TTL on raw text)
 Keep structured `expense` rows forever — that's the value. Null out `inbound_message.text` after ~6 months: long enough for prompt tuning and replay, short enough to avoid sitting on a years-long transcript of household chatter. A nightly Supabase scheduled job (`update inbound_message set text = null, fail_reason = null where received_at < now() - interval '6 months' and text is not null`). Status rows and structure survive; only the free text ages out.
 
+### Persistence & concurrency (Exposed on JDBC)
+All DB access goes through one `dbQuery` helper wrapping `newSuspendedTransaction(Dispatchers.IO)`. Two disciplines, both because Exposed's transaction model has sharp edges the Spring version hid:
+- **One style everywhere.** Never mix a blocking `transaction {}` with suspended transactions in a request path — it causes "connection is closed" errors. `dbQuery` is the only entry point.
+- **Flat, not nested.** A multi-step atomic write (iter 4 confirm) is a *single* `dbQuery` block with all steps inside. Don't nest suspended transactions — an inner one may fail to roll back when the outer throws.
+- **No network calls inside a transaction.** LLM/Slack calls happen outside the `dbQuery` block; open the transaction only around the writes. Exposed-JDBC is blocking under the hood, so `Dispatchers.IO` keeps it off the Netty event-loop threads — but at two-person volume this is correctness hygiene, not a performance concern.
+
+### Schema management (Flyway owns DDL, Exposed owns queries)
+Flyway SQL migrations are the source of truth; Exposed `Table` objects are hand-written mirrors used only for the query DSL. This is the one ergonomic cost vs jOOQ (which generated the Kotlin from the schema) — trivial at this schema size, and it keeps you in full control of migrations for the append-only ledger. Do not use `SchemaUtils.create*` as the prod schema mechanism; it isn't migration-safe. Test persistence against real Postgres with **Testcontainers** — the Ktor-world replacement for Spring's `@JooqTest` slice, and better, since you're testing real Postgres semantics rather than a mocked slice.
+
 ### Transaction / Slack side-effect boundary
-DB writes in a jOOQ `transaction { }`; `chat.postMessage` only after it returns. If you ever move the Slack post into an event listener, bind it to `AFTER_COMMIT` and remember `@JooqTest` rolls back — it won't fire `AFTER_COMMIT`, so those tests need a different harness (real commit or manual event assertion).
+DB writes inside a single `dbQuery { }`; `chat.postMessage` only after it returns. There is no event bus, transaction manager, or commit-phase listener in this stack — the Spring `@Transactional`/`AFTER_COMMIT` machinery that made this fiddly simply isn't present. The boundary is just: writes inside the block, network side-effect after it returns.
 
 ### Model config (OpenRouter)
 `qwen/qwen3-instruct` class (confirm exact slug on openrouter.ai/models — version slugs drift). `temperature: 0`, `response_format: json_schema` strict, `response-healing` plugin as a fallback, thinking disabled if a reasoning variant. Paid variant over `:free` for reliability. Volume (~300–600 calls/mo) makes cost negligible — optimize for CJK handling and JSON reliability, not price.

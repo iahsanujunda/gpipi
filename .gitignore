@@ -6,6 +6,7 @@
 # --- Gradle / Kotlin (Ktor backend) ---
 build/
 .gradle/
+.kotlin/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

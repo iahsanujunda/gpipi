@@ -8,11 +8,11 @@ import kotlin.test.*
 class ServerTest {
 
     @Test
-    fun `test root endpoint`() = testApplication {
-        // loads default configuration
+    fun `health endpoint returns 200`() = testApplication {
+        // loads application.conf → wires configureRouting (health + slack)
         configure()
-        // verify server root returns 200
-        assertEquals(HttpStatusCode.OK, client.get("/").status)
+        // liveness must answer without a Slack signature
+        assertEquals(HttpStatusCode.OK, client.get("/health").status)
     }
 
 }

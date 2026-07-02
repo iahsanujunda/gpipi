@@ -149,6 +149,31 @@ Slack disables an event subscription after repeated ack failures. Render **free*
 
 Socket Mode (WebSocket initiated from the server) avoids needing a public URL, but still requires a non-sleeping process — it does **not** solve cold starts. HTTP Events + Starter is simpler here. Revisit Socket Mode only if you want to drop the public endpoint.
 
+### 1.6 Health Check (Liveness)
+
+`/health` is infrastructure, not a feature — it lives in its own `health/` package, **outside** the Slack signature verification. It must be cheap and dependency-free (no DB, no external calls): Render pings it for deploy gating, and a free-tier keep-alive pinger hits it every few minutes, so a DB round-trip here would hammer Supabase and let a transient blip cycle the instance.
+
+```kotlin
+// health/HealthRoutes.kt
+fun Route.healthRoutes() {
+    get("/health") {                           // liveness — no dependencies
+        call.respond(HttpStatusCode.OK, mapOf("status" to "up"))
+    }
+    // iteration 2: /health/ready does a SELECT 1 via dbQuery (readiness)
+}
+```
+
+Wire it public, alongside (not inside) the verified Slack group — the reason verification is per-route inside `slackRoutes` rather than a global plugin is precisely so `/health` can answer 200 with no signature:
+
+```kotlin
+routing {
+    healthRoutes()                                     // public, unauthenticated
+    slackRoutes(slack, expenseService, signingSecret)  // verification inside this group
+}
+```
+
+Point Render's **Health Check Path** at `/health` for zero-downtime deploy gating (confirm current behavior in Render docs at deploy time).
+
 ### Definition of Done
 
 - [ ] Slack app created, event subscription pointed at `/slack/events`
@@ -157,6 +182,8 @@ Socket Mode (WebSocket initiated from the server) avoids needing a public URL, b
 - [ ] Endpoint acks 200 within 3s under a cold-start test
 - [ ] Async echo posts back via `chat.postMessage`
 - [ ] Retry requests (`X-Slack-Retry-Num`) short-circuit to 200
+- [ ] `/health` liveness returns 200 with no DB/external dependency, reachable without a Slack signature
+- [ ] Render Health Check Path set to `/health` at deploy
 - [ ] Hosting tier chosen and deployed (Starter recommended)
 
 ---
@@ -374,6 +401,7 @@ suspend fun handleEvent(e: SlackEnvelope) {
 ### Definition of Done
 
 - [ ] `inbound_message` + `expense` tables created in Supabase
+- [ ] `/health/ready` added — cheap `SELECT 1` via `dbQuery`; liveness `/health` stays dependency-free
 - [ ] Every `@ai` message captured to `inbound_message` before processing
 - [ ] Capture + dedup is a single `insertIgnoreAndGetId` write (null id on conflict → skip); retries skip
 - [ ] OpenRouter call returns schema-valid JSON for the reference inputs
@@ -681,6 +709,23 @@ Reserve genuine text-to-SQL (read-only role, LIMIT-capped) for the long tail, if
 ---
 
 ## Appendix — Cross-Cutting Notes
+
+### Project organization (package-by-feature)
+Ktor has no required structure — no component scan to satisfy. Keep your Spring by-feature instinct (not package-by-layer): each feature is a package of plain classes plus a `Route` extension function, wired by hand in `Application.module()`.
+
+```
+src/main/kotlin/
+├── Application.kt          # EngineMain → module(); builds the object graph
+├── plugins/               # install() config: Serialization, Monitoring, Security (signature)
+├── health/                # liveness/readiness (infra, not a feature)
+├── slack/                 # envelope DTOs, signature verify, client, routes
+├── inbound/               # inbound_message capture/dedup/status (iter 2)
+├── expense/               # domain: routes, service, repository, Exposed tables
+├── extraction/            # OpenRouter prompt + call + schema (iter 2)
+└── config/                # Hikari + Flyway.migrate() + Database.connect
+```
+
+What differs from Spring and will trip muscle memory: there's no `@Repository`/`@Service`/`@RestController` — a repo/service is a plain class, and a "controller" is `fun Route.xRoutes(deps)`, an extension function grouped by feature. You wire the whole object graph by hand in `module()` (no scanning), which is exactly what makes it test-injectable — `module` takes its collaborators as params, per the testing harness. Enforce boundaries with Kotlin `internal`, or — only if domains grow large — separate Gradle modules (`:slack`, `:expense`); there's no ArchUnit/Modulith equivalent shipped, and multi-module isn't warranted at this size. Don't reach for a DI framework (Koin) yet — hand-wiring is clearer here; revisit only if the graph balloons around iter 3+. And don't pre-create empty feature packages: let each appear with its iteration (iter 1 needs only `Application.kt`, `plugins/`, `slack/`, `health/`).
 
 ### Idempotency
 Slack retries on any non-200 within 3s and includes `X-Slack-Retry-Num`. Dedup on `inbound_message.event_id` via Exposed's `insertIgnoreAndGetId { }` at capture time — a `null` return means the unique `event_id` already exists (a retry), so skip. The header check in iter 1 is a fast early-out; the DB unique constraint is the real guarantee. Same discipline as PokeOps `processed_mutation_ids` / `SELECT FOR UPDATE`.

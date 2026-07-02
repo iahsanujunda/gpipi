@@ -9,7 +9,9 @@ group = "me"
 version = "1.0.0-SNAPSHOT"
 
 application {
-    mainClass = "io.ktor.server.netty.EngineMain"
+    // Our own entry point (main.kt) — loads .env into system properties, THEN delegates to
+    // EngineMain. Pointing this straight at io.ktor.server.netty.EngineMain would skip dotenv.
+    mainClass = "me.gpipi.MainKt"
 }
 
 kotlin {

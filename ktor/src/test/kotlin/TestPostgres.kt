@@ -1,6 +1,6 @@
 package me
 
-import org.testcontainers.postgresql.PostgreSQLContainer
+import org.testcontainers.containers.PostgreSQLContainer
 
 object TestPostgres {
     val container: PostgreSQLContainer<*> by lazy {

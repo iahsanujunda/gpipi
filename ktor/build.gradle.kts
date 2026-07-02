@@ -31,7 +31,7 @@ dependencies {
     
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
-    testImplementation("org.testcontainers:testcontainers-postgresql")
-    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:postgresql:1.20.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
     testImplementation("io.mockk:mockk:1.13.13")
 }

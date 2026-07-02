@@ -1,5 +1,5 @@
 # --- Secrets ---
-.env
+ktor/.env
 .env.*
 !.env.example
 

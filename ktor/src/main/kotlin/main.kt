@@ -1,7 +1,6 @@
 package me
 
-import io.ktor.server.engine.*
-import io.ktor.server.application.*
+import io.github.cdimascio.dotenv.dotenv
 
 fun main(args: Array<String>) {
     dotenv {

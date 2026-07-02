@@ -38,7 +38,7 @@ Signing secret, bot token, and OpenRouter key **never** land in git. They live i
 
 - [x] `git init`, `docs/` committed
 - [x] GitHub remote created and pushed
-- [ ] `.gitignore` verified to exclude `build/`, `.gradle/`, secrets
+- [x] `.gitignore` verified to exclude `build/`, `.gradle/`, secrets
 
 ---
 
@@ -80,11 +80,11 @@ Keeping them in separate workspaces/channels means dev test messages never hit t
 
 Leave the Request URL blank. It requires a live endpoint that echoes the `url_verification` challenge (Iteration 1.3). Completing it is the *first proof* that the route works — save it for then.
 
-- [ ] Dev app created from scratch in a test workspace
-- [ ] Signing Secret copied
-- [ ] `app_mentions:read` + `chat:write` scopes added
-- [ ] Installed to workspace; `xoxb-…` bot token copied
-- [ ] Event Subscriptions intentionally left blank
+- [x] Dev app created from scratch in a test workspace
+- [x] Signing Secret copied
+- [x] `app_mentions:read` + `chat:write` scopes added
+- [x] Installed to workspace; `xoxb-…` bot token copied
+- [x] Event Subscriptions intentionally left blank
 
 ---
 
@@ -125,10 +125,10 @@ ktor-serialization-kotlinx-json
 
 Unzip into the project root (alongside `docs/`), open in IntelliJ, confirm `./gradlew run` serves the default page at `http://localhost:8080`.
 
-- [ ] Project scaffolded with the settings above
-- [ ] Unzipped into repo root; opens cleanly in IntelliJ
-- [ ] `./gradlew run` serves the default page on :8080
-- [ ] Committed (with verified `.gitignore`)
+- [x] Project scaffolded with the settings above
+- [x] Unzipped into repo root; opens cleanly in IntelliJ
+- [x] `./gradlew run` serves the default page on :8080
+- [x] Committed (with verified `.gitignore`)
 
 ---
 
@@ -176,11 +176,11 @@ SLACK_BOT_OAUTH_TOKEN=       # Slack app → OAuth & Permissions → Bot User OA
 
 **Later on Render:** same variable names, populated with the **prod app's** credentials. The code never branches on environment — it verifies against whatever secret it was given and replies with whatever token it was given.
 
-- [ ] `application.conf` references `SLACK_SIGNING_SECRET` and `SLACK_BOT_OAUTH_TOKEN` via env
-- [ ] dotenv loader wired at top of `main()` (`systemProperties = true`, `ignoreIfMissing = true`)
-- [ ] `.env` populated with dev app credentials; `.env` in `.gitignore`
-- [ ] `.env.example` committed (keys + source comments, no values); **not** gitignored
-- [ ] App reads the values at startup (log a boolean "secret present", never the value)
+- [x] `application.conf` references `SLACK_SIGNING_SECRET` and `SLACK_BOT_OAUTH_TOKEN` via env
+- [x] dotenv loader wired at top of `main()` (`systemProperties = true`, `ignoreIfMissing = true`)
+- [x] `.env` populated with dev app credentials; `.env` in `.gitignore`
+- [x] `.env.example` committed (keys + source comments, no values); **not** gitignored
+- [x] App reads the values at startup (log a boolean "secret present", never the value)
 
 
 ---
@@ -215,10 +215,10 @@ The `ts.net` hostname is **stable** — tied to the machine, not rotated on rest
 - **No auth layer** — the endpoint is genuinely public; anyone can POST to it. That's fine and intended: iter 1.2's signature verification *is* the auth layer. Unsigned requests get 401. Same exposure any tunnel gives.
 - **Relay-limited throughput / possible rate limits** — irrelevant at household-Slack volume. Funnel is the *dev* tunnel only; Render is prod.
 
-- [ ] MagicDNS + HTTPS certificates enabled on tailnet
-- [ ] Funnel enabled for the tailnet
-- [ ] `tailscale funnel --bg 8080` running; `tailscale funnel status` shows the public URL
-- [ ] `ts.net` URL noted for iter 1's Event Subscriptions
+- [x] MagicDNS + HTTPS certificates enabled on tailnet
+- [x] Funnel enabled for the tailnet
+- [x] `tailscale funnel --bg 8080` running; `tailscale funnel status` shows the public URL
+- [x] `ts.net` URL noted for iter 1's Event Subscriptions
 
 ---
 
@@ -226,19 +226,19 @@ The `ts.net` hostname is **stable** — tied to the machine, not rotated on rest
 
 With `./gradlew run` and `tailscale funnel --bg 8080` both up, open `https://<your-machine>.<tailnet>.ts.net` in a browser (or from your phone off wifi). You should see the Ktor default page served **through** Funnel — proving the full public path works before any route exists.
 
-- [ ] Ktor default page reachable at the public `ts.net` URL from an external device
+- [x] Ktor default page reachable at the public `ts.net` URL from an external device
 
 ---
 
 ## Definition of Done — Artifacts Iteration 1 Assumes
 
-- [ ] Repo committed with a `.gitignore` that excludes secrets and build output
-- [ ] Dev Slack app created and installed; **Signing Secret** and **bot token** in hand
-- [ ] Slack scopes `app_mentions:read` + `chat:write` granted
-- [ ] Ktor 3.x project scaffolded, `./gradlew run` serves :8080 locally
-- [ ] Secrets wired via dotenv + `.env` (gitignored); `.env.example` committed
-- [ ] Tailscale Funnel running with a stable public `ts.net` URL
-- [ ] Default Ktor page verified reachable through Funnel from an external device
+- [x] Repo committed with a `.gitignore` that excludes secrets and build output
+- [x] Dev Slack app created and installed; **Signing Secret** and **bot token** in hand
+- [x] Slack scopes `app_mentions:read` + `chat:write` granted
+- [x] Ktor 3.x project scaffolded, `./gradlew run` serves :8080 locally
+- [x] Secrets wired via dotenv + `.env` (gitignored); `.env.example` committed
+- [x] Tailscale Funnel running with a stable public `ts.net` URL
+- [x] Default Ktor page verified reachable through Funnel from an external device
 
 ---
 

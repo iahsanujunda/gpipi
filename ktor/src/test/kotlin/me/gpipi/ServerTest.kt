@@ -1,4 +1,4 @@
-package me
+package me.gpipi
 
 import io.ktor.client.request.get
 import io.ktor.http.HttpStatusCode

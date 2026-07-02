@@ -26,12 +26,25 @@ dependencies {
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)
     implementation(ktorLibs.client.contentNegotiation)
+    implementation("org.jetbrains.exposed:exposed-core:1.3.1")
+    implementation("org.jetbrains.exposed:exposed-jdbc:1.3.1")
+    implementation("org.flywaydb:flyway-core:12.10.0")
+    implementation("org.flywaydb:flyway-database-postgresql:12.10.0")
+    implementation("org.postgresql:postgresql:42.7.12")
 
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
-    
+
     testImplementation(kotlin("test"))
     testImplementation(ktorLibs.server.testHost)
-    testImplementation("org.testcontainers:postgresql:1.20.4")
-    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+    testImplementation(platform("org.junit:junit-bom:5.14.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
+    testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("io.mockk:mockk:1.13.13")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

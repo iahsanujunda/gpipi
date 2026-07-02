@@ -1,4 +1,4 @@
-package me
+package me.gpipi
 
 import io.ktor.http.*
 import io.ktor.server.application.*

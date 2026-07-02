@@ -1,4 +1,4 @@
-package me
+package me.gpipi
 
 import io.github.cdimascio.dotenv.dotenv
 

@@ -1,0 +1,32 @@
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Gradle / Kotlin (Ktor backend) ---
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+out/
+*.class
+
+# --- IntelliJ ---
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# --- Logs ---
+*.log
+logs/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Node / React (Iteration 7 frontend, when added) ---
+node_modules/
+dist/
+.vite/

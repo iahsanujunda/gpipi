@@ -194,32 +194,66 @@ The moment this ships, the nightly recap dies. Categories are hardcoded in the p
 
 ### 2.0 Persistence Setup (Exposed + Flyway)
 
-Dependencies (add to `build.gradle.kts` — confirm current version + the `v1` coordinates on the Exposed docs, which moved to a `v1` package namespace):
+Dependencies (as wired in `ktor/build.gradle.kts` — Exposed moved to a `v1` package namespace in the 1.x line, so imports are `org.jetbrains.exposed.v1.*`):
 
 ```
-org.jetbrains.exposed:exposed-core
-org.jetbrains.exposed:exposed-jdbc          # blocking JDBC path (not R2DBC)
-org.jetbrains.exposed:exposed-java-time     # timestamp column support
-org.postgresql:postgresql                   # JDBC driver
-com.zaxxer:HikariCP                          # connection pool
-org.flywaydb:flyway-core                     # migrations
-org.flywaydb:flyway-database-postgresql
+org.jetbrains.exposed:exposed-core:1.3.1
+org.jetbrains.exposed:exposed-jdbc:1.3.1          # blocking JDBC path (not R2DBC)
+org.jetbrains.exposed:exposed-java-time:1.3.1     # timestamp column support — see note
+org.postgresql:postgresql:42.7.12                 # JDBC driver
+com.zaxxer:HikariCP:7.1.0                          # connection pool
+org.flywaydb:flyway-core:12.10.0                   # migrations
+org.flywaydb:flyway-database-postgresql:12.10.0
 ```
+
+> **All three Exposed modules must be the same version** (`1.3.1`) — mixing them causes subtle breakage. **`exposed-java-time` must be `implementation`, not `runtimeOnly`**: the timestamp column DSL (`timestampWithTimeZone(...)`, `CurrentTimestampWithTimeZone`) has to be on the *compile* classpath, or the `Table` objects won't compile.
 
 **Schema source of truth = Flyway SQL migrations.** Exposed `Table` objects *mirror* the migrations by hand — they're the query mapping, not the schema authority. This is the one ergonomic cost vs jOOQ (which generated the Kotlin from the schema); at this schema size it's trivial and gives full control. Do **not** use `SchemaUtils.create`/`createMissingTablesAndColumns` as your prod schema mechanism — it's convenient for a throwaway local DB but not migration-safe. Flyway owns DDL; Exposed owns queries.
 
-Connection, once at startup:
+> **Migrations are packaged with the app, on the classpath.** Flyway runs as a *library* (in-process, on boot via `migrate()`), not the CLI — so the SQL files ship inside the jar at `ktor/src/main/resources/db/migration/` (Flyway's default `classpath:db/migration` location, no `.locations(...)` override needed). This version-locks schema to the code that expects it: one jar carries exactly the schema it was written against, local and prod alike.
+>
+> **One authority, not two.** The repo also has a `supabase/` directory (Supabase CLI init). Supabase is used **only as the hosted Postgres** — its `supabase/migrations/` stays empty and `supabase db push` is never run. Flyway's boot-time `migrate()` is the *sole* thing that touches DDL. A stray `supabase migration new` / `db push` would create a second, competing migration history — don't.
+
+Connection is a real module in `config/Database.kt`, wired into the `application.conf` module chain as `me.gpipi.config.DatabaseKt.configureDatabase` (ahead of `configureRouting`, so the DB is ready before routes bind):
 
 ```kotlin
-val ds = HikariDataSource(HikariConfig().apply {
-    jdbcUrl = config.property("db.url").getString()   // from env: DATABASE_URL
-    maximumPoolSize = 3
-    // Supabase pooler (Supavisor, transaction mode) — disable JDBC prepared-statement
-    // caching or use the session-mode port, same as the janken-elo setup.
-})
-Flyway.configure().dataSource(ds).load().migrate()     // migrations run before first query
-Database.connect(ds)                                    // Exposed binds to the pool
+// config/Database.kt
+data class DbConfig(val url: String, val user: String, val password: String, val maxPoolSize: Int)
+
+fun ApplicationConfig.dbConfig() = DbConfig(
+    url = property("db.url").getString(),           // db.url ← DATABASE_URL (see application.conf)
+    user = property("db.user").getString(),         // db.user ← DATABASE_USER
+    password = property("db.password").getString(), // db.password ← DATABASE_PASSWORD
+    maxPoolSize = property("db.maxPoolSize").getString().toInt(),   // default 5
+)
+
+// Holds both so the pool can be closed on shutdown; Database alone can't close the pool.
+data class Db(val database: Database, val dataSource: HikariDataSource)
+
+fun connectDatabase(cfg: DbConfig): Db {
+    val pool = HikariDataSource(HikariConfig().apply {
+        jdbcUrl = cfg.url
+        username = cfg.user            // credentials passed explicitly, NOT in the URL query string —
+        password = cfg.password        // Hikari's username/password win, so local and prod resolve the same way
+        maximumPoolSize = cfg.maxPoolSize
+        // Supabase pooler (Supavisor, transaction mode) — disable JDBC prepared-statement
+        // caching or use the session-mode port. Set on the connection string / here when you
+        // point db.url at the real Supabase pooler.
+    })
+    Flyway.configure().dataSource(pool).load().migrate()   // migrations run before first query
+    return Db(Database.connect(pool), pool)                // Exposed binds to the pool
+}
+
+val DbKey = AttributeKey<Db>("Db")
+
+fun Application.configureDatabase() {
+    val db = connectDatabase(environment.config.dbConfig())
+    monitor.subscribe(ApplicationStopped) { db.dataSource.close() }   // release the pool on shutdown
+    attributes.put(DbKey, db)                                          // routes read attributes[DbKey]
+}
 ```
+
+> The connected `Db` is stashed in application attributes under `DbKey`; `configureRouting` reads `attributes[DbKey].database` and threads it into `slackRoutes(signingSecret, db)` → `handleEvent(payload, db)`. `connectDatabase` is also reused by the test harness (`TestPostgres`) so prod and test share one connect path.
 
 ### 2.1 Schema (initial)
 
@@ -255,7 +289,12 @@ create table expense (
 );
 ```
 
-Exposed `Table` objects mirroring the above (query mapping):
+Exposed `Table` objects mirroring the above (query mapping). Per package-by-feature (see Appendix), these live **with their feature**, not in one shared package: `InboundMessages` in `inbound/`, `Expenses` in `expense/`. The FK just means `expense/` imports from `inbound/` (a fine dependency direction).
+
+v1 import paths (the namespace moved — the old `org.jetbrains.exposed.*` paths are stale):
+- `UUIDTable` → `org.jetbrains.exposed.v1.core.dao.id.UUIDTable`
+- `text` / `long` / `reference` / `.nullable()` / `.default()` / `.uniqueIndex()` → `org.jetbrains.exposed.v1.core.*`
+- timestamp columns + `CurrentTimestampWithTimeZone` → `org.jetbrains.exposed.v1.javatime.*`
 
 ```kotlin
 object InboundMessages : UUIDTable("inbound_message") {
@@ -266,7 +305,7 @@ object InboundMessages : UUIDTable("inbound_message") {
     val slackTs     = text("slack_ts")
     val status      = text("status").default("RECEIVED")
     val failReason  = text("fail_reason").nullable()
-    val receivedAt  = timestamp("received_at").defaultExpression(CurrentTimestamp)
+    val receivedAt  = timestampWithTimeZone("received_at").defaultExpression(CurrentTimestampWithTimeZone)
 }
 
 object Expenses : UUIDTable("expense") {
@@ -277,11 +316,15 @@ object Expenses : UUIDTable("expense") {
     val category  = text("category")
     val merchant  = text("merchant").nullable()
     val note      = text("note").nullable()
-    val spentAt   = timestamp("spent_at").defaultExpression(CurrentTimestamp)
+    val spentAt   = timestampWithTimeZone("spent_at").defaultExpression(CurrentTimestampWithTimeZone)
     val source    = text("source").default("SLACK")
-    val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
+    val createdAt = timestampWithTimeZone("created_at").defaultExpression(CurrentTimestampWithTimeZone)
 }
 ```
+
+> **`timestamptz` → `timestampWithTimeZone`, not `timestamp`.** In `exposed-java-time`, `timestamp("...")` maps to a plain `timestamp` (Kotlin `Instant`), while `timestampWithTimeZone("...")` maps to `timestamptz` (Kotlin `OffsetDateTime`). Since the migration DDL is the authority and it says `timestamptz`, the mirror uses `timestampWithTimeZone` to stay faithful.
+>
+> **The default expression must match the column type.** Pair `timestampWithTimeZone` with `CurrentTimestampWithTimeZone` (both `OffsetDateTime`); `CurrentTimestamp` is `Instant`-typed and belongs to plain `timestamp` columns — mixing them is a compile error (`Argument type mismatch: … but 'Expression<OffsetDateTime>' was expected`).
 
 > Amount stored as integer JPY. If multi-currency is ever needed, migrate to `amount_minor bigint` + per-currency minor-unit handling. Not now.
 >
@@ -364,31 +407,38 @@ Categories:
 
 ### 2.5 Reply
 
-All DB access goes through one helper so the transaction style is uniform — this matters because Exposed forbids mixing blocking `transaction {}` and suspended transactions in the same path:
+All DB access goes through one helper (`config/DbQuery.kt`) so the transaction style is uniform — this matters because Exposed forbids mixing blocking `transaction {}` and suspended transactions in the same path:
 
 ```kotlin
-// The single DB entry point. newSuspendedTransaction dispatches to IO and manages
-// Exposed's thread-local correctly across suspension. Repos do raw table ops INSIDE this.
-suspend fun <T> dbQuery(block: suspend () -> T): T =
-    newSuspendedTransaction(Dispatchers.IO) { block() }
+// config/DbQuery.kt — the single request-path DB entry point.
+// NOTE: newSuspendedTransaction is DEPRECATED in Exposed v1 → use suspendTransaction.
+// suspendTransaction runs on the CURRENT coroutine context and does NOT dispatch blocking
+// JDBC itself, so the withContext(Dispatchers.IO) wrapper is on us (keeps JDBC off Netty's
+// event loop → the 3s Slack ack is never stalled). db is passed explicitly rather than relying
+// on Exposed's global "last Database created" default, since tests use a separate container DB.
+// Repos do raw table ops INSIDE the block and never open their own transaction.
+suspend fun <T> dbQuery(db: Database, block: suspend () -> T): T =
+    withContext(Dispatchers.IO) {
+        suspendTransaction(db = db) { block() }
+    }
 ```
 
 ```kotlin
-suspend fun handleEvent(e: SlackEnvelope) {
+suspend fun handleEvent(e: SlackEnvelope, db: Database) {
     // Capture + dedup in one write. Null id back = retry of an already-seen event.
-    val msgId = dbQuery { inboundRepo.captureOrSkip(e) } ?: return   // insertIgnoreAndGetId → null on conflict
+    val msgId = dbQuery(db) { inboundRepo.captureOrSkip(e) } ?: return   // insertIgnoreAndGetId → null on conflict
 
     val x = try {
-        openRouter.extract(e.text)                                    // suspend, non-blocking — outside the tx
+        openRouter.extract(e.text)                                       // suspend, non-blocking — outside the tx
     } catch (ex: ExtractionException) {
-        dbQuery { inboundRepo.markFailed(msgId, reason = ex.message) } // status = FAILED_PARSE, text kept
+        dbQuery(db) { inboundRepo.markFailed(msgId, reason = ex.message) } // status = FAILED_PARSE, text kept
         slack.postMessage(e.channel, "Couldn't read that one — mind rephrasing?")
         return
     }
 
-    dbQuery {                                                         // one transaction for the write pair
+    dbQuery(db) {                                                        // one transaction for the write pair
         expenseRepo.insert(x, inboundMessageId = msgId, userId = e.user)
-        inboundRepo.markRecorded(msgId)                               // status = RECORDED
+        inboundRepo.markRecorded(msgId)                                  // status = RECORDED
     }
     slack.postMessage(e.channel, "Recorded ✓  ¥${x.amount} · ${x.category}")
 }
@@ -525,8 +575,8 @@ Changing the dropdown fires `block_actions`; clicking Confirm fires `block_actio
 The expense insert, the `categorization_event` insert, the `inbound_message` status transition to `RECORDED`, and (iter 5) the hint upsert are **one flat transaction**. Only after it returns do you call `chat.postMessage` to confirm. (Capture + dedup already happened up front in iter 2 — the confirm step just flips status and writes the labeled event.)
 
 ```kotlin
-suspend fun onConfirm(draft: ExpenseDraft, finalCategoryId: UUID) {
-    dbQuery {                                          // single flat newSuspendedTransaction — do NOT nest
+suspend fun onConfirm(draft: ExpenseDraft, finalCategoryId: UUID, db: Database) {
+    dbQuery(db) {                                      // single flat suspendTransaction — do NOT nest
         val expenseId = expenseRepo.insert(draft, finalCategoryId)
         categorizationEventRepo.insert(draft, expenseId,
                                        predicted = draft.predictedCategoryId,
@@ -539,7 +589,7 @@ suspend fun onConfirm(draft: ExpenseDraft, finalCategoryId: UUID) {
 ```
 
 > **Exposed transaction discipline (replaces the old Spring `@JooqTest`/`AFTER_COMMIT` concern — that machinery doesn't exist here).** Two footguns to avoid, both of which would bite exactly at this multi-step write:
-> - **Keep it one flat transaction.** Don't nest suspended transactions — an inner `newSuspendedTransaction` may *not* roll back when the outer block throws, so a nested design can silently half-commit. All four steps live directly inside the single `dbQuery` block.
+> - **Keep it one flat transaction.** Don't nest suspended transactions — an inner `suspendTransaction` may *not* roll back when the outer block throws, so a nested design can silently half-commit. All four steps live directly inside the single `dbQuery` block.
 > - **Don't mix styles.** Every DB call in a request path goes through `dbQuery` (suspended). Mixing a blocking `transaction {}` with suspended ones causes "connection is closed" errors.
 >
 > The Slack side-effect stays *outside* the transaction: post only after `dbQuery { }` returns successfully. There's no event bus or commit-phase listener to route through — the boundary is just "DB work inside, network side-effect after."
@@ -586,7 +636,7 @@ fun upsertHint(merchant: String?, categoryId: UUID) {
         onUpdate = {
             it[MerchantCategoryHints.categoryId] = categoryId
             it[MerchantCategoryHints.confirmCount] = MerchantCategoryHints.confirmCount + 1
-            it[MerchantCategoryHints.lastConfirmedAt] = CurrentTimestamp
+            it[MerchantCategoryHints.lastConfirmedAt] = CurrentTimestampWithTimeZone
         }
     ) {
         it[normalizedMerchant] = norm
@@ -743,13 +793,15 @@ This is defensible where the corporate equivalent isn't, and it's worth being pr
 Keep structured `expense` rows forever — that's the value. Null out `inbound_message.text` after ~6 months: long enough for prompt tuning and replay, short enough to avoid sitting on a years-long transcript of household chatter. A nightly Supabase scheduled job (`update inbound_message set text = null, fail_reason = null where received_at < now() - interval '6 months' and text is not null`). Status rows and structure survive; only the free text ages out.
 
 ### Persistence & concurrency (Exposed on JDBC)
-All DB access goes through one `dbQuery` helper wrapping `newSuspendedTransaction(Dispatchers.IO)`. Two disciplines, both because Exposed's transaction model has sharp edges the Spring version hid:
+All DB access goes through one `dbQuery(db)` helper — `withContext(Dispatchers.IO) { suspendTransaction(db) { ... } }`. (Exposed v1 **deprecated `newSuspendedTransaction`**; `suspendTransaction` is the replacement, and since it runs on the current context, the `Dispatchers.IO` wrapper is ours to add, not the API's.) Two disciplines, both because Exposed's transaction model has sharp edges the Spring version hid:
 - **One style everywhere.** Never mix a blocking `transaction {}` with suspended transactions in a request path — it causes "connection is closed" errors. `dbQuery` is the only entry point.
 - **Flat, not nested.** A multi-step atomic write (iter 4 confirm) is a *single* `dbQuery` block with all steps inside. Don't nest suspended transactions — an inner one may fail to roll back when the outer throws.
 - **No network calls inside a transaction.** LLM/Slack calls happen outside the `dbQuery` block; open the transaction only around the writes. Exposed-JDBC is blocking under the hood, so `Dispatchers.IO` keeps it off the Netty event-loop threads — but at two-person volume this is correctness hygiene, not a performance concern.
 
 ### Schema management (Flyway owns DDL, Exposed owns queries)
-Flyway SQL migrations are the source of truth; Exposed `Table` objects are hand-written mirrors used only for the query DSL. This is the one ergonomic cost vs jOOQ (which generated the Kotlin from the schema) — trivial at this schema size, and it keeps you in full control of migrations for the append-only ledger. Do not use `SchemaUtils.create*` as the prod schema mechanism; it isn't migration-safe. Test persistence against real Postgres with **Testcontainers** — the Ktor-world replacement for Spring's `@JooqTest` slice, and better, since you're testing real Postgres semantics rather than a mocked slice.
+Flyway SQL migrations are the source of truth; Exposed `Table` objects are hand-written mirrors used only for the query DSL. This is the one ergonomic cost vs jOOQ (which generated the Kotlin from the schema) — trivial at this schema size, and it keeps you in full control of migrations for the append-only ledger. Do not use `SchemaUtils.create*` as the prod schema mechanism; it isn't migration-safe. Migrations live in the jar at `ktor/src/main/resources/db/migration/` and run in-process on boot (library mode, not the CLI); `supabase/migrations/` stays empty — Supabase is only the hosted Postgres, never a second migration authority.
+
+Test persistence against real Postgres with **Testcontainers** — the Ktor-world replacement for Spring's `@JooqTest` slice, and better, since you're testing real Postgres semantics rather than a mocked slice. Because `TestPostgres` reuses the same `connectDatabase`, **the real migrations run automatically in every test** — no separate test-schema mechanism, and no way for the Exposed mirrors to drift from the migrated schema undetected (a mismatch fails the persistence test loudly). `cleanDatabase()` truncates all tables *except* `flyway_schema_history` between tests, so Flyway's bookkeeping survives. Two consequences worth remembering: `testApplication` boots the full module chain including `configureDatabase`, so route tests must point `db.*` at the container (helper: `configureWithTestDb`); and the moment the first `V1__…sql` lands, both prod boot and every test start applying it.
 
 ### Transaction / Slack side-effect boundary
 DB writes inside a single `dbQuery { }`; `chat.postMessage` only after it returns. There is no event bus, transaction manager, or commit-phase listener in this stack — the Spring `@Transactional`/`AFTER_COMMIT` machinery that made this fiddly simply isn't present. The boundary is just: writes inside the block, network side-effect after it returns.

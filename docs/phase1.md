@@ -317,7 +317,7 @@ object Expenses : UUIDTable("expense") {
     val merchant  = text("merchant").nullable()
     val note      = text("note").nullable()
     val spentAt   = timestampWithTimeZone("spent_at").defaultExpression(CurrentTimestampWithTimeZone)
-    val source    = text("source").default("SLACK")
+    val sourceCol = text("source").default("SLACK")   // NOT `source`: clashes with ColumnSet.source
     val createdAt = timestampWithTimeZone("created_at").defaultExpression(CurrentTimestampWithTimeZone)
 }
 ```
@@ -325,6 +325,8 @@ object Expenses : UUIDTable("expense") {
 > **`timestamptz` → `timestampWithTimeZone`, not `timestamp`.** In `exposed-java-time`, `timestamp("...")` maps to a plain `timestamp` (Kotlin `Instant`), while `timestampWithTimeZone("...")` maps to `timestamptz` (Kotlin `OffsetDateTime`). Since the migration DDL is the authority and it says `timestamptz`, the mirror uses `timestampWithTimeZone` to stay faithful.
 >
 > **The default expression must match the column type.** Pair `timestampWithTimeZone` with `CurrentTimestampWithTimeZone` (both `OffsetDateTime`); `CurrentTimestamp` is `Instant`-typed and belongs to plain `timestamp` columns — mixing them is a compile error (`Argument type mismatch: … but 'Expression<OffsetDateTime>' was expected`).
+>
+> **Watch for property names that clash with `Table`/`ColumnSet` members.** A column named `source` can't be a property named `source` — `ColumnSet.source` already exists, so Kotlin errors with *"hides member of supertype … needs an 'override' modifier."* Rename the property (e.g. `sourceCol`) while keeping the DB name `text("source")`.
 
 > Amount stored as integer JPY. If multi-currency is ever needed, migrate to `amount_minor bigint` + per-currency minor-unit handling. Not now.
 >

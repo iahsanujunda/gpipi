@@ -2,6 +2,7 @@
 ktor/.env
 .env.*
 !.env.example
+.claude
 
 # --- Gradle / Kotlin (Ktor backend) ---
 build/

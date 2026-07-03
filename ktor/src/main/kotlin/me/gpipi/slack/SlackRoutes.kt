@@ -9,6 +9,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.jdbc.Database
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -16,7 +17,7 @@ private val json = Json { ignoreUnknownKeys = true }
  * Slack Events API endpoint. Signature verification lives INSIDE this group (not as a global
  * plugin) on purpose — so public routes like `/health` can answer 200 without a Slack signature.
  */
-fun Route.slackRoutes(signingSecret: String) {
+fun Route.slackRoutes(signingSecret: String, db: Database) {
     post("/slack/events") {
         val raw = call.receiveText()
 
@@ -47,11 +48,12 @@ fun Route.slackRoutes(signingSecret: String) {
         // App-scoped launch so the work survives the response returning; the request's own
         // scope would cancel it the moment we respond.
         call.application.launch {
-            handleEvent(payload)
+            handleEvent(payload, db)
         }
     }
 }
 
-private suspend fun handleEvent(payload: SlackEnvelope) {
+private suspend fun handleEvent(payload: SlackEnvelope, db: Database) {
     // TODO(iter-1): echo text back once the Slack client exists.
+    // TODO(iter-2): capture to inbound_message (dedup on event_id) + extract via db.
 }

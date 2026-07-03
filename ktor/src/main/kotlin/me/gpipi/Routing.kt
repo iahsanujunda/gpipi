@@ -5,6 +5,7 @@ import io.ktor.server.application.log
 import io.ktor.server.routing.routing
 import me.gpipi.health.healthRoutes
 import me.gpipi.slack.slackRoutes
+import me.gpipi.config.DbKey
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -23,8 +24,10 @@ fun Application.configureRouting() {
         "SLACK_SIGNING_SECRET is missing — set it in .env and restart before starting the server."
     }
 
+    val db = attributes[DbKey].database
+
     routing {
         healthRoutes()
-        slackRoutes(signingSecret)
+        slackRoutes(signingSecret, db)
     }
 }

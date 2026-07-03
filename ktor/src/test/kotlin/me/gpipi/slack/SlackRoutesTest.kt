@@ -7,6 +7,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
+import me.gpipi.support.configureWithTestDb
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -17,10 +18,8 @@ class SlackRoutesTest {
 
     private val secret = "test-signing-secret"
 
-    /** Boots the real application.conf module chain with a known signing secret injected. */
-    private fun ApplicationTestBuilder.bootWithSecret() = configure {
-        put("slack.signingSecret", secret)
-    }
+    /** Boots the real application.conf module chain with a known signing secret + test DB. */
+    private fun ApplicationTestBuilder.bootWithSecret() = configureWithTestDb(secret)
 
     @Test
     fun `unsigned request is rejected with 401`() = testApplication {
@@ -76,10 +75,9 @@ class SlackRoutesTest {
     @Test
     fun `refuses to boot when the signing secret is blank`() = testApplication {
         // Regression guard for the misconfigured-boot class of bug: a blank secret must fail
-        // startup loudly, never run silently unverifiable.
-        configure {
-            put("slack.signingSecret", "")
-        }
+        // startup loudly, never run silently unverifiable. DB is valid so we prove the failure
+        // is the secret check, not an unrelated DB connection error.
+        configureWithTestDb(signingSecret = "")
         val ex = assertFails { startApplication() }
         assertContains(ex.message.orEmpty(), "SLACK_SIGNING_SECRET")
     }

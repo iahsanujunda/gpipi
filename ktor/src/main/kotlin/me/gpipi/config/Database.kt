@@ -2,7 +2,10 @@ package me.gpipi.config
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.config.ApplicationConfig
+import io.ktor.util.AttributeKey
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
 
@@ -15,7 +18,9 @@ fun ApplicationConfig.dbConfig() = DbConfig(
     maxPoolSize = property("db.maxPoolSize").getString().toInt(),
 )
 
-fun connectDatabase(cfg: DbConfig): Database {
+data class Db(val database: Database, val dataSource: HikariDataSource)
+
+fun connectDatabase(cfg: DbConfig): Db {
     val pool = HikariDataSource(HikariConfig().apply {
         jdbcUrl = cfg.url
         username = cfg.user
@@ -23,5 +28,13 @@ fun connectDatabase(cfg: DbConfig): Database {
         maximumPoolSize = cfg.maxPoolSize
     })
     Flyway.configure().dataSource(pool).load().migrate()  // migrate on boot
-    return Database.connect(pool)
+    return Db(Database.connect(pool), pool)
+}
+
+val DbKey = AttributeKey<Db>("Db")
+
+fun Application.configureDatabase() {
+    val db = connectDatabase(environment.config.dbConfig())
+    monitor.subscribe(ApplicationStopped) { db.dataSource.close() }
+    attributes.put(DbKey, db)
 }

@@ -1,6 +1,7 @@
 package me.gpipi.support
 
-import org.flywaydb.core.Flyway
+import me.gpipi.config.DbConfig
+import me.gpipi.config.connectDatabase
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.testcontainers.postgresql.PostgreSQLContainer
 
@@ -12,15 +13,6 @@ object TestPostgres {
     }
 
     val database: Database by lazy {
-        Flyway.configure()
-            .dataSource(container.jdbcUrl, container.username, container.password)
-            .load()
-            .migrate()
-        Database.connect(
-            url = container.jdbcUrl,
-            driver = "org.postgresql.Driver",
-            user = container.username,
-            password = container.password
-        )
+        connectDatabase(DbConfig(container.jdbcUrl, container.username, container.password, maxPoolSize = 2)).database
     }
 }

@@ -30,7 +30,7 @@ dependencies {
     implementation(ktorLibs.client.contentNegotiation)
     implementation("org.jetbrains.exposed:exposed-core:1.3.1")
     implementation("org.jetbrains.exposed:exposed-jdbc:1.3.1")
-    runtimeOnly("org.jetbrains.exposed:exposed-java-time:1.3.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:1.3.1")
     implementation("org.flywaydb:flyway-core:12.10.0")
     implementation("org.flywaydb:flyway-database-postgresql:12.10.0")
     implementation("org.postgresql:postgresql:42.7.12")

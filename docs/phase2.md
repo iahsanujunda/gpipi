@@ -101,11 +101,11 @@ Each door is middleware that produces an authenticated `user_id`. Everything beh
 ```sql
 -- The only table phase 2 defines up front.
 create table auth_nonce (
-    nonce       text primary key,          -- random, single-use
-    user_id     text        not null,      -- the member the link was minted for
-    expires_at  timestamptz not null,      -- ~5-10 minutes out
-    consumed    boolean     not null default false,
-    created_at  timestamptz not null default now()
+                            nonce       text primary key,          -- random, single-use
+                            user_id     text        not null,      -- the member the link was minted for
+                            expires_at  timestamptz not null,      -- ~5-10 minutes out
+                            consumed    boolean     not null default false,
+                            created_at  timestamptz not null default now()
 );
 ```
 

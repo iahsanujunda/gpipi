@@ -22,7 +22,7 @@ Categorization is the only part that needs a model. The amount is trivially pars
 | 4 | Inline Confirmation Card + Labeled Events | One-tap correction; every confirm/correct becomes a labeled pair |
 | 5 | Merchant Hints Feedback Loop | Only possible once iter 4 has been logging confirmations |
 | 6 | Confidence Gate | "High confidence" is meaningless until hints exist and the real distribution is visible |
-| 7 | Frontend — Render static site | Deferrable: budgets editable directly in Supabase through iters 3–6 |
+| 7 | Frontend → **see Phase 2** | Full frontend (auth, expenses, payday, budgets, savings) is a separate document — Phase 2 |
 | 8 | Query Path (post-MVP) | Read side; deliberately last, deterministic SQL over agent loops |
 
 **Capture-first, not schema-first.** Unlike a seed-driven app, the data this system learns from (merchant→category hints) is *manufactured by dogfooding*. Stand up the loop that produces confirmed labels before building the thing that consumes them — same instinct as the PokeOps silver-label path.
@@ -708,31 +708,13 @@ Threshold starts at `0.80`; adjust against `categorization_event` after real usa
 
 ---
 
-# Iteration 7 — Frontend (Render Static Site)
+# Iteration 7 — Frontend → see Phase 2
 
-Deferrable — budgets and categories are editable directly in Supabase through iters 3–6. Build this once the household wants to manage things without touching the DB.
+The web frontend is specified in its own document, **Phase 2: Frontend & Magic-Link Auth**. It covers Slack-brokered magic-link authentication, the expense list, the payday funding view, budget management, and savings goals — each an independently deployable iteration.
 
-### 7.1 Scope
+Through phase 1, budgets and categories are editable directly in Supabase, so no frontend is needed to run the bot. Phase 2 begins once the bot is in daily use and its real requirements are understood.
 
-- **Budget config:** create/edit envelopes and categories (name, description, period, cap)
-- **Tracking:** spend vs cap per envelope, current period, category breakdown
-- **Manual ops:** add/edit/delete an expense, correct a category, view recent
-- **Hint review:** see learned merchant→category mappings, override a bad one
-
-### 7.2 Stack Notes
-
-- React on Render static site (free, unlimited)
-- Talks to the same Ktor API (add `/api/budgets`, `/api/expenses`, `/api/hints` read/write routes)
-- Auth: simplest is a shared household passphrase or Supabase Auth (2 users); don't over-build
-
-### Definition of Done
-
-- [ ] Static site deployed on Render, CORS configured for the Ktor API
-- [ ] Envelope + category CRUD wired to the API
-- [ ] Spend-vs-cap view per envelope for the current period
-- [ ] Manual expense add/edit/delete
-- [ ] Merchant hint list with override
-- [ ] Category description edits reflected in the next categorization (no redeploy)
+> **Auth note:** phase 2 authenticates the frontend with a magic-link → HttpOnly session flow, **not** a shared passphrase or ad-hoc login. Do not build frontend auth in phase 1 — the Slack signature covers the bot; the session cookie covers the frontend, and both are specified in phase 2.
 
 ---
 
@@ -743,6 +725,8 @@ The read side. Kept last and deliberately **not** agentic.
 ### 8.1 Intent Split
 
 A `@ai` message is either a **log** (default, everything so far) or a **query** ("how much on dining this month?"). A cheap intent classifier (or a lightweight keyword/regex pre-check) routes it.
+
+First real customers of this path: "how much is left in the going-out budget this month" (a read query), and chat-driven budget edits like "set the going-out budget to 40000" (a mutation intent). These are the Slack door to the same data phase 2's frontend edits — same authorization model, different surface.
 
 ### 8.2 Deterministic SQL Over Agent Loops
 

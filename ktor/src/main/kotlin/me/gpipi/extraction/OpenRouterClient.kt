@@ -29,6 +29,12 @@ Return JSON matching the schema. Rules:
 - amount: integer yen. "1500jpy", "¥1,500", "1500円" all → 1500.
 - merchant: the shop/place if named (keep original form: "Ito Yokado", "セブン"), else null.
 - category: choose exactly one from the list below by best fit.
+  - If the message explicitly names a spend type (e.g. "groceries", "lunch", "train", "medicine"),
+    that stated intent decides the category — even when the merchant's usual type differs.
+    Example: "groceries at seven eleven" → Monthly Groceries (the user said groceries, though
+    7-Eleven is normally a convenience store).
+  - Use the merchant to decide the category only when no spend type is stated.
+    Example: "510 at seven eleven" → Convenience Store.
 - confidence: 0-1. Lower it when the merchant is unknown or the category is a guess.
 - note: anything the user added that isn't amount/merchant/category, else null.
 

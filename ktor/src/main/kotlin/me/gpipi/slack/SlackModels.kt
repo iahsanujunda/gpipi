@@ -1,5 +1,6 @@
 package me.gpipi.slack
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -11,4 +12,15 @@ import kotlinx.serialization.Serializable
 data class SlackEnvelope(
     val type: String? = null,
     val challenge: String? = null,
+    @SerialName("event_id") val eventId: String? = null,
+    val event: SlackEvent? = null,
+)
+
+@Serializable
+data class SlackEvent(
+    val type: String? = null,
+    val user: String? = null,
+    val channel: String? = null,
+    val text: String? = null,
+    val ts: String? = null,
 )

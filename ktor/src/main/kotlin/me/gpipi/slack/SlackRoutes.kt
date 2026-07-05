@@ -9,6 +9,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import me.gpipi.config.dbQuery
 import org.jetbrains.exposed.v1.jdbc.Database
 
 private val json = Json { ignoreUnknownKeys = true }
@@ -54,6 +55,5 @@ fun Route.slackRoutes(signingSecret: String, db: Database) {
 }
 
 private suspend fun handleEvent(payload: SlackEnvelope, db: Database) {
-    // TODO(iter-1): echo text back once the Slack client exists.
-    // TODO(iter-2): capture to inbound_message (dedup on event_id) + extract via db.
+    val msgId = dbQuery(db) {  }
 }

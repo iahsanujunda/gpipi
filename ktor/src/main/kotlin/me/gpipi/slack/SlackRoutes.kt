@@ -1,7 +1,6 @@
 package me.gpipi.slack
 
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.application
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText

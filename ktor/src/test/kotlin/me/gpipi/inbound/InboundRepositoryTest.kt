@@ -6,6 +6,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertNotNull
 import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
+import me.gpipi.generated.db.base.public1.InboundMessage
 import me.gpipi.support.PersistenceTest
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
@@ -20,33 +21,33 @@ class InboundRepositoryTest : PersistenceTest() {
     fun `capture inserts a row with status RECEIVED`() {
         val id = capture()
         assertNotNull(id)
-        val row = query { InboundMessages.selectAll().single() }
-        assertEquals("RECEIVED", row[InboundMessages.status])
-        assertEquals("Ev001", row[InboundMessages.eventId])
-        assertEquals(id, row[InboundMessages.id].value)
+        val row = query { InboundMessage.selectAll().single() }
+        assertEquals("RECEIVED", row[InboundMessage.status])
+        assertEquals("Ev001", row[InboundMessage.eventId])
+        assertEquals(id, row[InboundMessage.id])
     }
 
     @Test
     fun `duplicate event_id returns null and keeps a single row`() {
         assertNotNull(capture("EvDup"))
         assertNull(capture("EvDup"))
-        assertEquals(1, query { InboundMessages.selectAll().count() })
+        assertEquals(1, query { InboundMessage.selectAll().count() })
     }
 
     @Test
     fun `markFailed sets status and keeps the raw text`() {
         val id = capture()!!
         query { repo.markFailed(id, "schema mismatch") }
-        val row = query { InboundMessages.selectAll().single() }
-        assertEquals("FAILED_PARSE", row[InboundMessages.status])
-        assertEquals("schema mismatch", row[InboundMessages.failReason])
-        assertEquals("1500 ramen", row[InboundMessages.text])
+        val row = query { InboundMessage.selectAll().single() }
+        assertEquals("FAILED_PARSE", row[InboundMessage.status])
+        assertEquals("schema mismatch", row[InboundMessage.failReason])
+        assertEquals("1500 ramen", row[InboundMessage.text])
     }
 
     @Test
     fun `markRecorded sets status`() {
         val id = capture()!!
         query { repo.markRecorded(id) }
-        assertEquals("RECORDED", query { InboundMessages.selectAll().single() }[InboundMessages.status])
+        assertEquals("RECORDED", query { InboundMessage.selectAll().single() }[InboundMessage.status])
     }
 }

@@ -1,0 +1,140 @@
+{
+  "databases": [
+    {
+      "name": "base",
+      "tables": [
+        {
+          "name": "public.expense",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "inbound_message_id",
+              "type": "uuid"
+            },
+            {
+              "name": "user_id",
+              "type": "text"
+            },
+            {
+              "name": "amount",
+              "type": "int8"
+            },
+            {
+              "name": "currency",
+              "type": "text",
+              "defaultExpr": "'JPY'::text"
+            },
+            {
+              "name": "category",
+              "type": "text"
+            },
+            {
+              "name": "merchant",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "spent_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "source",
+              "type": "text",
+              "defaultExpr": "'SLACK'::text"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "expense_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "expense_inbound_message_id_fkey",
+              "targetTable": "public.inbound_message",
+              "references": [
+                {
+                  "sourceColumn": "inbound_message_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "public.inbound_message",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "event_id",
+              "type": "text"
+            },
+            {
+              "name": "user_id",
+              "type": "text"
+            },
+            {
+              "name": "channel_id",
+              "type": "text"
+            },
+            {
+              "name": "text",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "slack_ts",
+              "type": "text"
+            },
+            {
+              "name": "status",
+              "type": "text",
+              "defaultExpr": "'RECEIVED'::text"
+            },
+            {
+              "name": "fail_reason",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "received_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "inbound_message_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [
+            {
+              "name": "inbound_message_event_id_key"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

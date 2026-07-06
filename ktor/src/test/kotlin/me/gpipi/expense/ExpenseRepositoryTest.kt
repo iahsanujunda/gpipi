@@ -9,6 +9,7 @@ import kotlin.test.assertNull
 import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
 import me.gpipi.extraction.Extraction
+import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
@@ -33,13 +34,13 @@ class ExpenseRepositoryTest : PersistenceTest() {
     fun `insert writes an expense linked to inbound message`() {
         val msgId = givenInbound()
         val expenseId = query { expenseRepository.insert(extraction(), inboundMessageId = msgId, userId = "U1") }
-        val row = query { Expenses.selectAll().single() }
+        val row = query { Expense.selectAll().single() }
 
-        assertEquals(expenseId, row[Expenses.id].value)
-        assertEquals(msgId, row[Expenses.inboundMessageId].value)  // FK link is the key assertion
-        assertEquals(1500L, row[Expenses.amount])
-        assertEquals("Monthly Groceries", row[Expenses.category])
-        assertEquals("Ito Yokado", row[Expenses.merchant])
+        assertEquals(expenseId, row[Expense.id])
+        assertEquals(msgId, row[Expense.inboundMessageId])  // FK link is the key assertion
+        assertEquals(1500L, row[Expense.amount])
+        assertEquals("Monthly Groceries", row[Expense.category])
+        assertEquals("Ito Yokado", row[Expense.merchant])
     }
 
     @Test
@@ -47,13 +48,13 @@ class ExpenseRepositoryTest : PersistenceTest() {
         val msgId = givenInbound()
         query { expenseRepository.insert(extraction(), msgId, "U1") }
 
-        val row = query { Expenses.selectAll().single() }
+        val row = query { Expense.selectAll().single() }
 
-        assertEquals("JPY", row[Expenses.currency])
-        assertEquals("SLACK", row[Expenses.sourceCol])
+        assertEquals("JPY", row[Expense.currency])
+        assertEquals("SLACK", row[Expense.source1])
 
-        assertNotNull(row[Expenses.spentAt])
-        assertNotNull(row[Expenses.createdAt])
+        assertNotNull(row[Expense.spentAt])
+        assertNotNull(row[Expense.createdAt])
     }
 
     @Test
@@ -61,10 +62,10 @@ class ExpenseRepositoryTest : PersistenceTest() {
         val msgId = givenInbound()
         query { expenseRepository.insert(extraction().copy(merchant = null, note = null), msgId, "U1") }
 
-        val row = query { Expenses.selectAll().single() }
+        val row = query { Expense.selectAll().single() }
 
-        assertNull(row[Expenses.merchant])
-        assertNull(row[Expenses.note])
+        assertNull(row[Expense.merchant])
+        assertNull(row[Expense.note])
     }
 
     @Test

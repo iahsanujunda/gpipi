@@ -2,12 +2,12 @@ package me.gpipi.inbound
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertNotNull
 import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
 import me.gpipi.support.PersistenceTest
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.junit.jupiter.api.assertNull
 
 class InboundRepositoryTest : PersistenceTest() {
     private val repo = InboundRepository()

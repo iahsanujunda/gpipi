@@ -66,7 +66,7 @@ fun Application.configureRouting() {
     )
 
     routing {
-        healthRoutes()
+        healthRoutes(db)
         slackRoutes(signingSecret, handler)
     }
 }

@@ -17,4 +17,11 @@ class ServerTest {
         assertEquals(HttpStatusCode.OK, client.get("/health").status)
     }
 
+    @Test
+    fun `readiness endpoint returns 200 when the database answers`() = testApplication {
+        configureWithTestDb()
+        // readiness round-trips a SELECT 1 through dbQuery against the container DB
+        assertEquals(HttpStatusCode.OK, client.get("/health/ready").status)
+    }
+
 }

@@ -14,7 +14,6 @@ class ExpenseRepository {
             it[Expense.userId]           = userId
             it[Expense.amount]           = x.amount
             it[Expense.currency]         = x.currency
-            it[Expense.category]         = x.category
             it[Expense.categoryId]       = categoryId
             it[Expense.merchant]         = x.merchant
             it[Expense.note]             = x.note

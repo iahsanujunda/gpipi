@@ -63,7 +63,6 @@ class ExpenseRepositoryTest : PersistenceTest() {
         assertEquals(expenseId, row[Expense.id])
         assertEquals(msgId, row[Expense.inboundMessageId])  // FK link is the key assertion
         assertEquals(1500L, row[Expense.amount])
-        assertEquals("Monthly Groceries", row[Expense.category])
         assertEquals("Ito Yokado", row[Expense.merchant])
         assertEquals(catId, row[Expense.categoryId])
     }

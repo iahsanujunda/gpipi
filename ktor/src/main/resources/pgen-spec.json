@@ -117,10 +117,6 @@
               "defaultExpr": "'JPY'::text"
             },
             {
-              "name": "category",
-              "type": "text"
-            },
-            {
               "name": "merchant",
               "type": "text",
               "nullable": true
@@ -147,8 +143,7 @@
             },
             {
               "name": "category_id",
-              "type": "uuid",
-              "nullable": true
+              "type": "uuid"
             }
           ],
           "primaryKey": {

@@ -81,7 +81,6 @@ class SlackEventHandlerTest : PersistenceTest() {
         assertEquals("RECORDED", inbound[InboundMessage.status])
         assertEquals(inbound[InboundMessage.id], expense[Expense.inboundMessageId])  // FK link
         assertEquals(1500L, expense[Expense.amount])
-        assertEquals("Eating Out", expense[Expense.category])
         assertEquals(testCategoryId, expense[Expense.categoryId])
         coVerify { slack.postMessage("C1", match { "Recorded" in it && "1500" in it }) }
     }

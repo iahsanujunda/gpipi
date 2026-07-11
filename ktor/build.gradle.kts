@@ -65,6 +65,13 @@ tasks.test {
     useJUnitPlatform()
 }
 
+// Deployment artifact is the `application` distribution (installDist), NOT the Ktor fat jar.
+// Flyway registers its plugins via ServiceLoader files under META-INF/services, and packing
+// flyway-core + flyway-database-postgresql into one shaded jar clobbers those same-named files
+// (shadow's ServiceFileTransformer drops flyway-core's 37 entries), leaving PluginRegister empty
+// → NPE on boot. The distribution keeps every jar separate so both service files coexist — the
+// same classpath shape `run` uses, which is why `run` never hit this.
+
 val pgenDbPort = 55432
 var pgenContainer: PostgreSQLContainer? = null
 

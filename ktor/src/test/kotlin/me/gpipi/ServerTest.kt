@@ -17,4 +17,11 @@ class ServerTest {
         assertEquals(HttpStatusCode.OK, client.get("/health").status)
     }
 
+    @Test
+    fun `readiness endpoint returns 200 when the db is reachable`() = testApplication {
+        // db.* points at the test container, so the SELECT 1 succeeds.
+        configureWithTestDb()
+        assertEquals(HttpStatusCode.OK, client.get("/health/ready").status)
+    }
+
 }

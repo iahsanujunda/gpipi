@@ -73,7 +73,7 @@ fun Application.configureRouting() {
     val isDev = cfg.propertyOrNull("app.env")?.getString().equals("DEV", ignoreCase = true)
 
     routing {
-        healthRoutes()
+        healthRoutes(db)
         slackRoutes(signingSecret, handler)
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")

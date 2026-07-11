@@ -12,10 +12,12 @@ import io.ktor.server.application.log
 import io.ktor.server.routing.routing
 import me.gpipi.health.healthRoutes
 import me.gpipi.slack.slackRoutes
+import me.gpipi.category.CategoryRepository
 import me.gpipi.config.DbKey
 import me.gpipi.dev.devRoutes
 import me.gpipi.expense.ExpenseRepository
-import me.gpipi.extraction.OpenRouterClient
+import me.gpipi.ai.OpenRouterClient
+import me.gpipi.extraction.ExtractionService
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.slack.SlackClient
 import me.gpipi.slack.SlackEventHandler
@@ -62,11 +64,17 @@ fun Application.configureRouting() {
         cfg.property("openrouter.model").getString()
     )
 
+    val extractionService = ExtractionService(
+        db = db,
+        categoryRepo = CategoryRepository(),
+        orClient = orClient,
+    )
+
     val handler = SlackEventHandler(
         db = db,
         inboundRepo = InboundRepository(),
         expenseRepo = ExpenseRepository(),
-        orClient = orClient,
+        extractionService = extractionService,
         slack = SlackClient(httpClient, botToken)
     )
 
@@ -77,7 +85,7 @@ fun Application.configureRouting() {
         slackRoutes(signingSecret, handler)
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")
-            devRoutes(orClient)
+            devRoutes(extractionService)
         }
     }
 }

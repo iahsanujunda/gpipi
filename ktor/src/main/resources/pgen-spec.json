@@ -4,6 +4,94 @@
       "name": "base",
       "tables": [
         {
+          "name": "public.budget_envelope",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "name",
+              "type": "text"
+            },
+            {
+              "name": "period",
+              "type": "text"
+            },
+            {
+              "name": "amount",
+              "type": "int8"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "budget_envelope_pkey",
+            "columns": [
+              "id"
+            ]
+          }
+        },
+        {
+          "name": "public.category",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "envelope_id",
+              "type": "uuid"
+            },
+            {
+              "name": "name",
+              "type": "text"
+            },
+            {
+              "name": "description",
+              "type": "text"
+            },
+            {
+              "name": "active",
+              "type": "bool",
+              "defaultExpr": "true"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "category_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "category_envelope_id_fkey",
+              "targetTable": "public.budget_envelope",
+              "references": [
+                {
+                  "sourceColumn": "envelope_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "category_name_key"
+            }
+          ]
+        },
+        {
           "name": "public.expense",
           "columns": [
             {
@@ -56,6 +144,11 @@
               "name": "created_at",
               "type": "pg_catalog.timestamptz",
               "defaultExpr": "now()"
+            },
+            {
+              "name": "category_id",
+              "type": "uuid",
+              "nullable": true
             }
           ],
           "primaryKey": {
@@ -65,6 +158,16 @@
             ]
           },
           "foreignKeys": [
+            {
+              "name": "expense_category_id_fkey",
+              "targetTable": "public.category",
+              "references": [
+                {
+                  "sourceColumn": "category_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
             {
               "name": "expense_inbound_message_id_fkey",
               "targetTable": "public.inbound_message",

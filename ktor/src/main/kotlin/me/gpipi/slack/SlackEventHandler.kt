@@ -3,7 +3,7 @@ package me.gpipi.slack
 import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.extraction.ExtractionException
-import me.gpipi.extraction.OpenRouterClient
+import me.gpipi.extraction.ExtractionService
 import me.gpipi.inbound.InboundRepository
 import org.jetbrains.exposed.v1.jdbc.Database
 
@@ -11,7 +11,7 @@ class SlackEventHandler(
     private val db: Database,
     private val inboundRepo: InboundRepository,
     private val expenseRepo: ExpenseRepository,
-    private val orClient: OpenRouterClient,
+    private val extractionService: ExtractionService,
     private val slack: SlackClient
 ) {
     suspend fun handle(payload: SlackEnvelope) {
@@ -26,8 +26,8 @@ class SlackEventHandler(
             inboundRepo.captureOrSkip(eventId, user, channel, text, ts)
         } ?: return
 
-        val x = try {
-            orClient.extract(text)
+        val (x, categoryId) = try {
+            extractionService.extract(text)
         } catch (ex: ExtractionException) {
             dbQuery(db) { inboundRepo.markFailed(msgId, ex.message) }
             slack.postMessage(channel, "Couldn't read that one, mind rephrasing?")
@@ -35,7 +35,7 @@ class SlackEventHandler(
         }
 
         dbQuery(db) {
-            expenseRepo.insert(x, inboundMessageId = msgId, userId = user)
+            expenseRepo.insert(x, inboundMessageId = msgId, userId = user, categoryId = categoryId)
             inboundRepo.markRecorded(msgId)
         }
 

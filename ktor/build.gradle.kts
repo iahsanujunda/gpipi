@@ -96,6 +96,8 @@ pgen {
         tableFilter {
             addTable("public", "inbound_message")
             addTable("public", "expense")
+            addTable("public", "budget_envelope")
+            addTable("public", "category")
         }
         columnTypeMappings {
             add(

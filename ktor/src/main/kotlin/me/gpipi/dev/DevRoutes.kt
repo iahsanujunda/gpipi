@@ -7,14 +7,14 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
 import me.gpipi.extraction.ExtractionException
-import me.gpipi.extraction.OpenRouterClient
+import me.gpipi.extraction.ExtractionService
 
-fun Route.devRoutes(orClient: OpenRouterClient) {
+fun Route.devRoutes(extractionService: ExtractionService) {
     post("/dev/extract") {
         val text = call.receiveText()
         if (text.isBlank()) return@post call.respond(HttpStatusCode.BadRequest, ExtractError("empty body"))
         try {
-            call.respond(orClient.extract(text))
+            call.respond(extractionService.extract(text).first)
         } catch (ex: ExtractionException) {
             call.respond(HttpStatusCode.UnprocessableEntity, ExtractError(ex.message))
         }

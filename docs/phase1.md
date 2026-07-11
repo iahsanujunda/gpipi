@@ -208,7 +208,9 @@ org.flywaydb:flyway-database-postgresql:12.10.0
 
 > **All three Exposed modules must be the same version** (`1.3.1`) — mixing them causes subtle breakage. **`exposed-java-time` must be `implementation`, not `runtimeOnly`**: the timestamp column DSL (`timestampWithTimeZone(...)`, `CurrentTimestampWithTimeZone`) has to be on the *compile* classpath, or the `Table` objects won't compile.
 
-**Schema source of truth = Flyway SQL migrations.** Exposed `Table` objects *mirror* the migrations by hand — they're the query mapping, not the schema authority. This is the one ergonomic cost vs jOOQ (which generated the Kotlin from the schema); at this schema size it's trivial and gives full control. Do **not** use `SchemaUtils.create`/`createMissingTablesAndColumns` as your prod schema mechanism — it's convenient for a throwaway local DB but not migration-safe. Flyway owns DDL; Exposed owns queries.
+**Schema source of truth = Flyway SQL migrations.** Exposed `Table` objects *mirror* the migrations — they're the query mapping, not the schema authority. Do **not** use `SchemaUtils.create`/`createMissingTablesAndColumns` as your prod schema mechanism — it's convenient for a throwaway local DB but not migration-safe. Flyway owns DDL; Exposed owns queries.
+
+> **pgen generates the Exposed mirrors.** Rather than hand-writing `Table` objects, the project uses the pgen Gradle plugin (`de.quati.pgen`) to generate them from the live schema. Generated classes live at `me.gpipi.generated.db.base.public1.*` (e.g. `InboundMessage`, `Expense`, `Category`, `BudgetEnvelope`). The code examples in this doc show the conceptual shape; the real imports are from the generated package. The discipline is unchanged: Flyway owns DDL, generated Exposed classes own queries.
 
 > **Migrations are packaged with the app, on the classpath.** Flyway runs as a *library* (in-process, on boot via `migrate()`), not the CLI — so the SQL files ship inside the jar at `ktor/src/main/resources/db/migration/` (Flyway's default `classpath:db/migration` location, no `.locations(...)` override needed). This version-locks schema to the code that expects it: one jar carries exactly the schema it was written against, local and prod alike.
 >
@@ -366,27 +368,40 @@ object Expenses : UUIDTable("expense") {
 
 ### 2.3 OpenRouter Call (Ktor client)
 
+`OpenRouterClient` lives in the **`ai/`** package — it is a generic LLM chat client with no knowledge of expense extraction. The caller (in iter 2, `ExtractionService`; eventually any feature) passes the system prompt and JSON schema; the client returns the raw content string and throws `AiException` on network or HTTP failures:
+
 ```kotlin
-val body = buildJsonObject {
-    put("model", "qwen/qwen3-instruct")        // pick exact current slug from openrouter.ai/models
-    putJsonArray("messages") {
-        addJsonObject { put("role", "system"); put("content", SYSTEM_PROMPT) }
-        addJsonObject { put("role", "user"); put("content", slackText) }
-    }
-    putJsonObject("response_format") {
-        put("type", "json_schema")
-        putJsonObject("json_schema") { put("strict", true); put("schema", EXTRACTION_SCHEMA) }
-    }
-    putJsonArray("plugins") {                  // JSON repair safety net
-        addJsonObject { put("id", "response-healing") }
-    }
-    put("temperature", 0)
+// ai/OpenRouterClient.kt
+class OpenRouterClient(http: HttpClient, apiKey: String, model: String) {
+    suspend fun chat(userMessage: String, systemPrompt: String, schema: JsonObject): String
+}
+
+class AiException(message: String, cause: Throwable? = null) : Exception(message, cause)
+```
+
+The HTTP request body (`json_schema` strict mode, `response-healing` plugin, `temperature: 0`) is assembled inside `chat()`. `ExtractionService` in `extraction/` calls `chat()`, parses the returned JSON string into an `Extraction`, and wraps `AiException` into `ExtractionException` — keeping all expense-domain concerns out of `ai/`:
+
+```kotlin
+// extraction/ExtractionService.kt
+val content = try {
+    orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
+} catch (ex: AiException) {
+    throw ExtractionException("AI call failed: ${ex.message}", ex)
+}
+val x = try {
+    json.decodeFromString<Extraction>(content)
+} catch (ex: SerializationException) {
+    throw ExtractionException("Extraction didn't match schema: ${content.take(200)}", ex)
 }
 ```
 
-> **Model:** Qwen3 leads for CJK among the cheap OpenRouter options and matches your local harness conventions. Use `temperature: 0` and, if the slug is a reasoning variant, disable thinking — extraction gains nothing from chain-of-thought. Prefer a **paid** variant over `:free` for a service you rely on daily (`:free` is rate-limited and can be pulled without notice; your volume is trivial either way). Validate the parsed JSON server-side regardless of strict mode.
+> **Model:** Qwen3 leads for CJK among the cheap OpenRouter options. Use `temperature: 0` and, if the slug is a reasoning variant, disable thinking — extraction gains nothing from chain-of-thought. Prefer a **paid** variant over `:free` for a service you rely on daily (`:free` is rate-limited and can be pulled without notice; your volume is trivial either way). Validate the parsed JSON server-side regardless of strict mode.
 
-### 2.4 System Prompt (categories hardcoded — temporary)
+> **`ai/` is the home for all LLM clients.** When you pull in a Google, OpenAI, or Koog SDK, add it here. Each client exposes its own method(s) returning primitives (`String`, `JsonObject`) — never domain types. Feature packages own the mapping from raw LLM output to their domain.
+
+### 2.4 System Prompt
+
+The prompt lives in `ExtractionService` as a `SYSTEM_PROMPT_TEMPLATE` constant with a `{{CATEGORIES}}` placeholder — even in iter 2 the categories are not literally hardcoded, because iter 3's DB injection is a one-line swap. `ExtractionService.buildSystemPrompt(categories)` fills the placeholder at request time.
 
 ```
 You extract a single household expense from a short casual message (English, Japanese, or mixed).
@@ -395,17 +410,18 @@ Return JSON matching the schema. Rules:
 - amount: integer yen. "1500jpy", "¥1,500", "1500円" all → 1500.
 - merchant: the shop/place if named (keep original form: "Ito Yokado", "セブン"), else null.
 - category: choose exactly one from the list below by best fit.
+  - If the message explicitly names a spend type, that stated intent decides the category.
+    Example: "groceries at seven eleven" → Monthly Groceries.
+  - Use the merchant to decide only when no spend type is stated.
+    Example: "510 at seven eleven" → Convenience Store.
 - confidence: 0-1. Lower it when the merchant is unknown or the category is a guess.
 - note: anything the user added that isn't amount/merchant/category, else null.
 
 Categories:
-- Eating Out — restaurants, cafes, ramen, izakaya, takeout meals
-- Convenience Store — konbini, small quick purchases (Seven, Lawson, FamilyMart)
-- Monthly Groceries — supermarket runs, bulk shopping (Ito Yokado, Tokyu Store, OK)
-- Transport — trains, buses, taxi, IC top-ups
-- Household — daily goods, drugstore, home supplies
-- Other — anything that fits nothing above
+{{CATEGORIES}}
 ```
+
+In iter 2, `ExtractionService` is also responsible for building the extraction JSON schema and resolving the returned category name to a `category_id` FK, returning `Pair<Extraction, UUID>` to the handler.
 
 ### 2.5 Reply
 
@@ -426,23 +442,26 @@ suspend fun <T> dbQuery(db: Database, block: suspend () -> T): T =
 ```
 
 ```kotlin
-suspend fun handleEvent(e: SlackEnvelope, db: Database) {
+// SlackEventHandler takes ExtractionService (not OpenRouterClient directly).
+// ExtractionService owns: category fetch, prompt build, schema build, AI call, JSON parse,
+// category_id resolution. Handler only sees the result pair.
+suspend fun handle(payload: SlackEnvelope) {
     // Capture + dedup in one write. Null id back = retry of an already-seen event.
-    val msgId = dbQuery(db) { inboundRepo.captureOrSkip(e) } ?: return   // insertIgnoreAndGetId → null on conflict
+    val msgId = dbQuery(db) { inboundRepo.captureOrSkip(eventId, user, channel, text, ts) } ?: return
 
-    val x = try {
-        openRouter.extract(e.text)                                       // suspend, non-blocking — outside the tx
+    val (x, categoryId) = try {
+        extractionService.extract(text)                                  // suspend, non-blocking — outside the tx
     } catch (ex: ExtractionException) {
-        dbQuery(db) { inboundRepo.markFailed(msgId, reason = ex.message) } // status = FAILED_PARSE, text kept
-        slack.postMessage(e.channel, "Couldn't read that one — mind rephrasing?")
+        dbQuery(db) { inboundRepo.markFailed(msgId, ex.message) }       // status = FAILED_PARSE, text kept
+        slack.postMessage(channel, "Couldn't read that one, mind rephrasing?")
         return
     }
 
     dbQuery(db) {                                                        // one transaction for the write pair
-        expenseRepo.insert(x, inboundMessageId = msgId, userId = e.user)
+        expenseRepo.insert(x, inboundMessageId = msgId, userId = user, categoryId = categoryId)
         inboundRepo.markRecorded(msgId)                                  // status = RECORDED
     }
-    slack.postMessage(e.channel, "Recorded ✓  ¥${x.amount} · ${x.category}")
+    slack.postMessage(channel, "Recorded ✓  ¥${x.amount} · ${x.category}")
 }
 ```
 
@@ -452,16 +471,16 @@ suspend fun handleEvent(e: SlackEnvelope, db: Database) {
 
 ### Definition of Done
 
-- [ ] `inbound_message` + `expense` tables created in Supabase
-- [ ] `/health/ready` added — cheap `SELECT 1` via `dbQuery`; liveness `/health` stays dependency-free
-- [ ] Every `@ai` message captured to `inbound_message` before processing
-- [ ] Capture + dedup is a single `insertIgnoreAndGetId` write (null id on conflict → skip); retries skip
-- [ ] OpenRouter call returns schema-valid JSON for the reference inputs
+- [x] `inbound_message` + `expense` tables created in Supabase
+- [x] `/health/ready` added — cheap `SELECT 1` via `dbQuery`; liveness `/health` stays dependency-free
+- [x] Every `@ai` message captured to `inbound_message` before processing
+- [x] Capture + dedup is a single `insertIgnore` write (null inserted count → skip); retries skip
+- [x] OpenRouter call returns schema-valid JSON for the reference inputs
 - [ ] JP, EN, and mixed input all extract correctly (test `イトーヨーカドー`, `conbini`, `¥1,500`)
-- [ ] Expense row written referencing `inbound_message_id`, with amount/category/merchant/spent_at
-- [ ] Failed extractions mark `status = FAILED_PARSE` with `fail_reason` and keep the raw text
-- [ ] Successful extractions mark `status = RECORDED`
-- [ ] Plain-text `Recorded ✓` confirmation posted
+- [x] Expense row written referencing `inbound_message_id`, with amount/category/merchant/spent_at
+- [x] Failed extractions mark `status = FAILED_PARSE` with `fail_reason` and keep the raw text
+- [x] Successful extractions mark `status = RECORDED`
+- [x] Plain-text `Recorded ✓` confirmation posted
 - [ ] Both spouses can log an expense end-to-end from mobile Slack
 
 ---
@@ -497,17 +516,38 @@ alter table expense add column category_id uuid references category(id);
 
 ### 3.2 Retrieval-then-Generate (NOT agentic)
 
-One cheap deterministic query fetches active categories + descriptions, injected into the prompt before a single extraction call. No loop, no model-driven tool selection.
+One cheap deterministic query fetches active categories + descriptions, injected into the prompt before a single extraction call. No loop, no model-driven tool selection. Both helpers live on `ExtractionService` and take `List<CategoryRow>` (the data class returned by `CategoryRepository.findActive()`, not the generated `Category` table singleton):
 
 ```kotlin
-suspend fun buildSystemPrompt(): String {
-    val cats = categoryRepo.findActive()   // one query, cached ~a few minutes
-    val list = cats.joinToString("\n") { "- ${it.name} — ${it.description}" }
-    return SYSTEM_PROMPT_TEMPLATE.replace("{{CATEGORIES}}", list)
+// extraction/ExtractionService.kt
+fun buildSystemPrompt(categories: List<CategoryRow>): String =
+    SYSTEM_PROMPT_TEMPLATE.replace(
+        "{{CATEGORIES}}",
+        categories.joinToString("\n") { "- ${it.name} — ${it.description}" }
+    )
+
+fun buildExtractionSchema(categories: List<CategoryRow>): JsonObject = buildJsonObject {
+    // ... standard fields (amount, currency, merchant, confidence, note) ...
+    putJsonObject("category") {
+        put("type", "string")
+        putJsonArray("enum") { categories.forEach { add(it.name) } }  // only valid category names accepted
+    }
+}
+
+suspend fun extract(text: String): Pair<Extraction, UUID> {
+    val categories = dbQuery(db) { categoryRepo.findActive() }   // TODO: cache ~a few minutes
+    val content = try {
+        orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
+    } catch (ex: AiException) {
+        throw ExtractionException("AI call failed: ${ex.message}", ex)
+    }
+    val x = json.decodeFromString<Extraction>(content)
+    val categoryId = categories.first { it.name == x.category }.id   // enum guarantees a match
+    return x to categoryId
 }
 ```
 
-The `category` field in the schema can be tightened to an `enum` built from the active category names, so the model can only return a valid category.
+`CategoryRow` is a lightweight data class (`id: UUID, name: String, description: String`) returned by `CategoryRepository`, which lives in the `category/` package.
 
 ### 3.3 Envelope Periods
 
@@ -515,12 +555,14 @@ Two envelopes can hold overlapping intent but different periods — that's the p
 
 ### Definition of Done
 
-- [ ] `budget_envelope` + `category` tables created and seeded
-- [ ] `expense.category_id` FK populated; old text column dropped after backfill
-- [ ] Active categories + descriptions injected into the prompt at request time
-- [ ] Category list cached, invalidated on change
-- [ ] Adding/editing a category in Supabase changes categorization with no redeploy
-- [ ] Konbini ¥510 → Convenience Store, Tokyu Store ¥7,500 → Monthly Groceries, verified
+- [x] `budget_envelope` + `category` tables created (`V2__categories.sql`)
+- [x] Initial envelopes + categories seeded (`V3__seed_categories.sql`)
+- [x] `expense.category_id` FK written on every new expense
+- [ ] Old `expense.category` text column dropped after backfill (backfill + `DROP COLUMN` in a V4 migration)
+- [x] Active categories + descriptions injected into the prompt at request time (`ExtractionService`)
+- [ ] Category list cached in `ExtractionService` (currently queries on every call — add a short-lived in-memory cache)
+- [ ] Adding/editing a category in Supabase changes categorization with no redeploy (depends on caching above)
+- [ ] Konbini ¥510 → Convenience Store, Tokyu Store ¥7,500 → Monthly Groceries, verified end-to-end
 
 ---
 
@@ -754,10 +796,14 @@ src/main/kotlin/
 ├── Application.kt          # EngineMain → module(); builds the object graph
 ├── plugins/               # install() config: Serialization, Monitoring, Security (signature)
 ├── health/                # liveness/readiness (infra, not a feature)
+├── ai/                    # LLM clients + AiException — no feature-domain deps (iter 2+)
+│                          #   OpenRouterClient.chat(): String; add Google/OpenAI/Koog SDKs here
 ├── slack/                 # envelope DTOs, signature verify, client, routes
 ├── inbound/               # inbound_message capture/dedup/status (iter 2)
 ├── expense/               # domain: routes, service, repository, Exposed tables
-├── extraction/            # OpenRouter prompt + call + schema (iter 2)
+├── extraction/            # ExtractionService, ExtractionException, prompt template (iter 2)
+│                          #   owns: category fetch, prompt build, AI call, JSON parse, category_id resolve
+├── category/              # CategoryRepository, CategoryRow (iter 3)
 └── config/                # Hikari + Flyway.migrate() + Database.connect
 ```
 
@@ -784,16 +830,18 @@ All DB access goes through one `dbQuery(db)` helper — `withContext(Dispatchers
 - **Flat, not nested.** A multi-step atomic write (iter 4 confirm) is a *single* `dbQuery` block with all steps inside. Don't nest suspended transactions — an inner one may fail to roll back when the outer throws.
 - **No network calls inside a transaction.** LLM/Slack calls happen outside the `dbQuery` block; open the transaction only around the writes. Exposed-JDBC is blocking under the hood, so `Dispatchers.IO` keeps it off the Netty event-loop threads — but at two-person volume this is correctness hygiene, not a performance concern.
 
-### Schema management (Flyway owns DDL, Exposed owns queries)
-Flyway SQL migrations are the source of truth; Exposed `Table` objects are hand-written mirrors used only for the query DSL. This is the one ergonomic cost vs jOOQ (which generated the Kotlin from the schema) — trivial at this schema size, and it keeps you in full control of migrations for the append-only ledger. Do not use `SchemaUtils.create*` as the prod schema mechanism; it isn't migration-safe. Migrations live in the jar at `ktor/src/main/resources/db/migration/` and run in-process on boot (library mode, not the CLI); `supabase/migrations/` stays empty — Supabase is only the hosted Postgres, never a second migration authority.
+### Schema management (Flyway owns DDL, pgen generates Exposed mirrors)
+Flyway SQL migrations are the source of truth. Exposed `Table` objects are generated by pgen (`de.quati.pgen`) from the live schema and live at `me.gpipi.generated.db.base.public1.*` — they are the query DSL, not the schema authority. Do not use `SchemaUtils.create*` as the prod schema mechanism; it isn't migration-safe. Migrations live in the jar at `ktor/src/main/resources/db/migration/` and run in-process on boot (library mode, not the CLI); `supabase/migrations/` stays empty — Supabase is only the hosted Postgres, never a second migration authority.
 
-Test persistence against real Postgres with **Testcontainers** — the Ktor-world replacement for Spring's `@JooqTest` slice, and better, since you're testing real Postgres semantics rather than a mocked slice. Because `TestPostgres` reuses the same `connectDatabase`, **the real migrations run automatically in every test** — no separate test-schema mechanism, and no way for the Exposed mirrors to drift from the migrated schema undetected (a mismatch fails the persistence test loudly). `cleanDatabase()` truncates all tables *except* `flyway_schema_history` between tests, so Flyway's bookkeeping survives. Two consequences worth remembering: `testApplication` boots the full module chain including `configureDatabase`, so route tests must point `db.*` at the container (helper: `configureWithTestDb`); and the moment the first `V1__…sql` lands, both prod boot and every test start applying it.
+> **After any schema change:** run pgen to regenerate the table objects before writing repo code. A mismatch between the migration and the generated classes is a compile error, not a silent data bug.
+
+Test persistence against real Postgres with **Testcontainers** — the Ktor-world replacement for Spring's `@JooqTest` slice, and better, since you're testing real Postgres semantics rather than a mocked slice. Because `TestPostgres` reuses the same `connectDatabase`, **the real migrations run automatically in every test** — no separate test-schema mechanism, and no way for the generated mirrors to drift from the migrated schema undetected. `cleanDatabase()` truncates all tables *except* `flyway_schema_history` between tests, so Flyway's bookkeeping survives. Two consequences worth remembering: `testApplication` boots the full module chain including `configureDatabase`, so route tests must point `db.*` at the container (helper: `configureWithTestDb`); and the moment the first `V1__…sql` lands, both prod boot and every test start applying it. Seed data from migrations is also truncated — persistence tests that need FK targets (e.g. a `category` row for an `expense` insert) must re-seed them in test setup.
 
 ### Transaction / Slack side-effect boundary
 DB writes inside a single `dbQuery { }`; `chat.postMessage` only after it returns. There is no event bus, transaction manager, or commit-phase listener in this stack — the Spring `@Transactional`/`AFTER_COMMIT` machinery that made this fiddly simply isn't present. The boundary is just: writes inside the block, network side-effect after it returns.
 
-### Model config (OpenRouter)
-`qwen/qwen3-instruct` class (confirm exact slug on openrouter.ai/models — version slugs drift). `temperature: 0`, `response_format: json_schema` strict, `response-healing` plugin as a fallback, thinking disabled if a reasoning variant. Paid variant over `:free` for reliability. Volume (~300–600 calls/mo) makes cost negligible — optimize for CJK handling and JSON reliability, not price.
+### AI client config (OpenRouter)
+`OpenRouterClient` in `ai/` wraps the OpenRouter HTTP API. Model: `qwen/qwen3-instruct` class (confirm exact slug on openrouter.ai/models — version slugs drift). `temperature: 0`, `response_format: json_schema` strict, `response-healing` plugin as a fallback, thinking disabled if a reasoning variant. Paid variant over `:free` for reliability. Volume (~300–600 calls/mo) makes cost negligible — optimize for CJK handling and JSON reliability, not price. When adding another LLM provider (Google, OpenAI, Koog), add its client to `ai/` alongside `OpenRouterClient`; the calling feature service (`ExtractionService`, etc.) decides which client to use.
 
 ### Hosting floor
 Render Starter $7/mo (always-on) is the realistic floor for clean 3s acks. Supabase free tier is sufficient; it won't pause under daily use.

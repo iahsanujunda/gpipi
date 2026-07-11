@@ -67,6 +67,7 @@ class OpenRouterClient(
             putJsonObject("response_format") {
                 put("type", "json_schema")
                 putJsonObject("json_schema") {
+                    put("name", "expense_extraction")   // required by the OpenAI json_schema spec; DashScope/Qwen enforces it
                     put("strict", true); put("schema", EXTRACTION_SCHEMA)
                 }
             }

@@ -1,6 +1,10 @@
 package me.gpipi.extraction
 
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.sksamuel.aedile.core.asCache
+import com.sksamuel.aedile.core.expireAfterWrite
 import java.util.UUID
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -42,6 +46,11 @@ class ExtractionService(
     private val categoryRepo: CategoryRepository,
     private val orClient: OpenRouterClient,
 ) {
+    private val categoryCache = Caffeine
+        .newBuilder()
+        .expireAfterWrite(5.minutes)
+        .asCache<Unit, List<CategoryRow>>()
+
     fun buildSystemPrompt(categories: List<CategoryRow>): String =
         SYSTEM_PROMPT_TEMPLATE.replace(
             "{{CATEGORIES}}",
@@ -62,8 +71,9 @@ class ExtractionService(
         put("additionalProperties", false)
     }
 
+
     suspend fun extract(text: String): Pair<Extraction, UUID> {
-        val categories = dbQuery(db) { categoryRepo.findActive() }   // cached
+        val categories = this.categoryCache.get(Unit) { dbQuery(db) { categoryRepo.findActive() } }
         val content = try {
             orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
         } catch (ex: AiException) {
@@ -74,7 +84,8 @@ class ExtractionService(
         } catch (ex: SerializationException) {
             throw ExtractionException("Extraction didn't match schema: ${content.take(200)}", ex)
         }
-        val categoryId = categories.first { it.name == x.category }.id   // enum guarantees a match
+        val categoryId = categories.firstOrNull { it.name == x.category }?.id
+            ?: throw ExtractionException("Model returned unknown category '${x.category}'")
         return x to categoryId
     }
 }

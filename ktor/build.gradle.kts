@@ -47,6 +47,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:12.10.0")
     implementation("org.postgresql:postgresql:42.7.12")
     implementation("com.zaxxer:HikariCP:7.1.0")
+    implementation("com.sksamuel.aedile:aedile-core:3.0.4")
 
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
 

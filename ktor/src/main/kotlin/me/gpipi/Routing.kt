@@ -13,6 +13,7 @@ import io.ktor.server.routing.routing
 import me.gpipi.health.healthRoutes
 import me.gpipi.slack.slackRoutes
 import me.gpipi.config.DbKey
+import me.gpipi.expense.ExpenseRepository
 import me.gpipi.extraction.OpenRouterClient
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.slack.SlackClient
@@ -57,6 +58,7 @@ fun Application.configureRouting() {
     val handler = SlackEventHandler(
         db = db,
         inboundRepo = InboundRepository(),
+        expenseRepo = ExpenseRepository(),
         orClient = OpenRouterClient(
             httpClient,
             openRouterKey,

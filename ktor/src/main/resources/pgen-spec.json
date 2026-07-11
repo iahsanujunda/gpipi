@@ -37,6 +37,102 @@
           }
         },
         {
+          "name": "public.categorization_event",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "inbound_message_id",
+              "type": "uuid"
+            },
+            {
+              "name": "expense_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "predicted_category_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "final_category_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "was_corrected",
+              "type": "bool"
+            },
+            {
+              "name": "confidence",
+              "type": "numeric",
+              "nullable": true
+            },
+            {
+              "name": "model",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "categorization_event_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "categorization_event_expense_id_fkey",
+              "targetTable": "public.expense",
+              "references": [
+                {
+                  "sourceColumn": "expense_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "categorization_event_final_category_id_fkey",
+              "targetTable": "public.category",
+              "references": [
+                {
+                  "sourceColumn": "final_category_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "categorization_event_inbound_message_id_fkey",
+              "targetTable": "public.inbound_message",
+              "references": [
+                {
+                  "sourceColumn": "inbound_message_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "categorization_event_predicted_category_id_fkey",
+              "targetTable": "public.category",
+              "references": [
+                {
+                  "sourceColumn": "predicted_category_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "name": "public.category",
           "columns": [
             {
@@ -169,6 +265,99 @@
               "references": [
                 {
                   "sourceColumn": "inbound_message_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "public.expense_draft",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "inbound_message_id",
+              "type": "uuid"
+            },
+            {
+              "name": "user_id",
+              "type": "text"
+            },
+            {
+              "name": "channel_id",
+              "type": "text"
+            },
+            {
+              "name": "amount",
+              "type": "int8"
+            },
+            {
+              "name": "currency",
+              "type": "text",
+              "defaultExpr": "'JPY'::text"
+            },
+            {
+              "name": "merchant",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "predicted_category_id",
+              "type": "uuid"
+            },
+            {
+              "name": "confidence",
+              "type": "numeric",
+              "nullable": true
+            },
+            {
+              "name": "model",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "status",
+              "type": "text",
+              "defaultExpr": "'PENDING'::text"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "expense_draft_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "expense_draft_inbound_message_id_fkey",
+              "targetTable": "public.inbound_message",
+              "references": [
+                {
+                  "sourceColumn": "inbound_message_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "expense_draft_predicted_category_id_fkey",
+              "targetTable": "public.category",
+              "references": [
+                {
+                  "sourceColumn": "predicted_category_id",
                   "targetColumn": "id"
                 }
               ]

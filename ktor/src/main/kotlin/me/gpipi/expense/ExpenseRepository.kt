@@ -17,7 +17,6 @@ class ExpenseRepository {
             it[Expense.categoryId]       = categoryId
             it[Expense.merchant]         = x.merchant
             it[Expense.note]             = x.note
-            // spentAt / source1 / createdAt → DB defaults (now / SLACK / now)
         }
         return id
     }

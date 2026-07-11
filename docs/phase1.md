@@ -534,20 +534,31 @@ fun buildExtractionSchema(categories: List<CategoryRow>): JsonObject = buildJson
     }
 }
 
+// Class-level cache (Aedile over Caffeine), 5-min TTL — persists across requests since
+// ExtractionService is a singleton. Concurrent misses collapse to one DB load.
+private val categoryCache = Caffeine.newBuilder()
+    .expireAfterWrite(5.minutes)
+    .asCache<Unit, List<CategoryRow>>()
+
 suspend fun extract(text: String): Pair<Extraction, UUID> {
-    val categories = dbQuery(db) { categoryRepo.findActive() }   // TODO: cache ~a few minutes
+    val categories = categoryCache.get(Unit) { dbQuery(db) { categoryRepo.findActive() } }
     val content = try {
         orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
     } catch (ex: AiException) {
         throw ExtractionException("AI call failed: ${ex.message}", ex)
     }
     val x = json.decodeFromString<Extraction>(content)
-    val categoryId = categories.first { it.name == x.category }.id   // enum guarantees a match
+    // firstOrNull, not first: a stale cache (category added <5 min ago) or a lax provider
+    // could return a name the schema enum should have excluded — fail cleanly, don't crash.
+    val categoryId = categories.firstOrNull { it.name == x.category }?.id
+        ?: throw ExtractionException("Model returned unknown category '${x.category}'")
     return x to categoryId
 }
 ```
 
 `CategoryRow` is a lightweight data class (`id: UUID, name: String, description: String`) returned by `CategoryRepository`, which lives in the `category/` package.
+
+> **Category caching (Aedile).** The active-category list is cached with a 5-minute TTL via [Aedile](https://github.com/sksamuel/aedile) (a coroutines-native wrapper over Caffeine — its loader is `suspend`, so `dbQuery` runs correctly inside it). The trade-off is a **≤5-minute lag** on Supabase category edits, which is fine for a household bot. Aedile was chosen over a hand-rolled `@Volatile` field because iter 5's merchant-hint cache will reuse the same pattern; one cache lib for both beats two bespoke ones.
 
 ### 3.3 Envelope Periods
 
@@ -558,11 +569,11 @@ Two envelopes can hold overlapping intent but different periods — that's the p
 - [x] `budget_envelope` + `category` tables created (`V2__categories.sql`)
 - [x] Initial envelopes + categories seeded (`V3__seed_categories.sql`)
 - [x] `expense.category_id` FK written on every new expense
-- [ ] Old `expense.category` text column dropped after backfill (backfill + `DROP COLUMN` in a V4 migration)
+- [x] Old `expense.category` text column dropped after backfill (`V4__drop_expense_category_text.sql` — backfill by name, `Other` fallback, `NOT NULL`, `DROP COLUMN`)
 - [x] Active categories + descriptions injected into the prompt at request time (`ExtractionService`)
-- [ ] Category list cached in `ExtractionService` (currently queries on every call — add a short-lived in-memory cache)
-- [ ] Adding/editing a category in Supabase changes categorization with no redeploy (depends on caching above)
-- [ ] Konbini ¥510 → Convenience Store, Tokyu Store ¥7,500 → Monthly Groceries, verified end-to-end
+- [x] Category list cached in `ExtractionService` (Aedile/Caffeine, 5-min TTL; cache test asserts one DB load across two calls)
+- [ ] Adding/editing a category in Supabase changes categorization with no redeploy — mechanism in place (request-time fetch, ≤5-min cache lag); live-verify against Supabase
+- [ ] Konbini ¥510 → Convenience Store, Tokyu Store ¥7,500 → Monthly Groceries, verified end-to-end (live-verify)
 
 ---
 

@@ -28,13 +28,18 @@ You extract a single household expense from a short casual message (English, Jap
 Return JSON matching the schema. Rules:
 - amount: integer yen. "1500jpy", "¥1,500", "1500円" all → 1500.
 - merchant: the shop/place if named (keep original form: "Ito Yokado", "セブン"), else null.
-- category: choose exactly one from the list below by best fit.
-  - If the message explicitly names a spend type (e.g. "groceries", "lunch", "train", "medicine"),
-    that stated intent decides the category — even when the merchant's usual type differs.
-    Example: "groceries at seven eleven" → Monthly Groceries (the user said groceries, though
-    7-Eleven is normally a convenience store).
-  - Use the merchant to decide the category only when no spend type is stated.
-    Example: "510 at seven eleven" → Convenience Store.
+- category: choose exactly one from the list below. Decide in this priority order:
+  1. Explicit intent wins — highest priority. If the user names a category or states a purpose
+     that matches one (by category name, e.g. "... for leisure", or by a purpose that fits a
+     category's description, e.g. "cat vet", "potluck with friends"), use that category even when
+     the merchant or the item alone would normally imply a different one.
+       "5000 ramen for leisure" → Leisure   (the user said "leisure"; ramen alone would be eating out)
+       "5000 for cat vet"        → Sapi mupi (a vet visit for the cat matches that category)
+  2. Otherwise, infer the category from the merchant or the item bought.
+       "5000 ramen" → the eating-out category · "510 at seven eleven" → the convenience-store category
+  3. If it is still unclear, pick the closest fit and lower the confidence.
+  Match against the category descriptions below, not just the names — the description carries the
+  disambiguation signal (e.g. which category covers the cat, or vet visits).
 - confidence: 0-1. Lower it when the merchant is unknown or the category is a guess.
 - note: anything the user added that isn't amount/merchant/category, else null.
 

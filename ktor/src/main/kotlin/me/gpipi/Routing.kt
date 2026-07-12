@@ -17,10 +17,14 @@ import me.gpipi.config.DbKey
 import me.gpipi.dev.devRoutes
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.ai.OpenRouterClient
+import me.gpipi.categorization.CategorizationEventRepository
+import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.slack.SlackClient
 import me.gpipi.slack.SlackEventHandler
+import me.gpipi.slack.SlackInteractionHandler
+import me.gpipi.slack.slackInteractionRoutes
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -58,6 +62,8 @@ fun Application.configureRouting() {
     }
     monitor.subscribe(ApplicationStopped) { httpClient.close() }
 
+    val slack = SlackClient(httpClient, botToken)
+
     val orClient = OpenRouterClient(
         httpClient,
         openRouterKey,
@@ -70,19 +76,29 @@ fun Application.configureRouting() {
         orClient = orClient,
     )
 
-    val handler = SlackEventHandler(
+    val eventHandler = SlackEventHandler(
         db = db,
         inboundRepo = InboundRepository(),
         expenseRepo = ExpenseRepository(),
         extractionService = extractionService,
-        slack = SlackClient(httpClient, botToken)
+        slack = slack
+    )
+
+    val interactionHandler = SlackInteractionHandler(
+        db = db,
+        draftRepo = ExpenseDraftRepository(),
+        expenseRepo = ExpenseRepository(),
+        inboundRepo = InboundRepository(),
+        eventRepo = CategorizationEventRepository(),
+        slack = slack
     )
 
     val isDev = cfg.propertyOrNull("app.env")?.getString().equals("DEV", ignoreCase = true)
 
     routing {
         healthRoutes(db)
-        slackRoutes(signingSecret, handler)
+        slackRoutes(signingSecret, eventHandler)
+        slackInteractionRoutes(signingSecret, interactionHandler)
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")
             devRoutes(extractionService)

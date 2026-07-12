@@ -6,9 +6,12 @@ import io.mockk.mockk
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
-import me.gpipi.expense.ExpenseRepository
+import me.gpipi.expense.ExpenseDraftRepository
+import me.gpipi.generated.db.base.public1.ExpenseDraft
+import me.gpipi.category.CategoryRow
 import me.gpipi.extraction.Extraction
 import me.gpipi.extraction.ExtractionException
+import me.gpipi.extraction.ExtractionResult
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.Category
@@ -33,7 +36,7 @@ class SlackEventHandlerTest : PersistenceTest() {
     private val testCategoryId: UUID = UUID.randomUUID()
     private val extractionService = mockk<ExtractionService>()
     private val slack = mockk<SlackClient>(relaxUnitFun = true)   // postMessage returns Unit → relaxed
-    private val handler = SlackEventHandler(db, InboundRepository(), ExpenseRepository(), extractionService, slack)
+    private val handler = SlackEventHandler(db, InboundRepository(), extractionService, ExpenseDraftRepository(), slack)
 
     // Superclass @BeforeEach (clean) runs first, then this seeds the FK target.
     @BeforeEach fun seedCategory() {
@@ -66,23 +69,30 @@ class SlackEventHandlerTest : PersistenceTest() {
         amount = 1500, currency = "JPY", merchant = null,
         category = "Eating Out", confidence = 0.9, note = null,
     )
+    private val ramenResult get() = ExtractionResult(
+        ramen, testCategoryId, listOf(CategoryRow(testCategoryId, "Eating Out", "restaurants, cafes, ramen")),
+    )
 
     private fun run(payload: SlackEnvelope) = runBlocking { handler.handle(payload) }
     private fun <T> query(block: () -> T): T = runBlocking { dbQuery(db) { block() } }
 
     @Test
-    fun `happy path records the expense and posts confirmation`() {
-        coEvery { extractionService.extract(any()) } returns (ramen to testCategoryId)
+    fun `happy path writes a pending draft and posts the card, no expense yet`() {
+        coEvery { extractionService.extract(any()) } returns ramenResult
 
         run(envelope())
 
+        // Mention path no longer records — it waits for Confirm. Inbound stays RECEIVED, no expense.
         val inbound = query { InboundMessage.selectAll().single() }
-        val expense = query { Expense.selectAll().single() }
-        assertEquals("RECORDED", inbound[InboundMessage.status])
-        assertEquals(inbound[InboundMessage.id], expense[Expense.inboundMessageId])  // FK link
-        assertEquals(1500L, expense[Expense.amount])
-        assertEquals(testCategoryId, expense[Expense.categoryId])
-        coVerify { slack.postMessage("C1", match { "Recorded" in it && "1500" in it }) }
+        assertEquals("RECEIVED", inbound[InboundMessage.status])
+        assertEquals(0L, query { Expense.selectAll().count() })
+
+        val draft = query { ExpenseDraft.selectAll().single() }
+        assertEquals(inbound[InboundMessage.id], draft[ExpenseDraft.inboundMessageId])  // FK link
+        assertEquals(1500L, draft[ExpenseDraft.amount])
+        assertEquals(testCategoryId, draft[ExpenseDraft.predictedCategoryId])
+        assertEquals("PENDING", draft[ExpenseDraft.status])
+        coVerify { slack.postCard("C1", any(), any()) }
     }
 
     @Test
@@ -101,15 +111,15 @@ class SlackEventHandlerTest : PersistenceTest() {
 
     @Test
     fun `duplicate delivery is processed once`() {
-        coEvery { extractionService.extract(any()) } returns (ramen to testCategoryId)
+        coEvery { extractionService.extract(any()) } returns ramenResult
 
         run(envelope("EvDup"))
         run(envelope("EvDup"))   // Slack retry of an already-captured event
 
         assertEquals(1L, query { InboundMessage.selectAll().count() })
-        assertEquals(1L, query { Expense.selectAll().count() })
+        assertEquals(1L, query { ExpenseDraft.selectAll().count() })
         coVerify(exactly = 1) { extractionService.extract(any()) }
-        coVerify(exactly = 1) { slack.postMessage(any(), any()) }
+        coVerify(exactly = 1) { slack.postCard(any(), any(), any()) }
     }
 
     @Test

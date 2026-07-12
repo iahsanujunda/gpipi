@@ -79,8 +79,8 @@ fun Application.configureRouting() {
     val eventHandler = SlackEventHandler(
         db = db,
         inboundRepo = InboundRepository(),
-        expenseRepo = ExpenseRepository(),
         extractionService = extractionService,
+        draftRepo = ExpenseDraftRepository(),
         slack = slack
     )
 

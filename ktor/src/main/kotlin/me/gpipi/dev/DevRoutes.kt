@@ -14,7 +14,7 @@ fun Route.devRoutes(extractionService: ExtractionService) {
         val text = call.receiveText()
         if (text.isBlank()) return@post call.respond(HttpStatusCode.BadRequest, ExtractError("empty body"))
         try {
-            call.respond(extractionService.extract(text).first)
+            call.respond(extractionService.extract(text).extraction)
         } catch (ex: ExtractionException) {
             call.respond(HttpStatusCode.UnprocessableEntity, ExtractError(ex.message))
         }

@@ -1,7 +1,7 @@
 package me.gpipi.slack
 
 import me.gpipi.config.dbQuery
-import me.gpipi.expense.ExpenseRepository
+import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.extraction.ExtractionException
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.inbound.InboundRepository
@@ -10,8 +10,8 @@ import org.jetbrains.exposed.v1.jdbc.Database
 class SlackEventHandler(
     private val db: Database,
     private val inboundRepo: InboundRepository,
-    private val expenseRepo: ExpenseRepository,
     private val extractionService: ExtractionService,
+    private val draftRepo: ExpenseDraftRepository,
     private val slack: SlackClient
 ) {
     suspend fun handle(payload: SlackEnvelope) {
@@ -26,7 +26,9 @@ class SlackEventHandler(
             inboundRepo.captureOrSkip(eventId, user, channel, text, ts)
         } ?: return
 
-        val (x, categoryId) = try {
+        // categories is the cached active list extract() already loaded — reused for the card
+        // dropdown so we don't re-query. Inbound stays RECEIVED; the expense is written on Confirm.
+        val (x, categoryId, categories) = try {
             extractionService.extract(text)
         } catch (ex: ExtractionException) {
             dbQuery(db) { inboundRepo.markFailed(msgId, ex.message) }
@@ -34,11 +36,25 @@ class SlackEventHandler(
             return
         }
 
-        dbQuery(db) {
-            expenseRepo.insert(x, inboundMessageId = msgId, userId = user, categoryId = categoryId)
-            inboundRepo.markRecorded(msgId)
+        val draftId = dbQuery(db) {
+            draftRepo.insert(
+                inboundMessageId = msgId,
+                userId = user,
+                channelId = channel,
+                amount = x.amount,
+                currency = x.currency,
+                merchant = x.merchant,
+                note = x.note,
+                predictedCategoryId = categoryId,
+                confidence = x.confidence,
+                model = null,
+            )
         }
 
-        slack.postMessage(channel, "Recorded ✓  ¥${x.amount} · ${x.category}")
+        slack.postCard(
+            channel,
+            text = "¥${x.amount} · ${x.category}",
+            blocks = expenseCard(draftId, x.amount, x.merchant, categoryId, categories),
+        )
     }
 }

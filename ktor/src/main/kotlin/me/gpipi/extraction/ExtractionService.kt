@@ -72,7 +72,7 @@ class ExtractionService(
     }
 
 
-    suspend fun extract(text: String): Pair<Extraction, UUID> {
+    suspend fun extract(text: String): ExtractionResult {
         val categories = this.categoryCache.get(Unit) { dbQuery(db) { categoryRepo.findActive() } }
         val content = try {
             orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
@@ -86,6 +86,19 @@ class ExtractionService(
         }
         val categoryId = categories.firstOrNull { it.name == x.category }?.id
             ?: throw ExtractionException("Model returned unknown category '${x.category}'")
-        return x to categoryId
+        // Hand back the cached category list too — the confirmation card's dropdown needs every
+        // active (id, name), and re-fetching would waste the load extract() already did.
+        return ExtractionResult(x, categoryId, categories)
     }
 }
+
+/**
+ * The result of an extraction: the parsed record, the resolved category id, and the active
+ * category list used to build the prompt — reused by the confirmation card so it doesn't re-query.
+ * Component order keeps `val (x, categoryId) = extract(...)` destructuring working.
+ */
+data class ExtractionResult(
+    val extraction: Extraction,
+    val categoryId: UUID,
+    val categories: List<CategoryRow>,
+)

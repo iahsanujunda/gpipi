@@ -69,8 +69,14 @@ class SlackInteractionHandlerTest : PersistenceTest() {
         )
     }
 
-    private fun confirm(draftId: UUID, finalCategoryId: UUID) =
-        runBlocking { handler.handleConfirm(draftId, finalCategoryId) }
+    private val responseUrl = "https://hooks.slack.test/r"
+
+    private fun confirm(
+        draftId: UUID,
+        finalCategoryId: UUID,
+        categoryName: String = "Convenience Store",
+        responseUrl: String? = this.responseUrl,
+    ) = runBlocking { handler.handleConfirm(draftId, finalCategoryId, categoryName, responseUrl) }
 
     @Test
     fun `confirm with no change records the prediction and commits all four writes`() {
@@ -93,7 +99,8 @@ class SlackInteractionHandlerTest : PersistenceTest() {
 
         assertEquals("RECORDED", query { InboundMessage.selectAll().single()[InboundMessage.status] })
         assertEquals("CONFIRMED", query { ExpenseDraft.selectAll().single()[ExpenseDraft.status] })
-        coVerify(exactly = 1) { slack.postMessage("C1", match { "Recorded" in it }) }
+        // Replaces the card in place via response_url, with the category name from the payload.
+        coVerify(exactly = 1) { slack.replaceCard(responseUrl, match { "Recorded" in it && "Convenience Store" in it }) }
     }
 
     @Test
@@ -125,7 +132,7 @@ class SlackInteractionHandlerTest : PersistenceTest() {
 
         assertEquals(1L, query { Expense.selectAll().count() })
         assertEquals(1L, query { CategorizationEvent.selectAll().count() })
-        coVerify(exactly = 1) { slack.postMessage(any(), any()) }
+        coVerify(exactly = 1) { slack.replaceCard(any(), any()) }
     }
 
     @Test
@@ -134,6 +141,20 @@ class SlackInteractionHandlerTest : PersistenceTest() {
 
         assertEquals(0L, query { Expense.selectAll().count() })
         assertEquals(0L, query { CategorizationEvent.selectAll().count() })
+        coVerify(exactly = 0) { slack.replaceCard(any(), any()) }
         coVerify(exactly = 0) { slack.postMessage(any(), any()) }
+    }
+
+    @Test
+    fun `confirm without a response_url falls back to a channel post`() {
+        val msgId = givenInbound()
+        val predicted = givenCategory("Convenience Store")
+        val draftId = givenDraft(msgId, predicted)
+
+        confirm(draftId, predicted, responseUrl = null)
+
+        // No card to replace — post to the draft's channel instead.
+        coVerify(exactly = 1) { slack.postMessage("C1", match { "Recorded" in it }) }
+        coVerify(exactly = 0) { slack.replaceCard(any(), any()) }
     }
 }

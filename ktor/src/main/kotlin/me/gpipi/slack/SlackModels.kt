@@ -30,6 +30,8 @@ data class Interaction(
     val type: String? = null,
     val actions: List<Action> = emptyList(),
     val state: State? = null,
+    @SerialName("response_url") val responseUrl: String? = null
+
 )
 @Serializable data class Action(
     @SerialName("action_id") val actionId: String? = null,
@@ -39,4 +41,8 @@ data class Interaction(
 @Serializable data class SelectValue(
     @SerialName("selected_option") val selectedOption: SelectedOption? = null,
 )
-@Serializable data class SelectedOption(val value: String? = null)
+@Serializable data class SelectedOption(
+    val value: String? = null,
+    val text: SlackText? = null,   // the option's display name (category name) lives here
+)
+@Serializable data class SlackText(val text: String? = null)

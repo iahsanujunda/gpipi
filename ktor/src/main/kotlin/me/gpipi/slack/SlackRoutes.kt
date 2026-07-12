@@ -77,11 +77,13 @@ fun Route.slackInteractionRoutes(signingSecret: String, handler: SlackInteractio
                 // Only the Confirm button acts; a bare dropdown change fires block_actions too — ignore it.
                 val confirm = interaction.actions.firstOrNull { it.actionId == "confirm_expense" } ?: return@launch
                 val draftId = confirm.value?.let(UUID::fromString) ?: return@launch
-                val categoryId = interaction.state?.values?.values
-                    ?.firstNotNullOfOrNull { block -> block["category_select"]?.selectedOption?.value }
-                    ?.let(UUID::fromString) ?: return@launch
+                // One selected_option carries both the category id (value) and its display name (text).
+                val selected = interaction.state?.values?.values
+                    ?.firstNotNullOfOrNull { block -> block["category_select"]?.selectedOption } ?: return@launch
+                val categoryId = selected.value?.let(UUID::fromString) ?: return@launch
+                val categoryName = selected.text?.text ?: return@launch
 
-                handler.handleConfirm(draftId, finalCategoryId = categoryId)
+                handler.handleConfirm(draftId, categoryId, categoryName, interaction.responseUrl)
             } catch (ex: Exception) {
                 call.application.log.warn("Dropping malformed Slack interaction: ${ex.message}")
             }

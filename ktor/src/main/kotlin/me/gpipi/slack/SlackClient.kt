@@ -41,4 +41,12 @@ class SlackClient(
         val body = buildJsonObject { put("channel", channel); put("text", text); put("blocks", blocks) }
         this.chatPostMessage(body)
     }
+
+    suspend fun replaceCard(responseUrl: String, text: String) {
+        http.post(responseUrl) {
+            contentType(Application.Json)
+            setBody(buildJsonObject { put("replace_original", true); put("text", text) })
+        }
+    }
+
 }

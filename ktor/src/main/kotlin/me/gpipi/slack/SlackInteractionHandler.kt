@@ -16,7 +16,7 @@ class SlackInteractionHandler(
     private val eventRepo: CategorizationEventRepository,
     private val slack: SlackClient
 ) {
-    suspend fun handleConfirm(draftId: UUID, finalCategoryId: UUID) {
+    suspend fun handleConfirm(draftId: UUID, finalCategoryId: UUID, categoryName: String, responseUrl: String?) {
         val draft = dbQuery(this.db) {
             val d = draftRepo.consumeIfPending(draftId) ?: return@dbQuery null
             val expenseId = expenseRepo.insert(
@@ -39,6 +39,8 @@ class SlackInteractionHandler(
             inboundRepo.markRecorded(d.inboundMessageId)
             d
         } ?: return
-        slack.postMessage(draft.channelId, "Recorded ✓  ¥${draft.amount} · …")
+        val reply = "Recorded ✓  ¥${draft.amount} · $categoryName"
+        if (responseUrl != null) slack.replaceCard(responseUrl, reply)
+        else slack.postMessage(draft.channelId, reply)
     }
 }

@@ -1,11 +1,15 @@
 package me.gpipi.slack
 
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.log
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
+import java.net.URLDecoder
+import java.util.UUID
+import kotlin.text.Charsets.UTF_8
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -47,6 +51,40 @@ fun Route.slackRoutes(signingSecret: String, handler: SlackEventHandler) {
         // scope would cancel it the moment we respond.
         call.application.launch {
             handler.handle(payload)
+        }
+    }
+}
+
+fun Route.slackInteractionRoutes(signingSecret: String, handler: SlackInteractionHandler) {
+    post("/slack/interactions") {
+        val raw = call.receiveText()
+
+        if (!verifySlackSignature(call.request.headers, raw, signingSecret)) {
+            call.respond(HttpStatusCode.Unauthorized); return@post
+        }
+
+        // ACK within 3s — everything below runs after the response returns.
+        call.respond(HttpStatusCode.OK)
+
+        // Parse + dispatch inside the launch so a malformed payload can't throw after we've
+        // already responded — log and drop instead.
+        call.application.launch {
+            try {
+                val payloadJson = URLDecoder.decode(raw.removePrefix("payload="), UTF_8)
+                val interaction = json.decodeFromString<Interaction>(payloadJson)
+                if (interaction.type != "block_actions") return@launch
+
+                // Only the Confirm button acts; a bare dropdown change fires block_actions too — ignore it.
+                val confirm = interaction.actions.firstOrNull { it.actionId == "confirm_expense" } ?: return@launch
+                val draftId = confirm.value?.let(UUID::fromString) ?: return@launch
+                val categoryId = interaction.state?.values?.values
+                    ?.firstNotNullOfOrNull { block -> block["category_select"]?.selectedOption?.value }
+                    ?.let(UUID::fromString) ?: return@launch
+
+                handler.handleConfirm(draftId, finalCategoryId = categoryId)
+            } catch (ex: Exception) {
+                call.application.log.warn("Dropping malformed Slack interaction: ${ex.message}")
+            }
         }
     }
 }

@@ -24,3 +24,19 @@ data class SlackEvent(
     val text: String? = null,
     val ts: String? = null,
 )
+
+@Serializable
+data class Interaction(
+    val type: String? = null,
+    val actions: List<Action> = emptyList(),
+    val state: State? = null,
+)
+@Serializable data class Action(
+    @SerialName("action_id") val actionId: String? = null,
+    val value: String? = null,
+)
+@Serializable data class State(val values: Map<String, Map<String, SelectValue>> = emptyMap())
+@Serializable data class SelectValue(
+    @SerialName("selected_option") val selectedOption: SelectedOption? = null,
+)
+@Serializable data class SelectedOption(val value: String? = null)

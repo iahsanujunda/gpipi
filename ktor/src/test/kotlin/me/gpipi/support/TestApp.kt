@@ -7,12 +7,16 @@ import io.ktor.server.testing.ApplicationTestBuilder
  * configureDatabase now runs on every startup, testApplication must point db.* at a live DB
  * or Hikari fails with connection-refused. Reuses the shared [TestPostgres] container.
  */
-fun ApplicationTestBuilder.configureWithTestDb(signingSecret: String = "test-signing-secret") = configure {
+fun ApplicationTestBuilder.configureWithTestDb(
+    signingSecret: String = "test-signing-secret",
+    appEnv: String? = null,   // null → app.env falls back to PROD from application.conf
+) = configure {
     put("slack.signingSecret", signingSecret)
     // Dummy secrets so configureRouting's fail-fast guards pass; nothing in these tests
     // calls Slack or OpenRouter for real. openrouter.model/url resolve from application.conf.
     put("slack.botToken", "xoxb-test-token")
     put("openrouter.apiKey", "test-openrouter-key")
+    if (appEnv != null) put("app.env", appEnv)
     val container = TestPostgres.container
     put("db.url", container.jdbcUrl)
     put("db.user", container.username)

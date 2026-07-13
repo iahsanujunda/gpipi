@@ -47,6 +47,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:12.10.0")
     implementation("org.postgresql:postgresql:42.7.12")
     implementation("com.zaxxer:HikariCP:7.1.0")
+    implementation("com.sksamuel.aedile:aedile-core:3.0.4")
 
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
 
@@ -64,6 +65,13 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+// Deployment artifact is the `application` distribution (installDist), NOT the Ktor fat jar.
+// Flyway registers its plugins via ServiceLoader files under META-INF/services, and packing
+// flyway-core + flyway-database-postgresql into one shaded jar clobbers those same-named files
+// (shadow's ServiceFileTransformer drops flyway-core's 37 entries), leaving PluginRegister empty
+// → NPE on boot. The distribution keeps every jar separate so both service files coexist — the
+// same classpath shape `run` uses, which is why `run` never hit this.
 
 val pgenDbPort = 55432
 var pgenContainer: PostgreSQLContainer? = null
@@ -89,6 +97,11 @@ pgen {
         tableFilter {
             addTable("public", "inbound_message")
             addTable("public", "expense")
+            addTable("public", "budget_envelope")
+            addTable("public", "category")
+            addTable("public", "categorization_event")
+            addTable("public", "expense_draft")
+
         }
         columnTypeMappings {
             add(

@@ -1,0 +1,45 @@
+# Slack expense bot (Ktor). Deploy from this directory: `fly deploy` (build context is ktor/).
+# Secrets are set via `fly secrets set`, never here — see the repo Makefile for the list.
+app = 'gpipi-bot'
+# Tokyo — closest region to the household; keep the Supabase project in ap-northeast to match.
+primary_region = 'nrt'
+
+# Swap absorbs the boot spike when Flyway runs migrations alongside Netty/Hikari startup
+# on a small heap.
+swap_size_mb = 512
+
+[build]
+
+[deploy]
+  # Boot the new machine, wait for its health check to pass, only then stop the old one.
+  strategy = 'bluegreen'
+
+[env]
+  # Keep the dev-only /dev/extract route disabled in prod. It defaults to PROD anyway;
+  # set explicitly so a stray env can never flip it on.
+  APP_ENV = 'PROD'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Slack needs a 3s ack with no cold start (phase1 §1.4), so the machine is always-on:
+  # never auto-stop, always keep at least one running.
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  # Liveness only — /health is dependency-free, so Fly's frequent probe never touches
+  # Postgres. That is what /health/ready is for, and why it is NOT used here.
+  [[http_service.checks]]
+    interval = '15s'
+    timeout = '4s'
+    # JVM boot + Flyway migrate on a shared CPU slice can take a minute; don't count those.
+    grace_period = '60s'
+    method = 'get'
+    path = '/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+  cpus = 1

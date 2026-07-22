@@ -12,7 +12,6 @@ import me.gpipi.categorization.CategorizationEventRepository
 import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.expense.ExpenseRepository
-import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.CategorizationEvent
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
@@ -44,19 +43,14 @@ class SlackInteractionHandlerTest : PersistenceTest() {
     }
 
     private fun givenCategory(name: String): UUID = query {
-        val envId = UUID.randomUUID()
-        BudgetEnvelope.insert {
-            it[BudgetEnvelope.id] = envId
-            it[BudgetEnvelope.name] = "Env $name"
-            it[BudgetEnvelope.period] = "WEEKLY"
-            it[BudgetEnvelope.amount] = 15000L
-        }
         val catId = UUID.randomUUID()
         Category.insert {
             it[Category.id] = catId
-            it[Category.envelopeId] = envId
             it[Category.name] = name
             it[Category.description] = "desc for $name"
+            it[Category.period] = "WEEKLY"
+            it[Category.amount] = 15000L
+            it[Category.slackLoggable] = true
         }
         catId
     }

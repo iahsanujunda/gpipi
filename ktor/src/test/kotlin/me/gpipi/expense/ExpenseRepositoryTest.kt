@@ -9,7 +9,6 @@ import kotlin.test.assertNull
 import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
 import me.gpipi.extraction.Extraction
-import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.inbound.InboundRepository
@@ -28,19 +27,14 @@ class ExpenseRepositoryTest : PersistenceTest() {
 
     private fun givenCategory(): UUID = runBlocking {
         dbQuery(db) {
-            val envId = UUID.randomUUID()
-            BudgetEnvelope.insert {
-                it[BudgetEnvelope.id] = envId
-                it[BudgetEnvelope.name] = "Test Envelope"
-                it[BudgetEnvelope.period] = "MONTHLY"
-                it[BudgetEnvelope.amount] = 50000L
-            }
             val catId = UUID.randomUUID()
             Category.insert {
                 it[Category.id] = catId
-                it[Category.envelopeId] = envId
                 it[Category.name] = "Monthly Groceries"
                 it[Category.description] = "supermarket runs, bulk shopping"
+                it[Category.period] = "MONTHLY"
+                it[Category.amount] = 50000L
+                it[Category.slackLoggable] = true
             }
             catId
         }

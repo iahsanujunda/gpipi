@@ -4,39 +4,6 @@
       "name": "base",
       "tables": [
         {
-          "name": "public.budget_envelope",
-          "columns": [
-            {
-              "name": "id",
-              "type": "uuid",
-              "defaultExpr": "gen_random_uuid()"
-            },
-            {
-              "name": "name",
-              "type": "text"
-            },
-            {
-              "name": "period",
-              "type": "text"
-            },
-            {
-              "name": "amount",
-              "type": "int8"
-            },
-            {
-              "name": "created_at",
-              "type": "pg_catalog.timestamptz",
-              "defaultExpr": "now()"
-            }
-          ],
-          "primaryKey": {
-            "name": "budget_envelope_pkey",
-            "columns": [
-              "id"
-            ]
-          }
-        },
-        {
           "name": "public.categorization_event",
           "columns": [
             {
@@ -141,10 +108,6 @@
               "defaultExpr": "gen_random_uuid()"
             },
             {
-              "name": "envelope_id",
-              "type": "uuid"
-            },
-            {
               "name": "name",
               "type": "text"
             },
@@ -161,6 +124,21 @@
               "name": "created_at",
               "type": "pg_catalog.timestamptz",
               "defaultExpr": "now()"
+            },
+            {
+              "name": "period",
+              "type": "text",
+              "defaultExpr": "'MONTHLY'::text"
+            },
+            {
+              "name": "amount",
+              "type": "int8",
+              "defaultExpr": "0"
+            },
+            {
+              "name": "slack_loggable",
+              "type": "bool",
+              "defaultExpr": "true"
             }
           ],
           "primaryKey": {
@@ -169,18 +147,6 @@
               "id"
             ]
           },
-          "foreignKeys": [
-            {
-              "name": "category_envelope_id_fkey",
-              "targetTable": "public.budget_envelope",
-              "references": [
-                {
-                  "sourceColumn": "envelope_id",
-                  "targetColumn": "id"
-                }
-              ]
-            }
-          ],
           "uniqueConstraints": [
             {
               "name": "category_name_key"

@@ -97,7 +97,6 @@ pgen {
         tableFilter {
             addTable("public", "inbound_message")
             addTable("public", "expense")
-            addTable("public", "budget_envelope")
             addTable("public", "category")
             addTable("public", "categorization_event")
             addTable("public", "expense_draft")

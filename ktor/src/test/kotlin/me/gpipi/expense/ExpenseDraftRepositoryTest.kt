@@ -7,12 +7,10 @@ import kotlin.test.assertNull
 import kotlin.test.assertNotNull
 import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
-import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.ExpenseDraft
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
-import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
@@ -26,19 +24,14 @@ class ExpenseDraftRepositoryTest : PersistenceTest() {
 
     private fun givenCategory(name: String = "Convenience Store"): UUID = runBlocking {
         dbQuery(db) {
-            val envId = UUID.randomUUID()
-            BudgetEnvelope.insert {
-                it[BudgetEnvelope.id] = envId
-                it[BudgetEnvelope.name] = "Test Envelope $name"
-                it[BudgetEnvelope.period] = "WEEKLY"
-                it[BudgetEnvelope.amount] = 15000L
-            }
             val catId = UUID.randomUUID()
             Category.insert {
                 it[Category.id] = catId
-                it[Category.envelopeId] = envId
                 it[Category.name] = name
                 it[Category.description] = "konbini, small quick purchases"
+                it[Category.amount] = 15000L
+                it[Category.period] = "WEEKLY"
+                it[Category.slackLoggable] = true
             }
             catId
         }

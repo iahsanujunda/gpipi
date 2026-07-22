@@ -10,7 +10,7 @@ A private Slack workspace for the household. Either spouse posts a natural-langu
 
 The core loop: **Slack message → Ktor acks within 3s → single LLM extraction (retrieval-then-generate) → confidence gate → auto-record or editable confirmation card → atomic write + hint upsert → the feedback loop improves the next categorization.**
 
-Categorization is the only part that needs a model. The amount is trivially parseable; the value is in mapping messy JP/EN merchant text (`ito yokado`, `イトーヨーカドー`, `conbini`, `セブン`) to the right envelope, and in disambiguating cases like ¥510 at a konbini (weekly food) vs ¥7,500 at Tokyu Store (monthly groceries).
+Categorization is the only part that needs a model. The amount is trivially parseable; the value is in mapping messy JP/EN merchant text (`ito yokado`, `イトーヨーカドー`, `conbini`, `セブン`) to the right budget line, and in disambiguating cases like ¥510 at a konbini (weekly food) vs ¥7,500 at Tokyu Store (monthly groceries).
 
 ### Iteration Order Rationale
 
@@ -210,7 +210,7 @@ org.flywaydb:flyway-database-postgresql:12.10.0
 
 **Schema source of truth = Flyway SQL migrations.** Exposed `Table` objects *mirror* the migrations — they're the query mapping, not the schema authority. Do **not** use `SchemaUtils.create`/`createMissingTablesAndColumns` as your prod schema mechanism — it's convenient for a throwaway local DB but not migration-safe. Flyway owns DDL; Exposed owns queries.
 
-> **pgen generates the Exposed mirrors.** Rather than hand-writing `Table` objects, the project uses the pgen Gradle plugin (`de.quati.pgen`) to generate them from the live schema. Generated classes live at `me.gpipi.generated.db.base.public1.*` (e.g. `InboundMessage`, `Expense`, `Category`, `BudgetEnvelope`). The code examples in this doc show the conceptual shape; the real imports are from the generated package. The discipline is unchanged: Flyway owns DDL, generated Exposed classes own queries.
+> **pgen generates the Exposed mirrors.** Rather than hand-writing `Table` objects, the project uses the pgen Gradle plugin (`de.quati.pgen`) to generate them from the live schema. Generated classes live at `me.gpipi.generated.db.base.public1.*` (e.g. `InboundMessage`, `Expense`, `Category`). The code examples in this doc show the conceptual shape; the real imports are from the generated package. The discipline is unchanged: Flyway owns DDL, generated Exposed classes own queries.
 
 > **Migrations are packaged with the app, on the classpath.** Flyway runs as a *library* (in-process, on boot via `migrate()`), not the CLI — so the SQL files ship inside the jar at `ktor/src/main/resources/db/migration/` (Flyway's default `classpath:db/migration` location, no `.locations(...)` override needed). This version-locks schema to the code that expects it: one jar carries exactly the schema it was written against, local and prod alike.
 >
@@ -487,32 +487,44 @@ suspend fun handle(payload: SlackEnvelope) {
 
 # Iteration 3 — Config-Driven Categories
 
-Categories and their budget envelopes move to the DB. Descriptions are injected into the prompt so categorization is config-driven, not baked into a string — this is what makes konbini-vs-Tokyu disambiguation tunable.
+Categories move to the DB and become the budget line itself. Descriptions are injected into the prompt so categorization is config-driven, not baked into a string — this is what makes konbini-vs-Tokyu disambiguation tunable.
+
+> **A category *is* a budget line.** An earlier draft split this into `budget_envelope` (the cap) and `category` (the label), on the theory that several categories might roll up into one capped envelope. Real household data disproved it: every category pointed at a single "General" envelope, because the budget is flat — the thing that has a name is the thing that has a cap. The two tables expressed a 1:1 relationship, so they are merged. `category` carries `period` and `amount` directly.
 
 ### 3.1 Schema
 
 ```sql
-create table budget_envelope (
-    id          uuid primary key default gen_random_uuid(),
-    name        text        not null,          -- "Weekly Food", "Monthly Groceries"
-    period      text        not null,          -- WEEKLY | MONTHLY
-    amount      bigint      not null,          -- budget cap, integer JPY
-    created_at  timestamptz not null default now()
-);
-
+-- One table. A category is a budget line: it has a name, a cap, a period,
+-- a description (for LLM disambiguation), and a flag for whether it is ever
+-- typed into Slack.
 create table category (
-    id          uuid primary key default gen_random_uuid(),
-    envelope_id uuid        not null references budget_envelope(id),
-    name        text        not null unique,   -- "Eating Out", "Convenience Store"
-    description text        not null,          -- LLM disambiguation hint
-    active      boolean     not null default true,
-    created_at  timestamptz not null default now()
+    id             uuid        primary key default gen_random_uuid(),
+    name           text        not null unique,  -- "Household groceries", "Weekend eat", "KPR"
+    description    text        not null,         -- LLM disambiguation hint
+    period         text        not null,         -- WEEKLY | MONTHLY
+    amount         bigint      not null,         -- budget cap, integer JPY
+    slack_loggable boolean     not null default true,  -- see 3.3
+    active         boolean     not null default true,
+    created_at     timestamptz not null default now()
 );
 
 -- expense.category becomes a FK
 alter table expense add column category_id uuid references category(id);
 -- backfill from the old text column, then drop it once verified
 ```
+
+If an earlier `budget_envelope` table already exists, the merge migration is:
+
+```sql
+-- V4__merge_envelope_into_category.sql
+alter table category add column period text   not null default 'MONTHLY';
+alter table category add column amount bigint not null default 0;
+alter table category add column slack_loggable boolean not null default true;
+alter table category drop column envelope_id;
+drop table budget_envelope;
+```
+
+Then set real `amount`/`period` per line, and `slack_loggable = false` on the fixed obligations (3.3).
 
 ### 3.2 Retrieval-then-Generate (NOT agentic)
 
@@ -534,46 +546,49 @@ fun buildExtractionSchema(categories: List<CategoryRow>): JsonObject = buildJson
     }
 }
 
-// Class-level cache (Aedile over Caffeine), 5-min TTL — persists across requests since
-// ExtractionService is a singleton. Concurrent misses collapse to one DB load.
-private val categoryCache = Caffeine.newBuilder()
-    .expireAfterWrite(5.minutes)
-    .asCache<Unit, List<CategoryRow>>()
-
 suspend fun extract(text: String): Pair<Extraction, UUID> {
-    val categories = categoryCache.get(Unit) { dbQuery(db) { categoryRepo.findActive() } }
+    val categories = dbQuery(db) { categoryRepo.findActive() }   // slack_loggable only; cached ~5 min
     val content = try {
         orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
     } catch (ex: AiException) {
         throw ExtractionException("AI call failed: ${ex.message}", ex)
     }
     val x = json.decodeFromString<Extraction>(content)
-    // firstOrNull, not first: a stale cache (category added <5 min ago) or a lax provider
-    // could return a name the schema enum should have excluded — fail cleanly, don't crash.
-    val categoryId = categories.firstOrNull { it.name == x.category }?.id
-        ?: throw ExtractionException("Model returned unknown category '${x.category}'")
+    val categoryId = categories.first { it.name == x.category }.id   // enum guarantees a match
     return x to categoryId
 }
 ```
 
-`CategoryRow` is a lightweight data class (`id: UUID, name: String, description: String`) returned by `CategoryRepository`, which lives in the `category/` package.
+`CategoryRow` is a lightweight data class (`id: UUID, name: String, description: String`) returned by `CategoryRepository`, which lives in the `category/` package. `findActive()` selects columns explicitly (no `SELECT *`) and filters on `active = true and slack_loggable = true` — phase 2 adds a separate method for the full budget-line projection.
 
-> **Category caching (Aedile).** The active-category list is cached with a 5-minute TTL via [Aedile](https://github.com/sksamuel/aedile) (a coroutines-native wrapper over Caffeine — its loader is `suspend`, so `dbQuery` runs correctly inside it). The trade-off is a **≤5-minute lag** on Supabase category edits, which is fine for a household bot. Aedile was chosen over a hand-rolled `@Volatile` field because iter 5's merchant-hint cache will reuse the same pattern; one cache lib for both beats two bespoke ones.
+### 3.3 Periods, and Which Lines Are Slack-Loggable
 
-### 3.3 Envelope Periods
+**Periods.** Two categories can hold overlapping intent but different periods — that's the point. A weekly konbini/quick-meal line resets weekly; a monthly supermarket line resets monthly. The description carries the signal for the model; the amount reinforces it.
 
-Two envelopes can hold overlapping intent but different periods — that's the point. "Weekly Food" (konbini, quick meals) resets weekly; "Monthly Groceries" (supermarket) resets monthly. The category description carries the signal; the amount reinforces it.
+**Not every budget line is an expense someone types.** Fixed obligations — mortgage, insurance, recurring transfers, investment contributions — are budget lines that matter for planning and for phase 2's payday funding, but nobody will ever post `@ai 50000 for KPR`. They just happen on schedule.
+
+Offering them in the extraction enum actively *hurts* accuracy: it dilutes the model's choice set with options that can never be correct for a typed message. Hence `slack_loggable`:
+
+- `CategoryRepository.findActive()` — the projection that feeds the prompt and the enum — filters `slack_loggable = true and active = true`.
+- Phase 2's payday funding reads **all** active categories, loggable or not, because that is where the money must go.
+
+Same table, two projections, each seeing only what it needs.
+
+**Retiring a line: deactivate, never delete.** Existing expenses reference `category_id` by FK, so deleting a category breaks history. Setting `active = false` removes it from future prompts while keeping every past expense valid.
 
 ### Definition of Done
 
-- [x] `budget_envelope` + `category` tables created (`V2__categories.sql`)
-- [x] Initial envelopes + categories seeded (`V3__seed_categories.sql`)
+- [x] `category` table created (`V2__categories.sql`)
+- [x] Initial categories seeded (`V3__seed_categories.sql`)
+- [ ] `budget_envelope` merged into `category` (`V4__merge_envelope_into_category.sql`): `period`, `amount`, `slack_loggable` added; `envelope_id` and `budget_envelope` dropped
+- [ ] Real `period` + `amount` set per budget line; `slack_loggable = false` on fixed obligations
+- [ ] `findActive()` filters `slack_loggable = true` so the extraction enum offers only typeable categories
 - [x] `expense.category_id` FK written on every new expense
-- [x] Old `expense.category` text column dropped after backfill (`V4__drop_expense_category_text.sql` — backfill by name, `Other` fallback, `NOT NULL`, `DROP COLUMN`)
+- [ ] Old `expense.category` text column dropped after backfill (backfill + `DROP COLUMN` in a V4 migration)
 - [x] Active categories + descriptions injected into the prompt at request time (`ExtractionService`)
-- [x] Category list cached in `ExtractionService` (Aedile/Caffeine, 5-min TTL; cache test asserts one DB load across two calls)
-- [ ] Adding/editing a category in Supabase changes categorization with no redeploy — mechanism in place (request-time fetch, ≤5-min cache lag); live-verify against Supabase
-- [ ] Konbini ¥510 → Convenience Store, Tokyu Store ¥7,500 → Monthly Groceries, verified end-to-end (live-verify)
+- [ ] Category list cached in `ExtractionService` (currently queries on every call — add a short-lived in-memory cache)
+- [ ] Adding/editing a category in Supabase changes categorization with no redeploy (depends on caching above)
+- [ ] Konbini ¥510 → Convenience Store, Tokyu Store ¥7,500 → Monthly Groceries, verified end-to-end
 
 ---
 
@@ -783,7 +798,7 @@ First real customers of this path: "how much is left in the going-out budget thi
 
 ### 8.2 Deterministic SQL Over Agent Loops
 
-The common questions — spend by category this period, remaining in an envelope, biggest expenses this week — are a handful of **predefined parameterized queries**, not a text-to-SQL agent. The LLM's only job is mapping the question to one of the known query templates + extracting parameters (category name, period). Deterministic, safe, cheap.
+The common questions — spend by category this period, remaining in a budget line, biggest expenses this week — are a handful of **predefined parameterized queries**, not a text-to-SQL agent. The LLM's only job is mapping the question to one of the known query templates + extracting parameters (category name, period). Deterministic, safe, cheap.
 
 Reserve genuine text-to-SQL (read-only role, LIMIT-capped) for the long tail, if ever. No agentic execution loop is warranted for a two-person budget.
 

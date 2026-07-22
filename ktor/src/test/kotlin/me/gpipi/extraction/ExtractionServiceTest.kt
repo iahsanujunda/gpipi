@@ -62,6 +62,8 @@ class ExtractionServiceTest : PersistenceTest() {
         assertTrue("- Eating Out — restaurants, cafes" in prompt)
         assertTrue("- Transport — trains, buses" in prompt)
         assertTrue("{{CATEGORIES}}" !in prompt)
+        assertTrue("Leisure" !in prompt)
+        assertTrue("Sapi mupi" !in prompt)
     }
 
     @Test

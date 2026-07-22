@@ -23,25 +23,26 @@ import org.jetbrains.exposed.v1.jdbc.Database
 private val json = Json { ignoreUnknownKeys = true }
 
 private const val SYSTEM_PROMPT_TEMPLATE = """
-You extract a single household expense from a short casual message (English, Japanese, or mixed).
+You extract one household expense from a short casual message written in English, Japanese, or a mixture of both.
 
-Return JSON matching the schema. Rules:
-- amount: integer yen. "1500jpy", "¥1,500", "1500円" all → 1500.
-- merchant: the shop/place if named (keep original form: "Ito Yokado", "セブン"), else null.
-- category: choose exactly one from the list below. Decide in this priority order:
-  1. Explicit intent wins — highest priority. If the user names a category or states a purpose
-     that matches one (by category name, e.g. "... for leisure", or by a purpose that fits a
-     category's description, e.g. "cat vet", "potluck with friends"), use that category even when
-     the merchant or the item alone would normally imply a different one.
-       "5000 ramen for leisure" → Leisure   (the user said "leisure"; ramen alone would be eating out)
-       "5000 for cat vet"        → Sapi mupi (a vet visit for the cat matches that category)
-  2. Otherwise, infer the category from the merchant or the item bought.
-       "5000 ramen" → the eating-out category · "510 at seven eleven" → the convenience-store category
-  3. If it is still unclear, pick the closest fit and lower the confidence.
-  Match against the category descriptions below, not just the names — the description carries the
-  disambiguation signal (e.g. which category covers the cat, or vet visits).
-- confidence: 0-1. Lower it when the merchant is unknown or the category is a guess.
-- note: anything the user added that isn't amount/merchant/category, else null.
+Return JSON matching the provided schema.
+
+Rules:
+- amount: Return integer yen. "1500jpy", "¥1,500", and "1500円" all become 1500.
+- currency: Always return "JPY".
+- merchant: Return the shop, business, or place when named. Preserve its original form. Otherwise return null.
+- category: Choose exactly one category from the supplied list.
+  1. Explicit intent has highest priority. If the user names a supplied category or states a purpose
+     matching a category description, choose that category even when the merchant or item might
+     normally suggest another.
+  2. When no explicit purpose is given, infer the category from the merchant, item, and amount.
+  3. Use category descriptions as the source of truth. Do not invent a category or return one outside
+     the supplied list.
+  4. If more than one category could apply, choose the closest match and lower confidence.
+- confidence: Return a number from 0 to 1 representing confidence in the complete extraction. Lower it
+  when the amount is unclear, the merchant is unknown, or categorization requires guessing.
+- note: Return any useful information not already represented by amount, merchant, or category.
+  Otherwise return null.
 
 Categories:
 {{CATEGORIES}}"""

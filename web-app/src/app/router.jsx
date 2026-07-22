@@ -4,6 +4,7 @@ import RouteError from './RouteError'
 import AccessRequiredPage from '@/auth/AccessRequiredPage'
 import EnterPage from '@/auth/EnterPage'
 import ProtectedRoute from '@/auth/ProtectedRoute'
+import ActivityPage from '@/activity/ActivityPage'
 import BudgetsPage from '@/budgets/BudgetsPage'
 
 export const routes = [
@@ -19,6 +20,7 @@ export const routes = [
         children: [
           { index: true, element: <Navigate to="/budgets" replace /> },
           { path: 'budgets', element: <BudgetsPage /> },
+          { path: 'activity', element: <ActivityPage /> },
         ],
       },
     ],

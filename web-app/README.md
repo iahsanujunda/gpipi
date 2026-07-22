@@ -16,6 +16,9 @@ npm run build
 
 During local development, Vite proxies `/api` to Ktor on `http://localhost:8080`.
 For a separately hosted production build, set `VITE_API_URL` to the Ktor origin.
+Set `VITE_SLACK_RETURN_URL` to the Slack deep link that the app-bar back button
+should open. Without it, the app falls back to browser history and then the
+generic Slack application link.
 
 ## Frontend API contract
 

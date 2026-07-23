@@ -18,9 +18,9 @@ class ServerTest {
     }
 
     @Test
-    fun `readiness endpoint returns 200 when the db is reachable`() = testApplication {
-        // db.* points at the test container, so the SELECT 1 succeeds.
+    fun `readiness endpoint returns 200 when the database answers`() = testApplication {
         configureWithTestDb()
+        // readiness round-trips a SELECT 1 through dbQuery against the container DB
         assertEquals(HttpStatusCode.OK, client.get("/health/ready").status)
     }
 

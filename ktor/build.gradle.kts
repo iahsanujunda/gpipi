@@ -38,6 +38,9 @@ dependencies {
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)
     implementation(ktorLibs.client.contentNegotiation)
+    implementation(ktorLibs.server.auth)
+    implementation(ktorLibs.server.sessions)
+    implementation(ktorLibs.server.cors)
     implementation("org.jetbrains.exposed:exposed-core:1.3.1")
     implementation("org.jetbrains.exposed:exposed-jdbc:1.3.1")
     implementation("org.jetbrains.exposed:exposed-java-time:1.3.1")
@@ -100,7 +103,7 @@ pgen {
             addTable("public", "category")
             addTable("public", "categorization_event")
             addTable("public", "expense_draft")
-
+            addTable("public", "auth_nonce")
         }
         columnTypeMappings {
             add(

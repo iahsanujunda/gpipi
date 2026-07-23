@@ -4,6 +4,49 @@
       "name": "base",
       "tables": [
         {
+          "name": "public.auth_nonce",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "nonce_hash",
+              "type": "text"
+            },
+            {
+              "name": "user_id",
+              "type": "text"
+            },
+            {
+              "name": "expires_at",
+              "type": "pg_catalog.timestamptz"
+            },
+            {
+              "name": "consumed_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "auth_nonce_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [
+            {
+              "name": "auth_nonce_nonce_hash_key"
+            }
+          ]
+        },
+        {
           "name": "public.categorization_event",
           "columns": [
             {

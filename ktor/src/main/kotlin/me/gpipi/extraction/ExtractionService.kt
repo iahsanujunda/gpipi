@@ -1,10 +1,6 @@
 package me.gpipi.extraction
 
-import com.github.benmanes.caffeine.cache.Caffeine
-import com.sksamuel.aedile.core.asCache
-import com.sksamuel.aedile.core.expireAfterWrite
 import java.util.UUID
-import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -15,10 +11,8 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import me.gpipi.ai.AiException
 import me.gpipi.ai.OpenRouterClient
-import me.gpipi.category.CategoryRepository
+import me.gpipi.category.ActiveCategoryReader
 import me.gpipi.category.CategoryRow
-import me.gpipi.config.dbQuery
-import org.jetbrains.exposed.v1.jdbc.Database
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -48,15 +42,9 @@ Categories:
 {{CATEGORIES}}"""
 
 class ExtractionService(
-    private val db: Database,
-    private val categoryRepo: CategoryRepository,
+    private val activeCategories: ActiveCategoryReader,
     private val orClient: OpenRouterClient,
 ) {
-    private val categoryCache = Caffeine
-        .newBuilder()
-        .expireAfterWrite(5.minutes)
-        .asCache<Unit, List<CategoryRow>>()
-
     fun buildSystemPrompt(categories: List<CategoryRow>): String =
         SYSTEM_PROMPT_TEMPLATE.replace(
             "{{CATEGORIES}}",
@@ -79,7 +67,7 @@ class ExtractionService(
 
 
     suspend fun extract(text: String): ExtractionResult {
-        val categories = this.categoryCache.get(Unit) { dbQuery(db) { categoryRepo.findActive() } }
+        val categories = activeCategories.current()
         val content = try {
             orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
         } catch (ex: AiException) {

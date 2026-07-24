@@ -15,19 +15,20 @@ import io.ktor.server.application.log
 import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
+import me.gpipi.ai.OpenRouterClient
 import me.gpipi.auth.AuthNonceRepository
 import me.gpipi.auth.AuthService
 import me.gpipi.auth.authRoutes
+import me.gpipi.category.ActiveCategoryCatalog
 import me.gpipi.category.BudgetService
 import me.gpipi.category.CategoryRepository
 import me.gpipi.category.budgetApiRoutes
+import me.gpipi.categorization.CategorizationEventRepository
 import me.gpipi.config.DbKey
 import me.gpipi.dev.devRoutes
+import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.expense.expenseApiRoutes
-import me.gpipi.ai.OpenRouterClient
-import me.gpipi.categorization.CategorizationEventRepository
-import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
@@ -36,8 +37,8 @@ import me.gpipi.slack.OpenBudgetCommand
 import me.gpipi.slack.SlackClient
 import me.gpipi.slack.SlackEventHandler
 import me.gpipi.slack.SlackInteractionHandler
-import me.gpipi.slack.slackRoutes
 import me.gpipi.slack.slackInteractionRoutes
+import me.gpipi.slack.slackRoutes
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -86,7 +87,13 @@ fun Application.configureRouting() {
     val categoryRepo = CategoryRepository()
     val inboundRepo = InboundRepository()
     val expenseRepo = ExpenseRepository()
-    val budgetService = BudgetService(db, categoryRepo, expenseRepo)
+    val activeCategoryCatalog = ActiveCategoryCatalog(db, categoryRepo)
+    val budgetService = BudgetService(
+        db = db,
+        categoryRepo = categoryRepo,
+        expenseRepo = expenseRepo,
+        activeCategories = activeCategoryCatalog,
+    )
 
     val authService = AuthService(
         db = db,
@@ -94,8 +101,7 @@ fun Application.configureRouting() {
     )
 
     val extractionService = ExtractionService(
-        db = db,
-        categoryRepo = categoryRepo,
+        activeCategories = activeCategoryCatalog,
         orClient = orClient,
     )
 

@@ -37,6 +37,7 @@ class BudgetService(
     private val db: Database,
     private val categoryRepo: CategoryRepository,
     private val expenseRepo: ExpenseRepository,
+    private val activeCategories: ActiveCategoryRebuilder,
     private val budgetZone: ZoneId = ZoneId.of("Asia/Tokyo"),
 ) {
     private companion object {
@@ -62,6 +63,7 @@ class BudgetService(
                     slackLoggable = request.slackLoggable,
                 )
             }
+            activeCategories.advanceAndRebuild()
             BudgetMutationResult.Created(id)
         } catch (_: ExposedSQLException) {
             BudgetMutationResult.DuplicateName(request.name)
@@ -87,14 +89,24 @@ class BudgetService(
             return BudgetMutationResult.DuplicateName(request.name)
         }
 
-        return if (updated) BudgetMutationResult.Updated else BudgetMutationResult.NotFound
+        return if (updated) {
+            activeCategories.advanceAndRebuild()
+            BudgetMutationResult.Updated
+        } else {
+            BudgetMutationResult.NotFound
+        }
     }
 
     suspend fun deactivate(id: UUID): BudgetMutationResult {
         val updated = dbQuery(db) {
             categoryRepo.deactivate(id)
         }
-        return if (updated) BudgetMutationResult.Updated else BudgetMutationResult.NotFound
+        return if (updated) {
+            activeCategories.advanceAndRebuild()
+            BudgetMutationResult.Updated
+        } else {
+            BudgetMutationResult.NotFound
+        }
     }
 
     suspend fun spendVsCap(date: LocalDate): List<SpendRow> = dbQuery(db) {

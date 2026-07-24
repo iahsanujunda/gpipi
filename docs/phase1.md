@@ -586,8 +586,8 @@ Same table, two projections, each seeing only what it needs.
 - [x] `expense.category_id` FK written on every new expense
 - [ ] Old `expense.category` text column dropped after backfill (backfill + `DROP COLUMN` in a V4 migration)
 - [x] Active categories + descriptions injected into the prompt at request time (`ExtractionService`)
-- [ ] Category list cached in `ExtractionService` (currently queries on every call — add a short-lived in-memory cache)
-- [ ] Adding/editing a category in Supabase changes categorization with no redeploy (depends on caching above)
+- [x] Category list cached for five minutes in the generation-keyed `ActiveCategoryCatalog`
+- [x] Successful web mutations advance and eagerly rebuild the cache; out-of-band DB edits appear after TTL without a redeploy
 - [ ] Konbini ¥510 → Convenience Store, Tokyu Store ¥7,500 → Monthly Groceries, verified end-to-end
 
 ---

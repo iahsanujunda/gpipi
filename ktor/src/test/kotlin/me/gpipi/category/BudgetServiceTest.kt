@@ -1,5 +1,7 @@
 package me.gpipi.category
 
+import io.mockk.coVerify
+import io.mockk.mockk
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -19,7 +21,14 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 
 class BudgetServiceTest : PersistenceTest() {
     private val budgetZone = ZoneId.of("Asia/Tokyo")
-    private val service = BudgetService(db, CategoryRepository(), ExpenseRepository(), budgetZone)
+    private val activeCategories = mockk<ActiveCategoryRebuilder>(relaxed = true)
+    private val service = BudgetService(
+        db = db,
+        categoryRepo = CategoryRepository(),
+        expenseRepo = ExpenseRepository(),
+        activeCategories = activeCategories,
+        budgetZone = budgetZone,
+    )
     private val inboundRepository = InboundRepository()
 
     private fun request(
@@ -136,6 +145,83 @@ class BudgetServiceTest : PersistenceTest() {
             0L,
             dbQuery(db) { Category.selectAll().count() },
         )
+    }
+
+    @Test
+    fun `only successful category mutations rebuild active categories`() = runBlocking {
+        val rebuilder = mockk<ActiveCategoryRebuilder>(relaxed = true)
+        val service = BudgetService(
+            db = db,
+            categoryRepo = CategoryRepository(),
+            expenseRepo = ExpenseRepository(),
+            activeCategories = rebuilder,
+            budgetZone = budgetZone,
+        )
+
+        val created = assertIs<BudgetMutationResult.Created>(service.create(request()))
+        assertIs<BudgetMutationResult.DuplicateName>(
+            service.create(request(description = "Duplicate")),
+        )
+        assertIs<BudgetMutationResult.Invalid>(service.create(request(name = " ")))
+
+        assertEquals(
+            BudgetMutationResult.Updated,
+            service.update(created.id, request(description = "Updated description")),
+        )
+        assertEquals(
+            BudgetMutationResult.NotFound,
+            service.update(UUID.randomUUID(), request(name = "Unknown")),
+        )
+
+        assertEquals(BudgetMutationResult.Updated, service.deactivate(created.id))
+        assertEquals(BudgetMutationResult.NotFound, service.deactivate(UUID.randomUUID()))
+
+        coVerify(exactly = 3) { rebuilder.advanceAndRebuild() }
+    }
+
+    @Test
+    fun `successful edits eagerly rebuild the catalog used by extraction`() = runBlocking {
+        val repository = CategoryRepository()
+        val catalog = ActiveCategoryCatalog(db, repository)
+        val service = BudgetService(
+            db = db,
+            categoryRepo = repository,
+            expenseRepo = ExpenseRepository(),
+            activeCategories = catalog,
+            budgetZone = budgetZone,
+        )
+        val created = assertIs<BudgetMutationResult.Created>(
+            service.create(request(description = "Old categorization hint")),
+        )
+
+        assertEquals(
+            "Old categorization hint",
+            catalog.current().single().description,
+        )
+
+        assertEquals(
+            BudgetMutationResult.Updated,
+            service.update(
+                created.id,
+                request(description = "New categorization hint"),
+            ),
+        )
+        assertEquals(
+            "New categorization hint",
+            catalog.current().single().description,
+        )
+
+        assertEquals(
+            BudgetMutationResult.Updated,
+            service.update(
+                created.id,
+                request(
+                    description = "New categorization hint",
+                    slackLoggable = false,
+                ),
+            ),
+        )
+        assertEquals(emptyList(), catalog.current())
     }
 
     @Test

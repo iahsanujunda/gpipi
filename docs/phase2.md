@@ -299,7 +299,7 @@ Makes convenient what iteration 2 assumed was done directly in the DB: editing b
 - Spend-vs-cap view: expenses-in-period against each line's `amount`.
 - **Routing (funder + destination account per line) is deferred** — it depends on iteration 2's `account`/`budget_routing` tables, which don't exist yet. This iteration ships category-only CRUD; routing lands whenever iteration 2 does.
 
-Editing `description` here directly tunes phase-1 categorization (it is the LLM disambiguation hint), and toggling `slack_loggable` adds or removes a line from the extraction enum — both take effect immediately (`CategoryRepository.findActive()` queries on every extraction call; there's no cache yet, so no TTL to wait out).
+Editing `description` here directly tunes phase-1 categorization (it is the LLM disambiguation hint), and toggling `slack_loggable` adds or removes a line from the extraction enum. Active extraction categories use a generation-keyed five-minute cache: every successful category mutation advances the generation after commit and eagerly rebuilds it. Concurrent readers share one rebuild, and a reader retries rather than returning a generation superseded while it was loading. A failed eager rebuild does not turn a committed mutation into an apparent API failure; the next extraction retries the current generation.
 
 **Layering.** Mirrors the `AuthService`/`AuthRoutes` split from iteration 1: `BudgetService` owns validation and orchestration and returns a sealed `BudgetMutationResult` (`Created` / `Updated` / `NotFound` / `Invalid` / `DuplicateName`); `budgetApiRoutes` only maps that result to an HTTP status — no business logic in the route layer. `CategoryRepository` does plain persistence (`create`/`update`/`deactivate`/`listBudgets`, the last returning **all** active categories regardless of `slack_loggable`, unlike `findActive()`). A duplicate `name` surfaces as an `ExposedSQLException` from the DB's unique constraint, caught in `BudgetService` and mapped to `DuplicateName` → 409 — there's no separate application-level uniqueness check.
 
@@ -336,8 +336,8 @@ Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are th
 - [x] Spend-vs-cap computed per category's own period (`GET /api/budgets/spend?date=`), bucketed on `Asia/Tokyo`
 - [x] Spend-vs-cap rendered in the frontend with exact differences, authoritative per-line windows, zero/over-cap treatments, and local loading/failure states
 - [x] Edits confirmed before commit — diff-only review step for edits, full summary for create, separate confirmation for deactivate
-- [x] `description` edits reflected in the next phase-1 categorization immediately (no cache yet, so no TTL to wait out — see 3.1)
-- [x] `slack_loggable` toggle adds/removes the line from the extraction enum (unchanged `findActive()` behavior)
+- [x] `description` edits advance and eagerly rebuild the active-category generation used by the next phase-1 categorization
+- [x] `slack_loggable` changes rebuild the extraction enum from the unchanged `findActive()` eligibility rules
 - [ ] **Deferred to iteration 2:** routing (funder + destination) editable per line
 - [ ] **Deferred to iteration 2:** editing an `amount` changes next period's computed payday plan — no payday plan exists yet
 

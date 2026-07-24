@@ -2,8 +2,6 @@ package me.gpipi.extraction
 
 import io.mockk.coEvery
 import io.mockk.mockk
-import io.mockk.spyk
-import io.mockk.verify
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,6 +13,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import me.gpipi.ai.AiException
 import me.gpipi.ai.OpenRouterClient
+import me.gpipi.category.ActiveCategoryCatalog
 import me.gpipi.category.CategoryRepository
 import me.gpipi.category.CategoryRow
 import me.gpipi.config.dbQuery
@@ -30,7 +29,10 @@ class ExtractionServiceTest : PersistenceTest() {
     private val orClient = mockk<OpenRouterClient>()
 
     private fun <T> query(block: () -> T): T = runBlocking { dbQuery(db) { block() } }
-    private fun service() = ExtractionService(db, CategoryRepository(), orClient)
+    private fun service() = ExtractionService(
+        activeCategories = ActiveCategoryCatalog(db, CategoryRepository()),
+        orClient = orClient,
+    )
 
     private fun seedCategory(name: String, description: String = "desc"): UUID = query {
         val catId = UUID.randomUUID()
@@ -108,18 +110,5 @@ class ExtractionServiceTest : PersistenceTest() {
         assertFailsWith<ExtractionException> {
             runBlocking { service().extract("1500 for ramen") }
         }
-    }
-
-    @Test
-    fun `extract caches the category list across calls`() {
-        seedCategory("Eating Out")
-        val spyRepo = spyk(CategoryRepository())
-        val svc = ExtractionService(db, spyRepo, orClient)
-        coEvery { orClient.chat(any(), any(), any()) } returns okJson("Eating Out")
-
-        runBlocking { svc.extract("1500 ramen") }
-        runBlocking { svc.extract("800 coffee") }
-
-        verify(exactly = 1) { spyRepo.findActive() }   // second call is a cache hit
     }
 }

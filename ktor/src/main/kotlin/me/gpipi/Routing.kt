@@ -84,9 +84,9 @@ fun Application.configureRouting() {
     )
 
     val categoryRepo = CategoryRepository()
-    val budgetService = BudgetService(db, categoryRepo)
     val inboundRepo = InboundRepository()
     val expenseRepo = ExpenseRepository()
+    val budgetService = BudgetService(db, categoryRepo, expenseRepo)
 
     val authService = AuthService(
         db = db,

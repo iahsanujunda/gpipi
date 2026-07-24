@@ -8,9 +8,12 @@ import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -90,5 +93,25 @@ class ExpenseRepository {
                     categoryName = it[Category.name],
                 )
             }
+    }
+
+    fun sumAmount(
+        categoryId: UUID,
+        fromInclusive: OffsetDateTime,
+        toExclusive: OffsetDateTime,
+    ): Long {
+        require(fromInclusive <= toExclusive) { "fromInclusive must not be after toExclusive" }
+
+        val totalAmount = Expense.amount.sum()
+
+        return Expense
+            .select(totalAmount)
+            .where {
+                (Expense.categoryId eq categoryId) and
+                    (Expense.spentAt greaterEq fromInclusive) and
+                    (Expense.spentAt less toExclusive)
+            }
+            .single()[totalAmount]
+            ?: 0L
     }
 }

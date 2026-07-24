@@ -1,7 +1,11 @@
 package me.gpipi.category
 
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
+import kotlinx.serialization.Serializable
 import me.gpipi.config.dbQuery
+import me.gpipi.expense.ExpenseRepository
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.Database
 
@@ -17,9 +21,21 @@ sealed interface BudgetMutationResult {
     data class DuplicateName(val name: String) : BudgetMutationResult
 }
 
+@Serializable
+data class SpendRow(
+    val categoryId: String,
+    val name: String,
+    val period: String,
+    val cap: Long,
+    val spent: Long,
+    val remaining: Long,
+)
+
 class BudgetService(
     private val db: Database,
     private val categoryRepo: CategoryRepository,
+    private val expenseRepo: ExpenseRepository,
+    private val budgetZone: ZoneId = ZoneId.of("Asia/Tokyo"),
 ) {
     private companion object {
         val SUPPORTED_PERIODS = setOf("WEEKLY", "MONTHLY")
@@ -77,6 +93,28 @@ class BudgetService(
             categoryRepo.deactivate(id)
         }
         return if (updated) BudgetMutationResult.Updated else BudgetMutationResult.NotFound
+    }
+
+    suspend fun spendVsCap(date: LocalDate): List<SpendRow> = dbQuery(db) {
+        categoryRepo.listBudgets().map { b ->
+            val period = requireNotNull(BudgetPeriod.from(b.period)) {
+                "Unknown budget period: ${b.period}"
+            }
+            val bucket = period.bucketFor(date, budgetZone)
+            val spent = expenseRepo.sumAmount(
+                UUID.fromString(b.id),
+                bucket.startInclusive,
+                bucket.endExclusive,
+            )
+            SpendRow(
+                categoryId = b.id,
+                name = b.name,
+                period = b.period,
+                cap = b.amount,
+                spent = spent,
+                remaining = b.amount - spent,
+            )
+        }
     }
 
     private fun validate(request: UpsertBudgetRequest): BudgetMutationResult.Invalid? =

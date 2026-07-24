@@ -9,6 +9,8 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 import java.util.UUID
 import kotlinx.serialization.Serializable
 
@@ -58,6 +60,20 @@ fun Route.budgetApiRoutes(
                 )
 
             call.respondBudgetResult(service.deactivate(id))
+        }
+
+        get("/spend") {
+            val date = call.request.queryParameters["date"]?.let {
+                try {
+                    LocalDate.parse(it)
+                } catch (_: DateTimeParseException) {
+                    return@get call.respond(
+                        HttpStatusCode.BadRequest,
+                        BudgetApiError("'date' must be an ISO-8601 date (YYYY-MM-DD)."),
+                    )
+                }
+            } ?: LocalDate.now()
+            call.respond(service.spendVsCap(date))
         }
     }
 }

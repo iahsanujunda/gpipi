@@ -70,4 +70,13 @@ class BudgetRoutesGuardTest {
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
+
+    @Test
+    fun `budget spend without a session is rejected with 401`() = testApplication {
+        boot()
+
+        val response = client.get("/api/budgets/spend?date=2026-07-24")
+
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
 }

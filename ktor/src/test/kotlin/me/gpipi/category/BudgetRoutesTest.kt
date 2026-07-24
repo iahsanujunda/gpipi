@@ -16,6 +16,7 @@ import io.ktor.server.testing.testApplication
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -230,5 +231,42 @@ class BudgetRoutesTest {
 
         assertEquals(HttpStatusCode.NotFound, response.status)
         coVerify(exactly = 1) { service.deactivate(id) }
+    }
+
+    @Test
+    fun `GET spend returns spend versus cap for the requested date`() = testApplication {
+        val date = LocalDate.of(2026, 7, 24)
+        val rows = listOf(
+            SpendRow(
+                categoryId = "00000000-0000-0000-0000-000000000001",
+                name = "Monthly Groceries",
+                period = "MONTHLY",
+                cap = 75_000L,
+                spent = 20_000L,
+                remaining = 55_000L,
+            ),
+        )
+        coEvery { service.spendVsCap(date) } returns rows
+        boot()
+
+        val response = apiClient().get("/api/budgets/spend?date=2026-07-24")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(rows, response.body<List<SpendRow>>())
+        coVerify(exactly = 1) { service.spendVsCap(date) }
+    }
+
+    @Test
+    fun `GET spend rejects a malformed date without calling the service`() = testApplication {
+        boot()
+
+        val response = apiClient().get("/api/budgets/spend?date=not-a-date")
+
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(
+            "'date' must be an ISO-8601 date (YYYY-MM-DD).",
+            response.body<JsonObject>()["message"]?.jsonPrimitive?.content,
+        )
+        coVerify(exactly = 0) { service.spendVsCap(any()) }
     }
 }

@@ -60,10 +60,14 @@ const homeRepairs = {
 }
 
 function spendRow(budget, spent) {
+  const window = budget.period === 'WEEKLY'
+    ? { windowStart: '2026-07-20', windowEndExclusive: '2026-07-27' }
+    : { windowStart: '2026-07-01', windowEndExclusive: '2026-08-01' }
   return {
     categoryId: budget.id,
     name: budget.name,
     period: budget.period,
+    ...window,
     cap: budget.amount,
     spent,
     remaining: budget.amount - spent,
@@ -111,7 +115,7 @@ describe('BudgetsPage', () => {
     renderBudgetExperience()
 
     expect(screen.getByRole('heading', { name: 'Eating Out' })).toBeInTheDocument()
-    expect(screen.getAllByText(/^WEEKLY/)).not.toHaveLength(0)
+    expect(screen.getAllByText('WEEKLY · 20–26 JUL')).not.toHaveLength(0)
     expect(screen.getByText('SLACK ON')).toBeInTheDocument()
     expect(screen.getAllByText(/Cap ¥15,000/)).not.toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Add budget line' })).not.toBeInTheDocument()
@@ -169,6 +173,7 @@ describe('BudgetsPage', () => {
     expect(screen.getAllByText('No cap set')).not.toHaveLength(0)
     expect(screen.queryByRole('progressbar', { name: 'Home repairs utilization' }))
       .not.toBeInTheDocument()
+    expect(screen.getByText('2 lines · 1 over cap')).toBeInTheDocument()
   })
 
   it('keeps budget details editable while spending is still loading', () => {
@@ -201,7 +206,9 @@ describe('BudgetsPage', () => {
     expect(screen.getByRole('heading', { name: 'Eating Out' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Edit Eating Out' })).toBeInTheDocument()
     expect(screen.getAllByText('Spending unavailable')).not.toHaveLength(0)
-    await user.click(screen.getAllByRole('button', { name: 'Retry spending' })[0])
+    const retry = screen.getAllByRole('button', { name: 'Retry spending' })[0]
+    expect(getComputedStyle(retry).minHeight).toBe('44px')
+    await user.click(retry)
     expect(refetch).toHaveBeenCalledOnce()
   })
 

@@ -225,6 +225,8 @@ class BudgetServiceTest : PersistenceTest() {
         val result = service.spendVsCap(LocalDate.of(2026, 7, 24)).single()
 
         assertEquals(categoryId.toString(), result.categoryId)
+        assertEquals("2026-07-01", result.windowStart)
+        assertEquals("2026-08-01", result.windowEndExclusive)
         assertEquals(15_000L, result.spent)
         assertEquals(35_000L, result.remaining)
     }
@@ -300,7 +302,11 @@ class BudgetServiceTest : PersistenceTest() {
 
         assertEquals(2_000L, resultByName.getValue("Eating Out").spent)
         assertEquals(8_000L, resultByName.getValue("Eating Out").remaining)
+        assertEquals("2026-07-13", resultByName.getValue("Eating Out").windowStart)
+        assertEquals("2026-07-20", resultByName.getValue("Eating Out").windowEndExclusive)
         assertEquals(8_000L, resultByName.getValue("Monthly Groceries").spent)
         assertEquals(12_000L, resultByName.getValue("Monthly Groceries").remaining)
+        assertEquals("2026-07-01", resultByName.getValue("Monthly Groceries").windowStart)
+        assertEquals("2026-08-01", resultByName.getValue("Monthly Groceries").windowEndExclusive)
     }
 }

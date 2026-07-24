@@ -241,6 +241,8 @@ class BudgetRoutesTest {
                 categoryId = "00000000-0000-0000-0000-000000000001",
                 name = "Monthly Groceries",
                 period = "MONTHLY",
+                windowStart = "2026-07-01",
+                windowEndExclusive = "2026-08-01",
                 cap = 75_000L,
                 spent = 20_000L,
                 remaining = 55_000L,

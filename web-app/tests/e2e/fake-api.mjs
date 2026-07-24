@@ -78,6 +78,25 @@ const budgetSpend = new Map([
 
 let nextBudgetId = 10
 
+function budgetWindow(period, dateValue) {
+  const start = new Date(`${dateValue}T00:00:00Z`)
+  if (period === 'WEEKLY') {
+    start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7))
+  } else {
+    start.setUTCDate(1)
+  }
+  const endExclusive = new Date(start)
+  if (period === 'WEEKLY') {
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 7)
+  } else {
+    endExclusive.setUTCMonth(endExclusive.getUTCMonth() + 1)
+  }
+  return {
+    windowStart: start.toISOString().slice(0, 10),
+    windowEndExclusive: endExclusive.toISOString().slice(0, 10),
+  }
+}
+
 function sendJson(response, status, body) {
   response.writeHead(status, {
     'Access-Control-Allow-Credentials': 'true',
@@ -119,6 +138,8 @@ createServer(async (request, response) => {
     return
   }
   if (request.url?.startsWith('/api/budgets/spend') && request.method === 'GET') {
+    const requestedDate = new URL(request.url, 'http://127.0.0.1').searchParams.get('date')
+      ?? new Date().toISOString().slice(0, 10)
     sendJson(
       response,
       200,
@@ -130,6 +151,7 @@ createServer(async (request, response) => {
             categoryId: budget.id,
             name: budget.name,
             period: budget.period,
+            ...budgetWindow(budget.period, requestedDate),
             cap: budget.amount,
             spent,
             remaining: budget.amount - spent,

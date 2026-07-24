@@ -46,6 +46,18 @@ test('shows exact utilization states on mobile and in the wider budget table', a
   await expect(homeRepairs.getByText('No cap set')).toBeVisible()
   await expect(homeRepairs.getByRole('progressbar')).toHaveCount(0)
 
+  await page.setViewportSize({ width: 900, height: 800 })
+  await page.reload()
+
+  const mediumTable = page.getByRole('table', { name: 'Active budget lines' })
+  await expect(mediumTable).toBeVisible()
+  const mediumTableBox = await mediumTable.boundingBox()
+  const lastEditBox = await mediumTable.getByRole('button', { name: 'Edit' }).last().boundingBox()
+  expect(mediumTableBox).not.toBeNull()
+  expect(lastEditBox).not.toBeNull()
+  expect(lastEditBox.x + lastEditBox.width)
+    .toBeLessThanOrEqual(mediumTableBox.x + mediumTableBox.width + 1)
+
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.reload()
 
@@ -56,6 +68,7 @@ test('shows exact utilization states on mobile and in the wider budget table', a
   await expect(table.getByRole('row', { name: /Transport/ })).toContainText('¥2,000 over')
   await expect(table.getByRole('row', { name: /Home repairs/ })).toContainText('No cap set')
   await expect(table.getByRole('row', { name: /Home repairs/ })).not.toContainText('over')
+  await expect(page.getByText('5 lines · 1 over cap')).toBeVisible()
 })
 
 test('launcher animates its main icon and staggered page action, then removes the action on Activity', async ({ page }) => {

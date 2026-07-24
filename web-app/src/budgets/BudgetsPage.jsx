@@ -47,10 +47,11 @@ function dateFromIso(value) {
   return new Date(`${value}T00:00:00Z`)
 }
 
-function formatAsOf(value) {
+function formatAsOf(value, includeYear = false) {
   return new Intl.DateTimeFormat('en-GB', {
     day: 'numeric',
     month: 'short',
+    ...(includeYear ? { year: 'numeric' } : {}),
   }).format(dateFromIso(value))
 }
 
@@ -69,17 +70,22 @@ function dateParts(date) {
   }
 }
 
-function formatPeriodWindow(period, budgetDate) {
-  const selected = dateFromIso(budgetDate)
+function formatPeriodWindow(period, budgetDate, spend) {
+  const hasAuthoritativeWindow = Boolean(spend?.windowStart && spend?.windowEndExclusive)
+  const selected = dateFromIso(hasAuthoritativeWindow ? spend.windowStart : budgetDate)
   if (period === 'MONTHLY') {
     const selectedParts = dateParts(selected)
     return `MONTHLY · ${selectedParts.month} ${selectedParts.year}`
   }
 
   const start = new Date(selected)
-  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7))
-  const end = new Date(start)
-  end.setUTCDate(end.getUTCDate() + 6)
+  if (!hasAuthoritativeWindow) {
+    start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7))
+  }
+  const end = hasAuthoritativeWindow
+    ? dateFromIso(spend.windowEndExclusive)
+    : new Date(start)
+  end.setUTCDate(end.getUTCDate() + (hasAuthoritativeWindow ? -1 : 6))
   const startParts = dateParts(start)
   const endParts = dateParts(end)
   const range = startParts.month === endParts.month
@@ -180,7 +186,7 @@ function SpendingUnavailable({ onRetry, compact = false }) {
         onClick={onRetry}
         size="small"
         variant="outlined"
-        sx={{ minHeight: 34, flexShrink: 0 }}
+        sx={{ minHeight: 44, flexShrink: 0 }}
       >
         Retry
       </Button>
@@ -340,7 +346,7 @@ function BudgetCards({
                 <EditButton budget={budget} onEdit={onEdit} />
               </Stack>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                <Chip label={formatPeriodWindow(budget.period, budgetDate)} size="small" />
+                <Chip label={formatPeriodWindow(budget.period, budgetDate, spend)} size="small" />
                 <Chip
                   label={budget.slackLoggable ? 'SLACK ON' : 'PLANNING ONLY'}
                   size="small"
@@ -420,7 +426,7 @@ function Difference({ spend }) {
   )
 }
 
-const tableGrid = 'minmax(210px, 1.25fr) 120px minmax(245px, 1.4fr) 140px 60px 48px'
+const tableGrid = 'minmax(165px, 1.25fr) 100px minmax(190px, 1.4fr) 120px 48px 44px'
 
 function BudgetTable({
   budgetDate,
@@ -453,7 +459,7 @@ function BudgetTable({
             gridTemplateColumns: tableGrid,
             gap: 2,
             alignItems: 'center',
-            px: 3,
+            px: 2,
             py: 1.5,
             bgcolor: 'highlight.main',
             borderBottom: 1,
@@ -490,7 +496,7 @@ function BudgetTable({
                 gridTemplateColumns: tableGrid,
                 gap: 2,
                 alignItems: 'center',
-                px: 3,
+                px: 2,
                 py: 2,
                 borderBottom: 1,
                 borderInlineStart: 4,
@@ -504,7 +510,7 @@ function BudgetTable({
                 <Typography color="text.secondary" variant="body2" noWrap>{budget.description}</Typography>
               </Box>
               <Typography role="cell" color="text.secondary" variant="body2">
-                {formatPeriodWindow(budget.period, budgetDate).replace(`${budget.period} · `, '')}
+                {formatPeriodWindow(budget.period, budgetDate, spend).replace(`${budget.period} · `, '')}
               </Typography>
               <Box role="cell" sx={{ minWidth: 0 }}>
                 <DesktopSpending
@@ -522,7 +528,7 @@ function BudgetTable({
                 {budget.slackLoggable ? 'On' : 'Off'}
               </Typography>
               <Box role="cell">
-                <Button onClick={() => onEdit(budget)} sx={{ minWidth: 0 }}>Edit</Button>
+                <Button onClick={() => onEdit(budget)} sx={{ minWidth: 44, px: 0.5 }}>Edit</Button>
               </Box>
             </Box>
           )
@@ -606,6 +612,16 @@ export default function BudgetsPage() {
   const spendByCategory = new Map(
     (budgetSpend.data ?? []).map((row) => [row.categoryId, row]),
   )
+  const spendComplete = !budgetSpend.isPending
+    && !budgetSpend.isError
+    && rows.every((row) => spendByCategory.has(row.id))
+  const overCapCount = [...spendByCategory.values()]
+    .filter((spend) => spend.cap > 0 && spend.remaining < 0)
+    .length
+  const lineSummary = `${rows.length} ${rows.length === 1 ? 'line' : 'lines'}`
+  const utilizationSummary = spendComplete
+    ? `${lineSummary} · ${overCapCount} over cap`
+    : lineSummary
 
   return (
     <Stack spacing={3}>
@@ -671,8 +687,20 @@ export default function BudgetsPage() {
           <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
             <Typography variant="h6" component="h2">Active budget lines</Typography>
             <Stack spacing={0.1} sx={{ alignItems: 'flex-end' }}>
-              <Typography color="text.secondary" variant="body2">As of {formatAsOf(budgetDate)}</Typography>
-              <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>{rows.length} lines</Typography>
+              <Typography color="text.secondary" variant="body2">
+                <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
+                  As of {formatAsOf(budgetDate)}
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                  As of {formatAsOf(budgetDate, true)}
+                </Box>
+              </Typography>
+              <Typography
+                color="text.secondary"
+                sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.75rem' }}
+              >
+                {utilizationSummary}
+              </Typography>
             </Stack>
           </Stack>
           <BudgetCards

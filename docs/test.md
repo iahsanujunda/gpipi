@@ -1,239 +1,331 @@
-# Household Budget Bot — Testing Harness
+# gpipi testing guide
 
-_Test facility · Stack: Ktor `testApplication` · Exposed (JDBC) · Testcontainers (Postgres) · Flyway · JUnit 5 · MockK_
+The repository has two test harnesses:
 
-> **Schema authority for this repo = Flyway.** The sibling `jepangpg` repo lets **Supabase** own the schema (its tests apply `supabase/migrations/*.sql` directly via JDBC, no Flyway). This repo has no Supabase — Flyway owns migrations for both prod and tests. Keep that distinction in mind whenever you copy an idea across from `jepangpg`; some of its machinery is Supabase/Spring-specific and does **not** port (see *Divergences* below).
+- Ktor: JUnit 5, Ktor `testApplication`, MockK, Exposed, Flyway, and Testcontainers Postgres.
+- Web: Vitest with Testing Library for component behavior, plus Playwright Firefox for browser behavior.
 
----
+Flyway is the schema authority in production and tests. Backend persistence tests always run against the real migrations and Postgres; there is no H2 or test-only schema.
 
-## Current state (2026-07-02) — what already exists
+## Quick verification
 
-Ground the plan in what's actually in the repo, not what the draft assumed:
+Run backend tests from the Ktor project:
 
-| Piece | State |
-|-------|-------|
-| Ktor `testApplication` wiring | ✅ **Working.** `src/test/kotlin/ServerTest.kt` boots the real app via Ktor's `configure()` (loads `application.conf` → all three modules) and asserts `GET /` returns 200. This *is* the app-layer smoke test. |
-| Test dependencies | ✅ **Present.** `ktor-server-test-host`, `kotlin("test")`, `org.testcontainers:postgresql:1.20.4`, `org.testcontainers:junit-jupiter:1.20.4`, `io.mockk:mockk:1.13.13`. |
-| Shared container | 🟡 **Half.** `src/test/kotlin/support/TestPostgres.kt` is a lazy singleton `PostgreSQLContainer("postgres:17-alpine")` that only `start()`s. No Flyway, no Exposed `Database` binding yet, and **nothing exercises it** (no test references it → the container never actually boots in CI). |
-| DB main deps (Exposed, Flyway, Postgres driver) | ❌ **Not added.** There are zero database deps in `main`. These are the gate for everything persistence-related. |
-| `PersistenceTest` base / `cleanDatabase()` | ❌ Not written. |
-| Route DI (`budgetModule(collaborators…)`) | ❌ Routes are still the scaffold's top-level `configureRouting()` with no injected collaborators. |
-
-So the honest headline: **the app-layer smoke test is done; the persistence harness is not even scaffolded, because its main deps aren't in the build yet.**
-
----
-
-## Overview — the Paul Bakker model, translated
-
-The Spring model (layered tests, one shared real-Postgres container reused across the suite, no H2, fast feedback) carries over wholesale. What does **not** carry over is the machinery that provides it — Ktor has no test slices, no context bootstrapping, no annotation-driven wiring. Each Spring convenience maps to an explicit Ktor equivalent, and a couple of them are actually *simpler* here because there's no application context to override.
-
-| Spring Boot Test | Ktor + Exposed equivalent | Note |
-|------------------|---------------------------|------|
-| `@SpringBootTest(webEnvironment=MOCK)` + MockMvc | `testApplication { }` (from `ktor-server-test-host`) | In-memory, no real port |
-| `@DataJpaTest` (persistence slice) | Base class: shared container + Flyway + Exposed `Database.connect` | Tests real migrated schema |
-| `@ServiceConnection` / `@DynamicPropertySource` | Manual: wire `container.jdbcUrl` into the test module | One helper, no magic |
-| `@Transactional` rollback between tests | **Truncate** all tables in `@BeforeEach` | Rollback doesn't translate cleanly — see below |
-| `@MockBean` (context bean replacement) | Constructor-inject a MockK double into the module | No context caching pain — a Ktor win |
-| Testcontainers `@Container` per class | **Singleton** container started once (your `TestPostgres`) | Reused across whole suite |
-
-Two properties fall out for free and are worth naming: because Flyway runs against the container, **every test run validates the migrations apply cleanly to a fresh Postgres** — migration tests you didn't write. And because Ktor DI is constructor-passing, **test doubles are just parameters** — no `@MockBean`, no context restart, no bean-override ceremony.
-
----
-
-## Divergences from `jepangpg` that do NOT port
-
-You asked for a setup *similar* to `jepangpg`. The conceptual pyramid ports; three implementation details do not — don't cargo-cult them:
-
-1. **No Flyway there, Flyway here.** `jepangpg`'s `SharedPostgres` drops/recreates `public` and replays `../supabase/migrations/*.sql` by hand, because Supabase is the schema authority. Here, Flyway is — put migrations under `src/main/resources/db/migration/` and let `Flyway.migrate()` run them.
-2. **`max_connections=500` bump — not needed.** `jepangpg` raises it because each Spring test *context* opens its own Hikari pool against the shared container, and many contexts exhaust the default 100. Ktor has no context-per-test explosion: one `Database.connect` for the entire suite. Default `max_connections` is fine.
-3. **`stop()`-override — barely relevant.** `jepangpg` suppresses `stop()` so one context shutdown doesn't kill a container other contexts still use. With a single suite-wide connection there are no competing contexts; let Ryuk reap the container at JVM exit.
-
-What *does* port: the singleton-container-per-JVM idea, truncate-between-tests, and the "real Postgres, no H2" stance.
-
----
-
-## Test Layers (the pyramid)
-
-| Layer | Scope | Tooling | Container? | Speed |
-|-------|-------|---------|-----------|-------|
-| **Unit** | Pure logic — signature verification, amount parsing, prompt assembly, JSON parsing | plain JUnit + MockK | no | ms |
-| **Persistence** | Exposed repos against real Postgres; dedup/idempotency; atomic writes | container base class | yes | ~seconds |
-| **Application** | Full route flow — `/slack/events` ack, signature reject, confirm handler — with external clients mocked | `testApplication` + container + MockK | yes | ~seconds |
-
-Keep the base as wide as possible: signature verification, the extraction-JSON decode, the amount/currency normalization, and prompt building are all *unit*-testable with no container — fast, and where most of the logic bugs live.
-
----
-
-# Roadmap — three stages
-
-The work splits cleanly into **what you can do now** (unblocked), **what you can prepare now** (scaffold that compiles and runs green, no-op until schema exists), and **what waits for later** (needs iteration-2 schema or iteration-1 route code). Do them in order.
-
-## Stage A — Do now (unblocked, no new deps, no schema)
-
-Everything here works against the repo exactly as it stands today.
-
-- [ ] **Container-boots smoke test.** The one genuinely valuable thing available today: assert `TestPostgres.container.isRunning`. This forces the singleton to actually `start()`, proving the whole Testcontainers→Docker path works on your machine and in CI — the flakiest infra dependency, validated before any schema exists. Nothing references `TestPostgres` yet, so today it's dead code; this is what lights it up.
-
-  ```kotlin
-  // src/test/kotlin/support/ContainerSmokeTest.kt
-  class ContainerSmokeTest {
-      @Test fun `postgres container boots`() {
-          assertTrue(TestPostgres.container.isRunning)
-      }
-  }
-  ```
-
-- [x] **App-layer smoke test** — already done by `ServerTest` (`GET /` through the real config). Leave it; it's your proof the test-host wiring is sound.
-- [ ] *(Optional)* a trivial pure-unit test, only if you want explicit proof the unit path runs — `ServerTest` already proves the task runs, so this is low-value.
-
-## Stage B — Prepare now (scaffold that no-ops until schema arrives)
-
-This is the "expected later but stood up now" tier. Each piece **compiles and runs green today** even with zero migrations — Flyway on an empty `db/migration/` is a successful no-op that just creates `flyway_schema_history`, `Database.connect` binds fine, and `cleanDatabase()` truncates an empty set. Standing it up now means iteration 2 only writes *tests*, not *plumbing*.
-
-- [ ] **Add the DB main deps** (these are the real gate — they do **not** exist yet):
-  ```kotlin
-  // build.gradle.kts — main (versions via your libs catalog once picked)
-  implementation("org.jetbrains.exposed:exposed-core:<v>")
-  implementation("org.jetbrains.exposed:exposed-jdbc:<v>")
-  implementation("org.flywaydb:flyway-core:<v>")
-  implementation("org.flywaydb:flyway-database-postgresql:<v>") // Flyway 10+ needs the PG module
-  implementation("org.postgresql:postgresql:<v>")
-  ```
-- [ ] **Confirm JUnit 5 is the engine.** `@BeforeEach` (used below) is JUnit Jupiter. `testcontainers:junit-jupiter` pulls the engine onto the classpath, but the `Test` task still needs the platform selected explicitly:
-  ```kotlin
-  tasks.test { useJUnitPlatform() }
-  ```
-  Verify this once `@BeforeEach` appears — the current `ServerTest` uses only `kotlin.test` annotations, so the gap is latent, not yet visible.
-- [ ] **Extend `TestPostgres`** with the Flyway-migrate-then-connect singleton (pin the image to your prod Postgres major — `17-alpine` today, matching `jepangpg`'s PG 17):
-  ```kotlin
-  // src/test/kotlin/support/TestPostgres.kt
-  object TestPostgres {
-      val container: PostgreSQLContainer<*> by lazy {
-          PostgreSQLContainer("postgres:17-alpine")
-              // .withReuse(true)  // only if you enable reuse in ~/.testcontainers.properties
-              .apply { start() }
-      }
-
-      // Migrate + bind Exposed exactly once, the first time any test needs the DB.
-      // With no migration files yet, migrate() is a green no-op.
-      val database: Database by lazy {
-          Flyway.configure()
-              .dataSource(container.jdbcUrl, container.username, container.password)
-              .load()
-              .migrate()                       // reads src/main/resources/db/migration/
-          Database.connect(
-              url = container.jdbcUrl,
-              driver = "org.postgresql.Driver",
-              user = container.username,
-              password = container.password,
-          )
-      }
-  }
-  ```
-- [ ] **`PersistenceTest` base + `cleanDatabase()`** — truncates every non-Flyway table, no hardcoded list, so it survives every future migration untouched:
-  ```kotlin
-  // src/test/kotlin/support/PersistenceTest.kt
-  abstract class PersistenceTest {
-      protected val db: Database = TestPostgres.database
-      @BeforeEach fun clean() = cleanDatabase()
-  }
-
-  fun cleanDatabase() = transaction(TestPostgres.database) {
-      val tables = exec(
-          """select tablename from pg_tables
-             where schemaname = 'public' and tablename <> 'flyway_schema_history'"""
-      ) { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() } ?: emptyList()
-      if (tables.isNotEmpty()) {
-          exec("TRUNCATE TABLE ${tables.joinToString(", ")} RESTART IDENTITY CASCADE")
-      }
-  }
-  ```
-- [ ] **Design routes for injection** (iteration-1 work, but decide the shape now). A module that takes its collaborators as parameters is what makes the application layer testable with MockK doubles — see below.
-
-## Stage C — Later (needs iteration-2 schema or iteration-1 route code)
-
-Blocked until the schema and route handlers actually exist. The Stage-B harness is built precisely so these become *just tests*:
-
-- [ ] `V1__inbound_and_expense.sql` under `src/main/resources/db/migration/` (iteration 2) — the moment this lands, Flyway-against-container starts validating migrations on **every** run, for free.
-- [ ] `insertIgnoreAndGetId` dedup — same `event_id` twice → one row, second returns null (the Slack-retry idempotency guard).
-- [ ] Atomic confirm write (iter 4) — all-or-nothing: force a failure mid-block, assert nothing committed.
-- [ ] Signature-verification **unit** test (iter 1.2) — no container, security-critical, known-good/known-bad fixture pair. **This is the ideal first *real* test.**
-- [ ] `/slack/events` application tests — unsigned → 401, `url_verification` challenge echoed — with Slack/OpenRouter mocked.
-- [ ] Extraction JSON decode + normalization against reference inputs (`イトーヨーカドー`, `conbini`, `¥1,500`) — unit level, no container.
-
----
-
-## Data Cleanup — Truncate, Not Rollback (and why)
-
-Spring's `@Transactional`-per-test wraps each test in a transaction and rolls it back. **Do not port that here** — it's precisely the Exposed-meets-transaction-management friction that soured you on Exposed under Spring. In a Ktor+Exposed test, the code under test opens its *own* `newSuspendedTransaction`s (via `dbQuery`), and trying to wrap those in an outer rollback transaction reproduces the nesting/"connection is closed" problems. Truncate sidesteps all of it: let the code commit normally, wipe between tests. Deterministic, and it exercises the real commit path (which is what you actually want to test for the idempotency and atomic-write behavior).
-
----
-
-## External Doubles — Constructor-Injected MockK
-
-For application tests, the OpenRouter and Slack clients must not make real network calls. In Ktor there's no `@MockBean` — you pass a MockK double into the module. This requires (and rewards) writing the module to take its collaborators as parameters:
-
-```kotlin
-// Production module takes its collaborators — makes it test-injectable (design this in iter 1).
-fun Application.budgetModule(
-    openRouter: OpenRouterClient,
-    slack: SlackClient,
-    db: Database,
-) { /* install plugins, wire routes */ }
+```bash
+cd ktor
+./gradlew test
 ```
 
+This requires:
+
+- Java 21, or a Gradle installation able to provision the configured Java 21 toolchain.
+- A running Docker-compatible engine for Testcontainers.
+
+Run the frontend checks from the web project:
+
+```bash
+cd web-app
+npm ci
+npm run lint
+npm test
+npm run build
+```
+
+Install Playwright Firefox once, then run the browser suite:
+
+```bash
+cd web-app
+npx playwright install firefox
+npm run test:e2e
+```
+
+The Playwright suite starts its own fake API on `127.0.0.1:18080` and Vite on `127.0.0.1:4173`. It does not need Ktor, Docker, Postgres, Slack, or OpenRouter.
+
+## Test layers
+
+| Layer | Scope | Harness | Real Postgres? |
+|---|---|---|---|
+| Backend unit | Parsing, validation, prompts, signatures, cache generations, services | JUnit 5 + MockK | No |
+| Backend persistence | Repositories, constraints, idempotency, atomic updates and transactions | `PersistenceTest` + Testcontainers | Yes |
+| Backend routes | HTTP paths, serialization, statuses, cookies, guards | Ktor `testApplication` | Only when booting the full app |
+| Frontend component | Rendering, queries, mutations, drawers, navigation, accessibility | Vitest + jsdom + Testing Library | No |
+| Frontend browser | Responsive layout, animation timing, geometry, focus, reduced motion | Playwright + Firefox + fake API | No |
+
+Use the narrowest layer that proves the behavior. For example:
+
+- Test input validation and result mapping at the service layer.
+- Test unique constraints and `UPDATE ... RETURNING` concurrency against Postgres.
+- Test exact URLs and HTTP statuses at the route layer.
+- Test layout geometry and animation timing in Playwright, not jsdom.
+
+There is currently one Gradle `test` source set rather than separate `unitTest` and `integrationTest` tasks. Running the complete backend suite therefore starts Docker even though many individual classes are pure unit tests.
+
+## Backend harness
+
+### Shared Postgres
+
+[`TestPostgres.kt`](../ktor/src/test/kotlin/me/gpipi/support/TestPostgres.kt) lazily starts one `postgres:17-alpine` container per test JVM. Its `database` property calls the production `connectDatabase` function, so it:
+
+1. creates the Hikari pool;
+2. runs every Flyway migration under `src/main/resources/db/migration`;
+3. connects Exposed to the migrated database.
+
+This means every persistence-suite run also proves that the production migrations apply cleanly to a fresh Postgres instance.
+
+`withReuse(true)` permits reuse between Gradle runs only when Testcontainers reuse is enabled on the developer machine. Reuse is optional; the singleton already prevents multiple containers inside one test JVM.
+
+### Database isolation
+
+Repository and transaction tests extend [`PersistenceTest.kt`](../ktor/src/test/kotlin/me/gpipi/support/PersistenceTest.kt):
+
 ```kotlin
-// src/test/kotlin/SlackEventsTest.kt
-class SlackEventsTest : PersistenceTest() {
+class CategoryRepositoryTest : PersistenceTest() {
+    private val repo = CategoryRepository()
 
     @Test
-    fun `unsigned request is rejected`() = testApplication {
-        val openRouter = mockk<OpenRouterClient>()
-        val slack = mockk<SlackClient>(relaxed = true)
-        application { budgetModule(openRouter, slack, db) }
+    fun `create persists a new budget line`() = runBlocking {
+        val id = dbQuery(db) {
+            repo.create(
+                name = "Monthly Groceries",
+                description = "Supermarket and pantry spending",
+                period = "MONTHLY",
+                amount = 75_000L,
+                active = true,
+                slackLoggable = true,
+            )
+        }
 
-        val res = client.post("/slack/events") { setBody("""{"type":"event_callback"}""") }
-        assertEquals(HttpStatusCode.Unauthorized, res.status)   // no valid signature
-    }
-
-    @Test
-    fun `url_verification challenge is echoed`() = testApplication {
-        application { budgetModule(mockk(), mockk(relaxed = true), db) }
-        // sign the body, POST, assert challenge echoed back
+        // Assert the committed database state.
     }
 }
 ```
 
-> This is the payoff of Ktor's explicit DI: no context, no bean override, no restart — the double is just an argument. It also nudges iteration 1's module into a testable shape from the start.
->
-> **Note:** the current scaffold wires modules by fully-qualified reference in `application.conf` (`me.RoutingKt.configureRouting`). Switching to a parameterized `budgetModule(...)` means dropping the config-declared modules and calling the module explicitly (`application { budgetModule(...) }` in tests; a thin `fun Application.module()` that constructs real collaborators in prod). Plan that refactor as part of iteration 1.
+Before each test, `cleanDatabase()` truncates every table in `public` except `flyway_schema_history` using `RESTART IDENTITY CASCADE`. Do not add a hard-coded table list when a migration introduces a table.
 
----
+The suite deliberately uses truncate-between-tests rather than wrapping tests in a rollback transaction. Production repository calls open their own Exposed transactions through `dbQuery`; allowing them to commit exercises the real transaction and concurrency boundaries.
 
-## Definition of Done
+### Full application tests
 
-**Done now:**
-- [x] Testcontainers + MockK deps added
-- [x] App-layer `testApplication` smoke test green (`ServerTest`, `GET /`)
+[`TestApp.kt`](../ktor/src/test/kotlin/me/gpipi/support/TestApp.kt) provides `configureWithTestDb()`. It loads the real `application.conf` module chain while replacing:
 
-**Stage A (do now):**
-- [ ] Container-boots smoke test green (confirms Docker available locally + `TestPostgres` actually starts)
+- database properties with the shared Testcontainers connection;
+- Slack, OpenRouter, and session secrets with non-sensitive test values;
+- the web and CORS origins with test origins.
 
-**Stage B (prepare now — green as no-ops):**
-- [ ] Exposed + Flyway + Postgres driver added to `main`
-- [ ] `useJUnitPlatform()` set / JUnit 5 engine confirmed
-- [ ] `TestPostgres` runs Flyway then binds Exposed `Database`
-- [ ] `PersistenceTest` base connects + truncates per test; `cleanDatabase()` covers all non-Flyway tables
-- [ ] Route module designed to take collaborators as params (test-injectable)
+Use it when the behavior depends on the production composition root:
 
-**Stage C (later):**
-- [ ] `V1__inbound_and_expense.sql` present; migrations validated every run
-- [ ] Signature-verification unit test passes with a known-good/known-bad pair
-- [ ] `/slack/events` reject + challenge application tests
-- [ ] `./gradlew test` runs green end to end
+```kotlin
+@Test
+fun `readiness answers when the database is available`() = testApplication {
+    configureWithTestDb()
 
----
+    assertEquals(HttpStatusCode.OK, client.get("/health/ready").status)
+}
+```
 
-## Handoff
+This style starts Postgres. For an isolated route contract, install only the required plugins and route, then inject mocked collaborators:
 
-Right now, do **Stage A** — the container smoke test — and you've proven every piece of infra the harness depends on (Docker, Testcontainers, the test task) with zero schema. Then **Stage B** stands up the persistence plumbing as green no-ops, so iteration 2 spends its budget on behavior, not wiring. The signature-verification unit test (Stage C) is the ideal first *real* test — no container, security-critical, and it gives you a fixture pair you'll trust before the Slack route is written test-first against this harness.
+```kotlin
+@Test
+fun `GET budgets returns the service result`() = testApplication {
+    val service = mockk<BudgetService>()
+    coEvery { service.listBudgets() } returns emptyList()
+
+    application {
+        configureSerialization()
+        routing { budgetApiRoutes(service) }
+    }
+
+    assertEquals(HttpStatusCode.OK, client.get("/api/budgets").status)
+}
+```
+
+An isolated `testApplication` normally does not need Docker.
+
+### External boundaries
+
+Automated tests must not call Slack or OpenRouter over the network.
+
+- Mock `OpenRouterClient`, `SlackClient`, or the next internal collaborator when testing orchestration.
+- Use Ktor's test server/client when testing HTTP client serialization.
+- Keep Slack request-signature fixtures local and sign the exact raw request body.
+- Inject `Clock`, `SecureRandom`, or another deterministic source when behavior depends on time or randomness.
+
+The current suite covers, among other things:
+
+- Slack signature verification, route acknowledgement, retry handling, and interaction dispatch;
+- inbound deduplication and atomic expense confirmation;
+- extraction schema, prompt construction, and category-catalog invalidation;
+- auth nonce hashing, expiry, single use, and concurrent redemption;
+- signed session cookies, idle renewal, absolute expiry, and tamper rejection;
+- budget CRUD, Tokyo date defaults, spend-versus-cap bucketing, and auth guards.
+
+## Frontend component tests
+
+Vitest finds `src/**/*.test.{js,jsx}` using the jsdom environment configured in [`vite.config.js`](../web-app/vite.config.js). [`src/test-setup.js`](../web-app/src/test-setup.js) installs jest-dom matchers and performs Testing Library cleanup after every test.
+
+Prefer queries that match how a user or assistive technology finds the control:
+
+```jsx
+expect(screen.getByRole('button', { name: 'Review budget line' })).toBeEnabled()
+```
+
+Use:
+
+- `renderWithProviders` for the application theme, router, and query client;
+- `userEvent` for complete interactions;
+- mocked API modules or query responses for network states;
+- fake or controlled timers only when the behavior itself is time-based.
+
+Component tests should cover loading, error, empty, successful, and destructive-confirmation states where the component supports them.
+
+Do not use jsdom to prove pixel geometry, CSS transition progress, focus after a real browser animation, or responsive breakpoint layout. Those belong in Playwright.
+
+## Playwright browser tests
+
+[`playwright.config.js`](../web-app/playwright.config.js) runs headless Firefox with the Pixel 7 device profile by default. Individual tests resize the viewport when they need to prove tablet or desktop behavior.
+
+The suite automatically starts:
+
+- [`fake-api.mjs`](../web-app/tests/e2e/fake-api.mjs), which implements the authenticated budget and activity API contract;
+- the Vite development server with `VITE_API_URL=http://127.0.0.1:18080`.
+
+Browser tests currently cover:
+
+- mobile drawers and wider-screen dialogs/tables;
+- budget creation, editing, deactivation, and spend-versus-cap presentation;
+- navigation and contextual page actions;
+- animation duration and intermediate motion;
+- tactile pressed states;
+- focus restoration;
+- reduced-motion behavior.
+
+When the frontend API contract changes, update the fake API in the same change. Keep the fake deterministic and limited to behavior needed by browser tests.
+
+Playwright retains screenshots only on failure and traces for failed tests under `web-app/test-results`.
+
+## Focused commands
+
+Run one backend class:
+
+```bash
+cd ktor
+./gradlew test --tests '*AuthServiceTest*'
+```
+
+Run backend tests matching a method name:
+
+```bash
+cd ktor
+./gradlew test --tests '*AuthServiceTest*minted nonce can only be redeemed once*'
+```
+
+Run one frontend test file:
+
+```bash
+cd web-app
+npm test -- src/budgets/__tests__/BudgetsPage.test.jsx
+```
+
+Run Vitest in watch mode:
+
+```bash
+cd web-app
+npx vitest
+```
+
+Run one Playwright file:
+
+```bash
+cd web-app
+npm run test:e2e -- tests/e2e/budget-management.spec.js
+```
+
+Run matching Playwright tests or show the browser:
+
+```bash
+npm run test:e2e -- --grep "launcher"
+npm run test:e2e -- --headed
+```
+
+Inspect a retained trace:
+
+```bash
+npx playwright show-trace test-results/<test-directory>/trace.zip
+```
+
+## Adding or changing behavior
+
+For backend changes:
+
+1. Put pure rules in a unit test first.
+2. Use `PersistenceTest` when correctness depends on SQL, a constraint, locking, transaction rollback, or concurrency.
+3. Add a route test for the public HTTP contract and authentication guard.
+4. Use a fixed `Clock` for boundary dates and expiration.
+5. Assert both the returned result and committed state for atomic operations.
+
+For frontend changes:
+
+1. Add or update component tests for state and interaction behavior.
+2. Add Playwright coverage when the acceptance criterion concerns responsive presentation, animation, geometry, or browser focus.
+3. Keep selectors accessible; add test-only selectors only for otherwise-unobservable animation internals.
+4. Update `fake-api.mjs` when the API response or mutation contract changes.
+
+Do not weaken a production constraint or add a test-only production branch merely to make a test easier.
+
+## Troubleshooting
+
+### Backend cannot start Postgres
+
+Confirm Docker is running:
+
+```bash
+docker info
+```
+
+The full backend suite will fail early if Testcontainers cannot reach the Docker daemon. A focused pure-unit class can still run without Docker if it does not extend `PersistenceTest` or boot the full application.
+
+### A persistence test passes alone but fails in the suite
+
+Check for:
+
+- coroutines still running after the test returns;
+- state stored outside Postgres in a singleton or cache;
+- a test that bypasses `PersistenceTest`;
+- assumptions about database row order without an explicit `ORDER BY`.
+
+Database rows are truncated before every `PersistenceTest`, but in-memory state must be reset by the owning test.
+
+### Playwright cannot launch Firefox
+
+Install the configured browser:
+
+```bash
+cd web-app
+npx playwright install firefox
+```
+
+On Linux, missing system libraries may require:
+
+```bash
+npx playwright install --with-deps firefox
+```
+
+### Playwright reports an occupied port
+
+The suite requires ports `4173` and `18080`, with `reuseExistingServer` disabled. Stop the process using either port before retrying.
+
+### Browser and component tests disagree
+
+Treat Playwright as the authority for layout, CSS motion, media queries, and focus timing. Treat Vitest as the faster authority for application state, rendered semantics, and interaction branching.
+
+## Completion checklist
+
+Before considering a change complete, run the checks relevant to its scope:
+
+- Backend behavior: `cd ktor && ./gradlew test`
+- Frontend behavior: `cd web-app && npm test`
+- Frontend static quality: `cd web-app && npm run lint && npm run build`
+- Responsive or animated UI: `cd web-app && npm run test:e2e`
+
+Before deployment, run all four groups.

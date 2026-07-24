@@ -16,7 +16,10 @@ import io.ktor.server.testing.testApplication
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,11 +30,13 @@ import me.gpipi.configureSerialization
 class BudgetRoutesTest {
     private val service = mockk<BudgetService>()
 
-    private fun ApplicationTestBuilder.boot() {
+    private fun ApplicationTestBuilder.boot(
+        clock: Clock = Clock.systemUTC(),
+    ) {
         application {
             configureSerialization()
             routing {
-                budgetApiRoutes(service)
+                budgetApiRoutes(service, clock)
             }
         }
     }
@@ -256,6 +261,22 @@ class BudgetRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(rows, response.body<List<SpendRow>>())
         coVerify(exactly = 1) { service.spendVsCap(date) }
+    }
+
+    @Test
+    fun `GET spend defaults to the current date in Tokyo`() = testApplication {
+        val clock = Clock.fixed(
+            Instant.parse("2026-07-23T15:30:00Z"),
+            ZoneOffset.UTC,
+        )
+        val tokyoDate = LocalDate.of(2026, 7, 24)
+        coEvery { service.spendVsCap(tokyoDate) } returns emptyList()
+        boot(clock)
+
+        val response = apiClient().get("/api/budgets/spend")
+
+        assertEquals(HttpStatusCode.OK, response.status)
+        coVerify(exactly = 1) { service.spendVsCap(tokyoDate) }
     }
 
     @Test

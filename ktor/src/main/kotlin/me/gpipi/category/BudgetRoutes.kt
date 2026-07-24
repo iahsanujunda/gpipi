@@ -9,6 +9,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import io.ktor.server.routing.route
+import java.time.Clock
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.util.UUID
@@ -32,6 +33,7 @@ private data class BudgetApiError(val message: String)
 
 fun Route.budgetApiRoutes(
     service: BudgetService,
+    clock: Clock = Clock.systemUTC(),
 ) {
     route("/api/budgets") {
         get {
@@ -72,7 +74,7 @@ fun Route.budgetApiRoutes(
                         BudgetApiError("'date' must be an ISO-8601 date (YYYY-MM-DD)."),
                     )
                 }
-            } ?: LocalDate.now()
+            } ?: LocalDate.now(clock.withZone(DEFAULT_BUDGET_ZONE))
             call.respond(service.spendVsCap(date))
         }
     }

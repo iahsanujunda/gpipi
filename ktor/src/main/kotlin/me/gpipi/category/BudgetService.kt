@@ -9,6 +9,8 @@ import me.gpipi.expense.ExpenseRepository
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.Database
 
+internal val DEFAULT_BUDGET_ZONE: ZoneId = ZoneId.of("Asia/Tokyo")
+
 sealed interface BudgetMutationResult {
     data class Created(val id: UUID) : BudgetMutationResult
 
@@ -38,7 +40,7 @@ class BudgetService(
     private val categoryRepo: CategoryRepository,
     private val expenseRepo: ExpenseRepository,
     private val activeCategories: ActiveCategoryRebuilder,
-    private val budgetZone: ZoneId = ZoneId.of("Asia/Tokyo"),
+    private val budgetZone: ZoneId = DEFAULT_BUDGET_ZONE,
 ) {
     private companion object {
         val SUPPORTED_PERIODS = setOf("WEEKLY", "MONTHLY")

@@ -7,7 +7,7 @@ export default function AccessRequiredPage() {
         <Stack spacing={1.5}>
           <Typography variant="h4" component="h1">Open from Slack</Typography>
           <Typography color="text.secondary">
-            Ask the household assistant to open the budget, then use the private link it sends you.
+            Ask gpipi to open the budget, then use the private link it sends you.
           </Typography>
         </Stack>
       </Paper>

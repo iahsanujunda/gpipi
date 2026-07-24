@@ -1,4 +1,4 @@
-# Household Assistant web app
+# gpipi web app
 
 Minimal React frontend for Phase 2. It mirrors the useful foundation from
 `jepangpg/ops-app`: Vite, Material UI, React Router, TanStack Query, cookie-aware

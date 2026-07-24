@@ -39,7 +39,7 @@ export default function EnterPage() {
     <Box component="main" sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3 }}>
       <Paper variant="outlined" sx={{ width: '100%', maxWidth: 480, p: { xs: 3, sm: 4 } }}>
         <Stack spacing={2} sx={{ alignItems: 'center', textAlign: 'center' }}>
-          <Typography variant="h4" component="h1">Household Assistant</Typography>
+          <Typography variant="h4" component="h1">gpipi</Typography>
           {error ? (
             <Alert severity="error" role="alert">{error}</Alert>
           ) : (

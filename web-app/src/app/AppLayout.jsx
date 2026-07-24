@@ -40,7 +40,7 @@ export default function AppLayout() {
               <ReturnToSlackIcon />
             </IconButton>
             <Typography variant="h6" component="div" sx={{ color: 'text.heading', ml: 0.5 }}>
-              Household Assistant
+              gpipi
             </Typography>
           </Toolbar>
         </AppBar>

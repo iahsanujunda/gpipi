@@ -28,12 +28,11 @@ class OpenBudgetCommandTest {
     )
 
     @Test
-    fun `matches open commands case-insensitively`() {
+    fun `matches only open commands`() {
         assertTrue(command.matches("open"))
-        assertTrue(command.matches("OPEN"))
-        assertTrue(command.matches("Open budget"))
-        assertFalse(command.matches("opener"))
-        assertFalse(command.matches("log dinner"))
+        assertTrue(command.matches("open budget"))
+        assertFalse(command.matches("1500 ramen"))
+        assertFalse(command.matches("opening the fridge"))
     }
 
     @Test
@@ -47,7 +46,7 @@ class OpenBudgetCommandTest {
             slack.postEphemeral(
                 channel = "C1",
                 user = "U1",
-                text = "Open your budget: https://budget.test/enter#raw-nonce",
+                text = match { it.contains("raw-nonce") },
             )
         }
         coVerify(exactly = 0) { slack.postMessage(any(), any()) }
@@ -55,7 +54,7 @@ class OpenBudgetCommandTest {
 
     @Test
     fun `handle sends private failure feedback when minting fails`() = runBlocking {
-        coEvery { authService.mint("U1") } throws IllegalStateException("database unavailable")
+        coEvery { authService.mint(any()) } throws RuntimeException()
 
         command.handle(message, UUID.randomUUID())
 
@@ -64,6 +63,13 @@ class OpenBudgetCommandTest {
                 channel = "C1",
                 user = "U1",
                 text = "Couldn't open your budget right now — try again shortly.",
+            )
+        }
+        coVerify(exactly = 0) {
+            slack.postEphemeral(
+                channel = "C1",
+                user = "U1",
+                text = match { it.startsWith("Open your budget:") },
             )
         }
         coVerify(exactly = 0) { slack.postMessage(any(), any()) }

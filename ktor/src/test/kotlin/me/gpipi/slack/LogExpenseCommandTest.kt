@@ -16,6 +16,7 @@ import me.gpipi.extraction.ExtractionException
 import me.gpipi.extraction.ExtractionResult
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.generated.db.base.public1.Category
+import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.generated.db.base.public1.ExpenseDraft
 import me.gpipi.generated.db.base.public1.InboundMessage
 import me.gpipi.inbound.InboundRepository
@@ -101,6 +102,7 @@ class LogExpenseCommandTest : PersistenceTest() {
 
         assertEquals(1L, query { InboundMessage.selectAll().count() })
         assertEquals("RECEIVED", query { InboundMessage.selectAll().single()[InboundMessage.status] })
+        assertEquals(0L, query { Expense.selectAll().count() })
         val draft = query { ExpenseDraft.selectAll().single() }
         assertEquals(inboundMessageId, draft[ExpenseDraft.inboundMessageId])
         assertEquals(message.userId, draft[ExpenseDraft.userId])
@@ -121,6 +123,7 @@ class LogExpenseCommandTest : PersistenceTest() {
         val inbound = query { InboundMessage.selectAll().single() }
         assertEquals("FAILED_PARSE", inbound[InboundMessage.status])
         assertEquals("bad json", inbound[InboundMessage.failReason])
+        assertEquals(message.text, inbound[InboundMessage.text])
         assertEquals(0L, query { ExpenseDraft.selectAll().count() })
         coVerify(exactly = 1) {
             slack.postMessage("C1", "Couldn't read that one, mind rephrasing?")

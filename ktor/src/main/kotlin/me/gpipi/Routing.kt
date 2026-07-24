@@ -28,6 +28,8 @@ import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
+import me.gpipi.slack.LogExpenseCommand
+import me.gpipi.slack.OpenBudgetCommand
 import me.gpipi.slack.SlackClient
 import me.gpipi.slack.SlackEventHandler
 import me.gpipi.slack.SlackInteractionHandler
@@ -88,15 +90,20 @@ fun Application.configureRouting() {
         orClient = orClient,
     )
 
+    val inboundRepo = InboundRepository()
+
     val webBaseUrl = cfg.property("web.baseUrl").getString()
     val eventHandler = SlackEventHandler(
         db = db,
-        inboundRepo = InboundRepository(),
-        extractionService = extractionService,
-        draftRepo = ExpenseDraftRepository(),
-        authService = authService,
-        webBaseUrl = webBaseUrl,
-        slack = slack,
+        inboundRepo = inboundRepo,
+        commands = listOf(OpenBudgetCommand(authService, slack, webBaseUrl)),
+        default = LogExpenseCommand(
+            db = db,
+            inboundRepo = inboundRepo,
+            extractionService = extractionService,
+            draftRepo = ExpenseDraftRepository(),
+            slack = slack,
+        ),
     )
 
     val interactionHandler = SlackInteractionHandler(

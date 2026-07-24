@@ -1,144 +1,100 @@
 package me.gpipi.slack
 
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
-import me.gpipi.auth.AuthService
 import me.gpipi.config.dbQuery
-import me.gpipi.expense.ExpenseDraftRepository
-import me.gpipi.generated.db.base.public1.ExpenseDraft
-import me.gpipi.category.CategoryRow
-import me.gpipi.extraction.Extraction
-import me.gpipi.extraction.ExtractionException
-import me.gpipi.extraction.ExtractionResult
-import me.gpipi.extraction.ExtractionService
-import me.gpipi.generated.db.base.public1.Category
-import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.generated.db.base.public1.InboundMessage
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
-import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.junit.jupiter.api.BeforeEach
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
-/**
- * Handler-level tests: real repos + Testcontainers DB (so status transitions and the FK link are
- * genuinely exercised), mocked HTTP edges (OpenRouter, Slack) so nothing hits the network.
- * The route→launch plumbing is covered separately in SlackRoutesTest; here we drive handle() directly.
- */
+private class FakeCommand(
+    val name: String,
+    private val match: (String) -> Boolean,
+) : SlackCommand {
+    var calls = 0
+
+    override fun matches(body: String): Boolean = match(body)
+
+    override suspend fun handle(msg: SlackMessage, inboundMessageId: UUID) {
+        calls++
+    }
+}
+
 class SlackEventHandlerTest : PersistenceTest() {
-
-    private val testCategoryId: UUID = UUID.randomUUID()
-    private val extractionService = mockk<ExtractionService>()
-    private val authService = mockk<AuthService>()
-    private val slack = mockk<SlackClient>(relaxUnitFun = true)   // postMessage returns Unit → relaxed
+    private val openCommand = FakeCommand("open") { it == "open" }
+    private val defaultCommand = FakeCommand("default") { false }
     private val handler = SlackEventHandler(
         db = db,
         inboundRepo = InboundRepository(),
-        extractionService = extractionService,
-        draftRepo = ExpenseDraftRepository(),
-        authService = authService,
-        slack = slack,
-        webBaseUrl = "https://budget.test",
+        commands = listOf(openCommand),
+        default = defaultCommand,
     )
 
-    // Superclass @BeforeEach (clean) runs first, then this seeds the FK target.
-    @BeforeEach fun seedCategory() {
-        runBlocking {
-            dbQuery(db) {
-                Category.insert {
-                    it[Category.id] = testCategoryId
-                    it[Category.name] = "Eating Out"
-                    it[Category.description] = "restaurants, cafes, ramen"
-                    it[Category.amount] = 15000L
-                    it[Category.period] = "WEEKLY"
-                    it[Category.slackLoggable] = true
-                }
-            }
-        }
-    }
-
-    private fun envelope(eventId: String = "Ev001", text: String? = "1500 for ramen") = SlackEnvelope(
+    private fun envelope(
+        eventId: String = "Ev001",
+        text: String? = "<@BOT> 1500 ramen",
+        type: String = "app_mention",
+    ) = SlackEnvelope(
         type = "event_callback",
         eventId = eventId,
-        event = SlackEvent(type = "app_mention", user = "U1", channel = "C1", text = text, ts = "1751700000.000100"),
+        event = SlackEvent(
+            type = type,
+            user = "U1",
+            channel = "C1",
+            text = text,
+            ts = "1751700000.000100",
+        ),
     )
 
-    private val ramen = Extraction(
-        amount = 1500, currency = "JPY", merchant = null,
-        category = "Eating Out", confidence = 0.9, note = null,
-    )
-    private val ramenResult get() = ExtractionResult(
-        ramen, testCategoryId, listOf(CategoryRow(testCategoryId, "Eating Out", "restaurants, cafes, ramen")),
-    )
+    private fun handle(payload: SlackEnvelope) = runBlocking {
+        handler.handle(payload)
+    }
 
-    private fun run(payload: SlackEnvelope) = runBlocking { handler.handle(payload) }
-    private fun <T> query(block: () -> T): T = runBlocking { dbQuery(db) { block() } }
-
-    @Test
-    fun `happy path writes a pending draft and posts the card, no expense yet`() {
-        coEvery { extractionService.extract(any()) } returns ramenResult
-
-        run(envelope())
-
-        // Mention path no longer records — it waits for Confirm. Inbound stays RECEIVED, no expense.
-        val inbound = query { InboundMessage.selectAll().single() }
-        assertEquals("RECEIVED", inbound[InboundMessage.status])
-        assertEquals(0L, query { Expense.selectAll().count() })
-
-        val draft = query { ExpenseDraft.selectAll().single() }
-        assertEquals(inbound[InboundMessage.id], draft[ExpenseDraft.inboundMessageId])  // FK link
-        assertEquals(1500L, draft[ExpenseDraft.amount])
-        assertEquals(testCategoryId, draft[ExpenseDraft.predictedCategoryId])
-        assertEquals("PENDING", draft[ExpenseDraft.status])
-        coVerify { slack.postCard("C1", any(), any()) }
+    private fun inboundCount(): Long = runBlocking {
+        dbQuery(db) { InboundMessage.selectAll().count() }
     }
 
     @Test
-    fun `failed extraction marks FAILED_PARSE, keeps text, writes no expense, posts apology`() {
-        coEvery { extractionService.extract(any()) } throws ExtractionException("bad json")
+    fun `open body routes to the matching command`() {
+        handle(envelope(text = "<@BOT> open"))
 
-        run(envelope())
-
-        val inbound = query { InboundMessage.selectAll().single() }
-        assertEquals("FAILED_PARSE", inbound[InboundMessage.status])
-        assertEquals("bad json", inbound[InboundMessage.failReason])
-        assertEquals("1500 for ramen", inbound[InboundMessage.text])   // raw text kept for debugging
-        assertEquals(0L, query { Expense.selectAll().count() })
-        coVerify { slack.postMessage("C1", any()) }
+        assertEquals(1, openCommand.calls)
+        assertEquals(0, defaultCommand.calls)
     }
 
     @Test
-    fun `duplicate delivery is processed once`() {
-        coEvery { extractionService.extract(any()) } returns ramenResult
+    fun `expense body routes to the default command`() {
+        handle(envelope(text = "<@BOT> 1500 ramen"))
 
-        run(envelope("EvDup"))
-        run(envelope("EvDup"))   // Slack retry of an already-captured event
-
-        assertEquals(1L, query { InboundMessage.selectAll().count() })
-        assertEquals(1L, query { ExpenseDraft.selectAll().count() })
-        coVerify(exactly = 1) { extractionService.extract(any()) }
-        coVerify(exactly = 1) { slack.postCard(any(), any(), any()) }
+        assertEquals(0, openCommand.calls)
+        assertEquals(1, defaultCommand.calls)
     }
 
     @Test
-    fun `non-app_mention event is ignored before capture`() {
-        run(envelope().copy(event = envelope().event!!.copy(type = "message")))
+    fun `duplicate delivery is captured and dispatched only once`() {
+        val payload = envelope(
+            eventId = "EvDuplicate",
+            text = "<@BOT> open",
+        )
 
-        assertEquals(0L, query { InboundMessage.selectAll().count() })
-        coVerify(exactly = 0) { extractionService.extract(any()) }
+        handle(payload)
+        handle(payload)
+
+        assertEquals(1, openCommand.calls)
+        assertEquals(0, defaultCommand.calls)
+        assertEquals(1L, inboundCount())
     }
 
     @Test
-    fun `blank text mention is ignored before capture`() {
-        run(envelope(text = "   "))
+    fun `invalid Slack events are ignored before capture and dispatch`() {
+        handle(envelope(eventId = "EvBlank", text = "   "))
+        handle(envelope(eventId = "EvWrongType", type = "message"))
 
-        assertEquals(0L, query { InboundMessage.selectAll().count() })
-        coVerify(exactly = 0) { extractionService.extract(any()) }
+        assertEquals(0L, inboundCount())
+        assertEquals(0, openCommand.calls)
+        assertEquals(0, defaultCommand.calls)
     }
 }

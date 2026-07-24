@@ -17,6 +17,8 @@ fun ApplicationTestBuilder.configureWithTestDb(
     put("slack.botToken", "xoxb-test-token")
     put("openrouter.apiKey", "test-openrouter-key")
     put("session.signKey", "test-session-sign-key")
+    put("web.baseUrl", "https://budget.test")
+    put("cors.allowedOrigin", "budget.test")
     if (appEnv != null) put("app.env", appEnv)
     val container = TestPostgres.container
     put("db.url", container.jdbcUrl)

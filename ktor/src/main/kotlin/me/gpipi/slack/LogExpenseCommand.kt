@@ -19,15 +19,22 @@ class LogExpenseCommand(
     override fun matches(body: String): Boolean = false
 
     override suspend fun handle(msg: SlackMessage, inboundMessageId: UUID) {
-        val (extraction, categoryId, categories) = try {
+        val result = try {
             extractionService.extract(msg.text)
         } catch (ex: ExtractionException) {
             dbQuery(db) {
                 inboundRepo.markFailed(inboundMessageId, ex.message)
             }
-            slack.postMessage(msg.channelId, "Couldn't read that one, mind rephrasing?")
+            slack.postMessage(
+                msg.channelId,
+                "Couldn't read that one, mind rephrasing?",
+            )
             return
         }
+
+        val extraction = result.extraction
+        val categoryId = result.categoryId
+        val categories = result.categories
 
         val draftId = dbQuery(db) {
             draftRepo.insert(
@@ -40,7 +47,7 @@ class LogExpenseCommand(
                 note = extraction.note,
                 predictedCategoryId = categoryId,
                 confidence = extraction.confidence,
-                model = null,
+                model = result.model,
             )
         }
 

@@ -32,6 +32,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
  */
 class SlackInteractionHandlerTest : PersistenceTest() {
 
+    private val testModel = "resolved/model-version"
     private val slack = mockk<SlackClient>(relaxUnitFun = true)
     private val draftRepo = ExpenseDraftRepository()
     private val handler = SlackInteractionHandler(
@@ -61,7 +62,7 @@ class SlackInteractionHandlerTest : PersistenceTest() {
         draftRepo.insert(
             inboundMessageId = msgId, userId = "U1", channelId = "C1",
             amount = 510, currency = "JPY", merchant = "conbini", note = null,
-            predictedCategoryId = predictedCategoryId, confidence = 0.9, model = "qwen/qwen3-instruct",
+            predictedCategoryId = predictedCategoryId, confidence = 0.9, model = testModel,
         )
     }
 
@@ -92,6 +93,7 @@ class SlackInteractionHandlerTest : PersistenceTest() {
         assertEquals(predicted, event[CategorizationEvent.predictedCategoryId])
         assertEquals(predicted, event[CategorizationEvent.finalCategoryId])
         assertFalse(event[CategorizationEvent.wasCorrected])
+        assertEquals(testModel, event[CategorizationEvent.model])
 
         assertEquals("RECORDED", query { InboundMessage.selectAll().single()[InboundMessage.status] })
         assertEquals("CONFIRMED", query { ExpenseDraft.selectAll().single()[ExpenseDraft.status] })

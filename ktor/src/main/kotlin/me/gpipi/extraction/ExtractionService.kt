@@ -68,31 +68,45 @@ class ExtractionService(
 
     suspend fun extract(text: String): ExtractionResult {
         val categories = activeCategories.current()
-        val content = try {
-            orClient.chat(text, buildSystemPrompt(categories), buildExtractionSchema(categories))
+
+        val completion = try {
+            orClient.chat(
+                userMessage = text,
+                systemPrompt = buildSystemPrompt(categories),
+                schema = buildExtractionSchema(categories),
+            )
         } catch (ex: AiException) {
             throw ExtractionException("AI call failed: ${ex.message}", ex)
         }
-        val x = try {
-            json.decodeFromString<Extraction>(content)
+
+        val extraction = try {
+            json.decodeFromString<Extraction>(completion.content)
         } catch (ex: SerializationException) {
-            throw ExtractionException("Extraction didn't match schema: ${content.take(200)}", ex)
+            throw ExtractionException(
+                "Extraction didn't match schema: ${completion.content.take(200)}",
+                ex,
+            )
         }
-        val categoryId = categories.firstOrNull { it.name == x.category }?.id
-            ?: throw ExtractionException("Model returned unknown category '${x.category}'")
-        // Hand back the cached category list too — the confirmation card's dropdown needs every
-        // active (id, name), and re-fetching would waste the load extract() already did.
-        return ExtractionResult(x, categoryId, categories)
+
+        val categoryId = categories
+            .firstOrNull { it.name == extraction.category }
+            ?.id
+            ?: throw ExtractionException(
+                "Model returned unknown category '${extraction.category}'",
+            )
+
+        return ExtractionResult(
+            extraction = extraction,
+            categoryId = categoryId,
+            categories = categories,
+            model = completion.model,
+        )
     }
 }
 
-/**
- * The result of an extraction: the parsed record, the resolved category id, and the active
- * category list used to build the prompt — reused by the confirmation card so it doesn't re-query.
- * Component order keeps `val (x, categoryId) = extract(...)` destructuring working.
- */
 data class ExtractionResult(
     val extraction: Extraction,
     val categoryId: UUID,
     val categories: List<CategoryRow>,
+    val model: String,
 )

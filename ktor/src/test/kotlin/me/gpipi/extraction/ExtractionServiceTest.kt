@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import me.gpipi.ai.AiException
+import me.gpipi.ai.ChatResult
 import me.gpipi.ai.OpenRouterClient
 import me.gpipi.category.ActiveCategoryCatalog
 import me.gpipi.category.BudgetMutationResult
@@ -34,6 +35,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
  */
 class ExtractionServiceTest : PersistenceTest() {
     private val orClient = mockk<OpenRouterClient>()
+    private val testModel = "resolved/model-version"
 
     private fun <T> query(block: () -> T): T = runBlocking { dbQuery(db) { block() } }
     private fun service() = ExtractionService(
@@ -56,6 +58,11 @@ class ExtractionServiceTest : PersistenceTest() {
 
     private fun okJson(category: String) =
         """{"amount":1500,"currency":"JPY","merchant":null,"category":"$category","confidence":0.9,"note":null}"""
+
+    private fun okResult(category: String) = ChatResult(
+        content = okJson(category),
+        model = testModel,
+    )
 
     private fun budgetRequest(
         name: String = "Monthly Groceries",
@@ -103,13 +110,14 @@ class ExtractionServiceTest : PersistenceTest() {
     @Test
     fun `extract parses the content and resolves the category_id`() {
         val eatingOutId = seedCategory("Eating Out")
-        coEvery { orClient.chat(any(), any(), any()) } returns okJson("Eating Out")
+        coEvery { orClient.chat(any(), any(), any()) } returns okResult("Eating Out")
 
-        val (x, categoryId) = runBlocking { service().extract("1500 for ramen") }
+        val result = runBlocking { service().extract("1500 for ramen") }
 
-        assertEquals(1500L, x.amount)
-        assertEquals("Eating Out", x.category)
-        assertEquals(eatingOutId, categoryId)
+        assertEquals(1500L, result.extraction.amount)
+        assertEquals("Eating Out", result.extraction.category)
+        assertEquals(eatingOutId, result.categoryId)
+        assertEquals(testModel, result.model)
     }
 
     @Test
@@ -138,9 +146,9 @@ class ExtractionServiceTest : PersistenceTest() {
             ),
         )
         coEvery { orClient.chat(any(), any(), any()) } returnsMany listOf(
-            okJson("Monthly Groceries"),
-            okJson("Monthly Groceries"),
-            okJson("Transport"),
+            okResult("Monthly Groceries"),
+            okResult("Monthly Groceries"),
+            okResult("Transport"),
         )
 
         extractionService.extract("warm the active-category catalog")
@@ -212,7 +220,10 @@ class ExtractionServiceTest : PersistenceTest() {
     @Test
     fun `extract wraps malformed JSON as ExtractionException`() {
         seedCategory("Eating Out")
-        coEvery { orClient.chat(any(), any(), any()) } returns "not json at all {"
+        coEvery { orClient.chat(any(), any(), any()) } returns ChatResult(
+            content = "not json at all {",
+            model = testModel,
+        )
 
         assertFailsWith<ExtractionException> {
             runBlocking { service().extract("1500 for ramen") }

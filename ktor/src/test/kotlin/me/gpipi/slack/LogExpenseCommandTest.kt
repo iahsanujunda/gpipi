@@ -26,6 +26,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 
 class LogExpenseCommandTest : PersistenceTest() {
     private val categoryId = UUID.randomUUID()
+    private val testModel = "resolved/model-version"
     private val inboundRepo = InboundRepository()
     private val draftRepo = ExpenseDraftRepository()
     private val extractionService = mockk<ExtractionService>()
@@ -94,6 +95,7 @@ class LogExpenseCommandTest : PersistenceTest() {
             ),
             categoryId = categoryId,
             categories = listOf(CategoryRow(categoryId, "Eating Out", "restaurants, cafes, ramen")),
+            model = testModel,
         )
 
         runBlocking {
@@ -108,6 +110,7 @@ class LogExpenseCommandTest : PersistenceTest() {
         assertEquals(message.userId, draft[ExpenseDraft.userId])
         assertEquals(message.channelId, draft[ExpenseDraft.channelId])
         assertEquals(1_500L, draft[ExpenseDraft.amount])
+        assertEquals(testModel, draft[ExpenseDraft.model])
         coVerify(exactly = 1) { slack.postCard("C1", any(), any()) }
     }
 

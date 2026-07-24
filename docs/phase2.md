@@ -295,28 +295,36 @@ Makes convenient what iteration 2 assumed was done directly in the DB: editing b
 
 ### 3.1 Scope
 
-- View/edit the phase-1 `category` table as budget lines: `name`, `description`, `period`, `amount`, `active`, `slack_loggable`.
-- View/edit the iteration-2 `budget_routing` (funder + destination account per line).
+- View/edit/create the phase-1 `category` table as budget lines: `name`, `description`, `period`, `amount`, `active`, `slack_loggable`.
 - Spend-vs-cap view: expenses-in-period against each line's `amount`.
+- **Routing (funder + destination account per line) is deferred** — it depends on iteration 2's `account`/`budget_routing` tables, which don't exist yet. This iteration ships category-only CRUD; routing lands whenever iteration 2 does.
 
-Editing `description` here directly tunes phase-1 categorization (it is the LLM disambiguation hint), and toggling `slack_loggable` adds or removes a line from the extraction enum — both take effect within the `ExtractionService` cache TTL, no redeploy.
+Editing `description` here directly tunes phase-1 categorization (it is the LLM disambiguation hint), and toggling `slack_loggable` adds or removes a line from the extraction enum — both take effect immediately (`CategoryRepository.findActive()` queries on every extraction call; there's no cache yet, so no TTL to wait out).
+
+**Layering.** Mirrors the `AuthService`/`AuthRoutes` split from iteration 1: `BudgetService` owns validation and orchestration and returns a sealed `BudgetMutationResult` (`Created` / `Updated` / `NotFound` / `Invalid` / `DuplicateName`); `budgetApiRoutes` only maps that result to an HTTP status — no business logic in the route layer. `CategoryRepository` does plain persistence (`create`/`update`/`deactivate`/`listBudgets`, the last returning **all** active categories regardless of `slack_loggable`, unlike `findActive()`). A duplicate `name` surfaces as an `ExposedSQLException` from the DB's unique constraint, caught in `BudgetService` and mapped to `DuplicateName` → 409 — there's no separate application-level uniqueness check.
+
+**Deactivate is a dedicated endpoint, not a PUT flag.** `PUT /categories/{id}` is a full replace (every field required), so folding `active: false` into it would mean deactivating requires resending the entire line correctly — and would let a routine edit accidentally *reactivate* a line if the client's edit form ever forgot to carry `active` forward. `PUT /categories/{id}/deactivate` removes that footgun entirely: the frontend's edit form doesn't expose `active` as an editable field at all, and deactivation only happens through its own confirmation flow.
 
 ### 3.2 Endpoints
 
 | Method | Path | Guard | Purpose |
 |--------|------|-------|---------|
-| GET | `/api/budgets` | session | All active categories + routing |
-| PUT | `/api/budgets/categories/{id}` | session | Edit name/description/period/amount/active/slack_loggable |
+| GET | `/api/budgets` | session | All active categories (routing omitted — not yet modeled) |
 | POST | `/api/budgets/categories` | session | Create a budget line |
-| PUT | `/api/budgets/routing/{categoryId}` | session | Set funder + destination account |
-| GET | `/api/budgets/spend?period=` | session | Spend vs cap per line |
+| PUT | `/api/budgets/categories/{id}` | session | Full-replace edit: name/description/period/amount/active/slack_loggable |
+| PUT | `/api/budgets/categories/{id}/deactivate` | session | Deactivate only — the sole way `active` is ever set to `false` |
+| GET | `/api/budgets/spend?date=` | session | Spend vs. cap per line for the bucket containing `date` (defaults to today) |
+
+**Spend-vs-cap bucketing (`3.2a`).** A category's `period` is its own — WEEKLY or MONTHLY — so a single `?period=YYYY-MM` param (the original spec) can't cleanly cover weekly lines: comparing a weekly ¥3,000 cap against a full month's spend would always read as over budget. Instead, `?date=YYYY-MM-DD` (default today) is bucketed **per category**, using that category's own period: `BudgetPeriod.bucketFor(date, zone)` resolves a MONTHLY line to the calendar month containing `date`, and a WEEKLY line to the ISO week (Monday–Sunday) containing it. Bucketing runs on a fixed `Asia/Tokyo` zone (`BudgetService`'s `budgetZone`, defaulted, injectable for tests) — the household's actual "today," not server-local or UTC. At household scale (a handful of budget lines), `BudgetService.spendVsCap` computes this as one small per-category loop (`listBudgets()` then `ExpenseRepository.sumAmount(categoryId, from, to)` per row) rather than one clever aggregate query — consistent with this project's general preference for deterministic, simple queries (see phase 1's iteration-8 stance on deterministic SQL over agent loops).
 
 ### 3.3 Frontend
 
-- Budget editor: one row per budget line (cap, period, description, flags) plus its routing assignment.
-- Spend-vs-cap dashboard for the current period.
-- Edits use a confirm step — a mis-set cap is higher-stakes than a mis-categorized expense.
-- Deactivate rather than delete: expenses reference `category_id` by FK, so removal breaks history.
+- Budget editor: create/edit as a bottom-sheet (mobile) or dialog (desktop) form — `BudgetEditor.jsx`. Routing assignment is not part of this form (deferred, see 3.1).
+- The edit form's initial state is loaded directly from the already-fetched `BudgetRow` (`formFromBudget(budget)`), never a blank/defaulted object — this is what keeps a routine edit from silently touching `active`/`slack_loggable` fields the user didn't intend to change.
+- Edits use a confirm step showing **only the changed fields** (previous → next) before commit; create shows a full summary. A mis-set cap is higher-stakes than a mis-categorized expense.
+- Deactivate rather than delete: expenses reference `category_id` by FK, so removal breaks history. Deactivating has its own confirmation screen, separate from the edit-changes review, and calls the dedicated `/deactivate` endpoint.
+- Unsaved-edit protection: an in-app navigation guard plus a `beforeunload` handler warn before losing dirty form state.
+- Spend-vs-cap renders as a secondary layer on the existing budget cards/table (joined by `categoryId`), not a blocking dependency — the page still renders caps if the spend query fails or is slow.
 
 ### 3.4 Cross-door note
 
@@ -324,13 +332,14 @@ Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are th
 
 ### Definition of Done
 
-- [ ] Budget-line CRUD wired to the API (create, edit, deactivate)
-- [ ] Routing (funder + destination) editable per line
-- [ ] Spend-vs-cap view for the current period
-- [ ] Edits confirmed before commit
-- [ ] `description` edits reflected in the next phase-1 categorization (no redeploy)
-- [ ] `slack_loggable` toggle adds/removes the line from the extraction enum
-- [ ] Editing an `amount` changes next period's computed payday plan (integration with iter 2)
+- [x] Budget-line CRUD wired to the API (create, edit, deactivate) — `BudgetService` + `budgetApiRoutes`, all four endpoints session-guarded (proven by `BudgetRoutesGuardTest`)
+- [x] Spend-vs-cap computed per category's own period (`GET /api/budgets/spend?date=`), bucketed on `Asia/Tokyo`
+- [ ] Spend-vs-cap **rendered** in the frontend (backend endpoint done; not yet joined into `BudgetsPage`)
+- [x] Edits confirmed before commit — diff-only review step for edits, full summary for create, separate confirmation for deactivate
+- [x] `description` edits reflected in the next phase-1 categorization immediately (no cache yet, so no TTL to wait out — see 3.1)
+- [x] `slack_loggable` toggle adds/removes the line from the extraction enum (unchanged `findActive()` behavior)
+- [ ] **Deferred to iteration 2:** routing (funder + destination) editable per line
+- [ ] **Deferred to iteration 2:** editing an `amount` changes next period's computed payday plan — no payday plan exists yet
 
 ---
 

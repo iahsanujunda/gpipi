@@ -792,9 +792,9 @@ The read side. Kept last and deliberately **not** agentic.
 
 ### 8.1 Intent Split
 
-A `@ai` message is either a **log** (default, everything so far) or a **query** ("how much on dining this month?"). A cheap intent classifier (or a lightweight keyword/regex pre-check) routes it.
+A `@ai` message is either a **log** (default, everything so far) or a **query** ("how much on dining this month?"). This is not a new mechanism — it's the **command dispatch** already in place (see appendix): the query path is a new `SlackCommand` whose `matches` recognizes question-shaped messages, and the log path stays the `default`. A cheap intent classifier (or a lightweight keyword/regex pre-check) lives in the dispatcher's matching step, never inside a command — so log capture, queries, and budget edits are peer commands, and adding one doesn't touch the others.
 
-First real customers of this path: "how much is left in the going-out budget this month" (a read query), and chat-driven budget edits like "set the going-out budget to 40000" (a mutation intent). These are the Slack door to the same data phase 2's frontend edits — same authorization model, different surface.
+First real customers of this path: "how much is left in the going-out budget this month" (a read query), and chat-driven budget edits like "set the going-out budget to 40000" (a mutation intent) — each its own `SlackCommand`. These are the Slack door to the same data phase 2's frontend edits — same authorization model, different surface.
 
 ### 8.2 Deterministic SQL Over Agent Loops
 
@@ -825,6 +825,8 @@ src/main/kotlin/
 ├── ai/                    # LLM clients + AiException — no feature-domain deps (iter 2+)
 │                          #   OpenRouterClient.chat(): String; add Google/OpenAI/Koog SDKs here
 ├── slack/                 # envelope DTOs, signature verify, client, routes
+│                          #   + command dispatch: SlackEventHandler (dispatcher), SlackCommand,
+│                          #     SlackMessage (parse/guard), one class per command (iter 4+)
 ├── inbound/               # inbound_message capture/dedup/status (iter 2)
 ├── expense/               # domain: routes, service, repository, Exposed tables
 ├── extraction/            # ExtractionService, ExtractionException, prompt template (iter 2)
@@ -834,6 +836,40 @@ src/main/kotlin/
 ```
 
 What differs from Spring and will trip muscle memory: there's no `@Repository`/`@Service`/`@RestController` — a repo/service is a plain class, and a "controller" is `fun Route.xRoutes(deps)`, an extension function grouped by feature. You wire the whole object graph by hand in `module()` (no scanning), which is exactly what makes it test-injectable — `module` takes its collaborators as params, per the testing harness. Enforce boundaries with Kotlin `internal`, or — only if domains grow large — separate Gradle modules (`:slack`, `:expense`); there's no ArchUnit/Modulith equivalent shipped, and multi-module isn't warranted at this size. Don't reach for a DI framework (Koin) yet — hand-wiring is clearer here; revisit only if the graph balloons around iter 3+. And don't pre-create empty feature packages: let each appear with its iteration (iter 1 needs only `Application.kt`, `plugins/`, `slack/`, `health/`).
+
+### Slack command dispatch (how `@ai <verb>` messages are routed)
+Every `@ai` message is not just "an expense" — it's a **command**. Rather than growing an `if/else` chain inside one handler, `SlackEventHandler` is a thin **dispatcher** over a hand-wired command list. This seam was introduced the moment a second behavior appeared (the phase-2 `@ai open` magic-link command alongside expense capture), and it's what iteration 8 (query path, chat-driven budget edits) plugs into without touching the dispatcher.
+
+```kotlin
+interface SlackCommand {
+    fun matches(body: String): Boolean               // does this verb belong to me?
+    suspend fun handle(msg: SlackMessage, inboundMessageId: UUID)
+}
+
+class SlackEventHandler(
+    private val db: Database,
+    private val inboundRepo: InboundRepository,
+    private val commands: List<SlackCommand>,         // matched in order
+    private val default: SlackCommand,                // the fallback (expense capture)
+) {
+    suspend fun handle(payload: SlackEnvelope) {
+        val msg = SlackMessage.from(payload) ?: return          // 1. parse + guard (pure)
+        val id = dbQuery(db) {                                   // 2. capture + dedup — EVERY message
+            inboundRepo.captureOrSkip(msg.eventId, msg.userId, msg.channelId, msg.text, msg.ts)
+        } ?: return                                             //    null id = Slack retry → skip
+        (commands.firstOrNull { it.matches(msg.body) } ?: default).handle(msg, id)   // 3. route
+    }
+}
+```
+
+Four disciplines make this hold up:
+- **Parse is a pure function.** `SlackMessage.from(payload)` does the `app_mention`/null/blank guarding and strips the bot mention (`body` = text after `>`, trimmed). No DB, no mocks — trivially unit-tested, and the dispatcher stays about routing.
+- **Capture/dedup lives in the dispatcher, not the commands.** `inbound_message` is the single record of *every* `@ai` message, so capturing (and its `event_id` unique-constraint dedup) is a cross-cutting concern that runs once, before routing. Consequence: **every command inherits idempotency for free** — a Slack retry can't double-fire a command (e.g. mint two magic-link nonces). Commands receive the resulting `inboundMessageId` and never open their own capture.
+  - Corollary: non-expense commands (`@ai open`, later queries) also land in `inbound_message`, sitting at `RECEIVED`. That's consistent with "capture everything"; a command may mark its row `NON_EXPENSE` (the status already reserved for chatter/queries) once iteration 8 formalizes intent.
+- **Explicit `default`, not a catch-all `matches`.** The expense flow is passed as a named `default` argument (its `matches` returns `false`), rather than being a last list element that matches everything. This states intent and removes the "forgot to put it last, it ate every command" footgun.
+- **Each command owns its deps and is tested in isolation.** A command is a plain class taking its collaborators in the constructor (same hand-wiring as everything else); its test constructs it with mocks and calls `handle(msg, id)` directly — no envelope, no dispatcher, no sibling commands. The dispatcher is tested separately with *fake* commands asserting first-match-wins, fallback, and dedup. N commands → N small tests + one stable dispatcher test.
+
+Don't build a framework around this (priorities, annotations, auto-discovery, a context object wrapping the client) — a `List<SlackCommand>` + explicit `default`, wired in `module()`, is the whole thing, and matches the "plain classes, hand-wired" philosophy above. When you eventually want an LLM to disambiguate log-vs-query, that logic lives in the dispatcher's *matching* step, never inside a command — so commands never learn about intent classification.
 
 ### Idempotency
 Slack retries on any non-200 within 3s and includes `X-Slack-Retry-Num`. Dedup on `inbound_message.event_id` via Exposed's `insertIgnoreAndGetId { }` at capture time — a `null` return means the unique `event_id` already exists (a retry), so skip. The header check in iter 1 is a fast early-out; the DB unique constraint is the real guarantee. Same discipline as PokeOps `processed_mutation_ids` / `SELECT FOR UPDATE`.

@@ -16,6 +16,9 @@ fun ApplicationTestBuilder.configureWithTestDb(
     // calls Slack or OpenRouter for real. openrouter.model/url resolve from application.conf.
     put("slack.botToken", "xoxb-test-token")
     put("openrouter.apiKey", "test-openrouter-key")
+    put("session.signKey", "test-session-sign-key")
+    put("web.baseUrl", "https://budget.test")
+    put("cors.allowedOrigin", "budget.test")
     if (appEnv != null) put("app.env", appEnv)
     val container = TestPostgres.container
     put("db.url", container.jdbcUrl)

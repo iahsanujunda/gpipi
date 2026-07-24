@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="430" height="940" viewBox="0 0 430 940" role="img" aria-labelledby="title description">
+  <title id="title">Household Assistant activity page on a mobile phone</title>
+  <desc id="description">The authenticated Activity view has the shared app bar and navigation launcher, a compact filter surface, and vertically stacked expense cards showing merchant, amount, category, and date.</desc>
+
+  <defs>
+    <clipPath id="screen-clip">
+      <rect x="28" y="18" width="374" height="904" rx="40" />
+    </clipPath>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity="0.18" />
+    </filter>
+    <filter id="control-shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1D4E89" flood-opacity="0.22" />
+    </filter>
+  </defs>
+
+  <rect width="430" height="940" fill="#E7F5F7" />
+  <rect x="20" y="8" width="390" height="924" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+  <rect x="28" y="18" width="374" height="904" rx="40" fill="#F4FAFB" />
+
+  <g clip-path="url(#screen-clip)" font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <rect x="28" y="18" width="374" height="904" fill="#F4FAFB" />
+
+    <!-- Mobile status bar -->
+    <rect x="28" y="18" width="374" height="38" fill="#ffffff" />
+    <text x="48" y="42" fill="#1D4E89" font-size="13" font-weight="700">9:41</text>
+    <g fill="none" stroke="#1D4E89" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M348 38c4-5 9-5 13 0" />
+      <path d="M351 41c2-3 5-3 7 0" />
+      <circle cx="354.5" cy="44" r="1" fill="#1D4E89" stroke="none" />
+      <rect x="370" y="33" width="18" height="10" rx="2" />
+      <path d="M389 36v4" />
+    </g>
+    <rect x="372.5" y="35.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+
+    <!-- Shared application bar -->
+    <rect x="28" y="56" width="374" height="58" fill="#ffffff" />
+    <rect x="36" y="63" width="44" height="44" rx="10" fill="#ffffff" />
+    <path d="M59 75 49 85l10 10M50 85h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="88" y="91" fill="#1D4E89" font-size="17" font-weight="700" letter-spacing="-0.2">Household Assistant</text>
+    <line x1="28" y1="113.5" x2="402" y2="113.5" stroke="#C9E2E5" />
+
+    <!-- Page heading -->
+    <text x="44" y="158" fill="#1D4E89" font-size="30" font-weight="720" letter-spacing="-0.8">Activity</text>
+    <text x="44" y="184" fill="#526966" font-size="14">Review household expenses recorded through Slack.</text>
+
+    <!-- Filter surface -->
+    <rect x="44" y="208" width="342" height="226" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+    <text x="64" y="240" fill="#1D4E89" font-size="18" font-weight="700">Refine activity</text>
+    <text x="366" y="240" fill="#526966" font-size="13" text-anchor="end">3 expenses</text>
+
+    <g>
+      <rect x="64" y="258" width="302" height="48" rx="10" fill="#ffffff" stroke="#C9E2E5" />
+      <text x="76" y="274" fill="#526966" font-size="10" font-weight="650">CATEGORY</text>
+      <text x="76" y="295" fill="#17312E" font-size="15">All categories</text>
+      <path d="m342 278 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g>
+      <rect x="64" y="318" width="145" height="48" rx="10" fill="#ffffff" stroke="#C9E2E5" />
+      <text x="76" y="334" fill="#526966" font-size="10" font-weight="650">FROM</text>
+      <text x="76" y="355" fill="#17312E" font-size="14">1 Jul 2026</text>
+      <rect x="221" y="318" width="145" height="48" rx="10" fill="#ffffff" stroke="#C9E2E5" />
+      <text x="233" y="334" fill="#526966" font-size="10" font-weight="650">TO</text>
+      <text x="233" y="355" fill="#17312E" font-size="14">31 Jul 2026</text>
+    </g>
+
+    <g>
+      <rect x="64" y="378" width="302" height="40" rx="10" fill="#ffffff" stroke="#C9E2E5" />
+      <text x="76" y="394" fill="#526966" font-size="10" font-weight="650">SORT</text>
+      <text x="76" y="411" fill="#17312E" font-size="14">Newest first</text>
+      <path d="m342 393 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <!-- Expense cards -->
+    <g>
+      <rect x="44" y="450" width="342" height="112" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+      <text x="64" y="482" fill="#1D4E89" font-size="17" font-weight="700">FamilyMart</text>
+      <text x="366" y="482" fill="#1D4E89" font-size="18" font-weight="700" text-anchor="end">¥510</text>
+      <rect x="64" y="496" width="126" height="26" rx="13" fill="#DFF4F4" />
+      <text x="127" y="514" fill="#526966" font-size="11" font-weight="650" text-anchor="middle" letter-spacing="0.25">CONVENIENCE STORE</text>
+      <text x="64" y="544" fill="#526966" font-size="13">24 Jul 2026</text>
+    </g>
+
+    <g>
+      <rect x="44" y="578" width="342" height="112" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+      <text x="64" y="610" fill="#1D4E89" font-size="17" font-weight="700">Ito Yokado</text>
+      <text x="366" y="610" fill="#1D4E89" font-size="18" font-weight="700" text-anchor="end">¥7,500</text>
+      <rect x="64" y="624" width="126" height="26" rx="13" fill="#DFF4F4" />
+      <text x="127" y="642" fill="#526966" font-size="11" font-weight="650" text-anchor="middle" letter-spacing="0.25">MONTHLY GROCERIES</text>
+      <text x="64" y="672" fill="#526966" font-size="13">23 Jul 2026</text>
+    </g>
+
+    <g>
+      <rect x="44" y="706" width="342" height="112" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+      <text x="64" y="738" fill="#1D4E89" font-size="17" font-weight="700">JR East</text>
+      <text x="366" y="738" fill="#1D4E89" font-size="18" font-weight="700" text-anchor="end">¥1,200</text>
+      <rect x="64" y="752" width="82" height="26" rx="13" fill="#DFF4F4" />
+      <text x="105" y="770" fill="#526966" font-size="11" font-weight="650" text-anchor="middle" letter-spacing="0.25">TRANSPORT</text>
+      <text x="64" y="800" fill="#526966" font-size="13">22 Jul 2026</text>
+    </g>
+
+    <!-- Fixed bottom navigation dock -->
+    <rect x="28" y="850" width="374" height="72" fill="#F4FAFB" />
+    <circle cx="215" cy="886" r="28" fill="#16679A" filter="url(#control-shadow)" />
+    <rect x="202" y="873" width="10" height="10" rx="2.5" fill="#3FC1C0" />
+    <rect x="218" y="873" width="10" height="10" rx="2.5" fill="#ffffff" />
+    <rect x="202" y="889" width="10" height="10" rx="2.5" fill="#ffffff" />
+    <rect x="218" y="889" width="10" height="10" rx="2.5" fill="#3FC1C0" />
+  </g>
+
+  <rect x="166" y="27" width="98" height="24" rx="12" fill="#1D4E89" />
+</svg>

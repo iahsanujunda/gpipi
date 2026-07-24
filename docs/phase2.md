@@ -41,22 +41,28 @@ A credential placed *in a URL* leaks — through browser history, server/proxy a
 
 ```
 User issues a command in Slack (e.g. "@ai open budget")
-  → backend mints a nonce: { nonce, user_id, expires_at (~5 min), consumed=false } → Postgres
-  → posts a link back:  https://<frontend>/enter#<nonce>          (fragment — kept out of logs/Referer)
+  → backend mints a random nonce; stores only its SHA-256 HASH:
+      { nonce_hash, user_id, expires_at (~10 min), consumed_at=null } → Postgres
+  → posts the raw nonce back EPHEMERALLY (chat.postEphemeral, only the issuer sees it):
+      https://<frontend>/enter#<nonce>                     (fragment — kept out of logs/Referer)
 
 User clicks
   → frontend reads nonce from location.hash → POST /api/auth/redeem { nonce }
-      → validate: unexpired AND unconsumed
-      → flip consumed=true IN THE SAME TRANSACTION (a leaked/double-clicked nonce cannot be reused)
+      → backend hashes the presented nonce, then validates + consumes in ONE updateReturning:
+          match on nonce_hash WHERE expires_at > now AND consumed_at IS NULL, set consumed_at = now
+      → the atomic update returns the user_id iff the row was still redeemable
+        (a leaked/double-clicked nonce cannot be reused — the second update matches nothing)
       → set session cookie: HttpOnly; Secure; SameSite=Lax; short lifetime
   ← nonce is dead; the URL in history is worthless
 
 Subsequent /api/** calls → carry the session cookie; endpoints check the SESSION, never the nonce
 ```
 
+The raw nonce lives only in the link (and briefly in the browser); at rest we keep just its hash, so a Postgres dump can't be replayed into sessions. Delivering the link **ephemerally to the issuer** also closes an identity trap: the nonce is minted for whoever ran `@ai open`, so if another member could see and click it they'd get a session acting *as* the issuer. `chat.postEphemeral` means only the issuer ever sees their own link.
+
 ### Three non-negotiables
 
-1. **Nonce is single-use**, enforced transactionally — validation and the `consumed` flip in one `dbQuery` block, so concurrent/repeat redemptions can't both succeed.
+1. **Nonce is single-use**, enforced transactionally — validation and the `consumed_at` flip in one `updateReturning` inside a `dbQuery` block, so concurrent/repeat redemptions can't both succeed (proven by a concurrent-consumers test).
 2. **Session lives in an `HttpOnly` cookie** — never the URL, never `localStorage`. Set `Secure` (HTTPS only) and `SameSite=Lax` (CSRF mitigation).
 3. **Verify before trust** — `/api/auth/redeem` is the only public route; every other `/api/**` requires a valid session.
 
@@ -73,15 +79,18 @@ The nonce stores the `user_id` of the member who issued the command, so the sess
 
 ```sql
 create table auth_nonce (
-    nonce       text primary key,          -- random, single-use
-    user_id     text        not null,      -- the member the link was minted for
-    expires_at  timestamptz not null,      -- ~5-10 minutes out
-    consumed    boolean     not null default false,
+    id          uuid        primary key default gen_random_uuid(),
+    nonce_hash  text        not null unique,  -- SHA-256 of the raw nonce; the raw is NEVER stored
+    user_id     text        not null,         -- the member the link was minted for
+    expires_at  timestamptz not null,         -- ~10 minutes out
+    consumed_at timestamptz,                   -- null = unconsumed; set on redeem (single-use)
     created_at  timestamptz not null default now()
 );
 ```
 
-Session storage: start with a signed stateless cookie (no table); add a `session` table only if server-side revocation is wanted. Expired/consumed nonces are swept by a periodic cleanup job.
+> Two deliberate deviations from a naive design: the primary key is a surrogate `id` and the nonce is keyed by a **hashed** column (`nonce_hash unique`), never the raw value — so a DB leak can't be replayed. And `consumed` is a **timestamp** (`consumed_at`), not a boolean, so redemption is observable ("when was this consumed") for free. `AuthNonceRepository.consume` does the validate-and-flip as a single `updateReturning`; `AuthService` owns the hashing (mint hashes before insert, redeem hashes before lookup) so the two sides can never drift.
+
+**Session mechanism (concrete).** A signed **stateless** cookie via Ktor's `Sessions` plugin — no `session` table. The payload is `UserSession(userId, issuedAt)`, signed (not encrypted) with `SessionTransportTransformerMessageAuthentication` keyed on `SESSION_SIGN_KEY`; the cookie is `HttpOnly`, `Secure` (gated on env so local http still works), `SameSite=Lax`, ~30 min. The guard is a Ktor `Authentication` provider named `"auth-session"` wrapping the protected `/api/**` routes. Add a server-side `session` table only if revocation is ever wanted. Expired/consumed nonces are swept by a periodic cleanup job.
 
 ---
 
@@ -133,7 +142,8 @@ React  /enter#<nonce>
   → render sortable/filterable data table
 
 Slack (phase-1 bot): "@ai open" / "@ai open budget"
-  → mint auth_nonce → post magic link
+  → OpenBudgetCommand (a SlackCommand in the phase-1 dispatcher, see phase 1 appendix)
+  → mint auth_nonce (store hash) → post magic link EPHEMERALLY to the issuer
 ```
 
 ### 1.2 Schema
@@ -148,28 +158,30 @@ Slack (phase-1 bot): "@ai open" / "@ai open budget"
 | Method | Path | Guard | Purpose |
 |--------|------|-------|---------|
 | POST | `/api/auth/redeem` | public | Exchange a nonce for a session cookie |
+| GET | `/api/auth/session` | session | Current member for the session cookie, or 401 — the frontend's bootstrap check on load |
 | GET | `/api/expenses` | session | Paginated expense list (filter by date range, category) |
 | POST | `/api/auth/logout` | session | Clear the session cookie |
 
-Plus a phase-1-side Slack command that mints the nonce and posts the link (the frontend's entry point).
+`/api/auth/session` is guarded, not public: the frontend calls it on load and treats a 401 as "not signed in" (no session yet), so `/api/auth/redeem` remains the *only* truly public route. Plus a phase-1-side `SlackCommand` (`OpenBudgetCommand`) that mints the nonce and posts the link ephemerally (the frontend's entry point).
 
 ### 1.4 Session Guard
 
-A Ktor route-scoped check applied to the `/api/**` group (except `/api/auth/redeem`): read the session cookie, validate it, resolve `user_id`, reject with 401 if absent/expired. This is the frontend's equivalent of phase 1's per-route Slack signature verification — the second door.
+A Ktor `Authentication` provider named `"auth-session"` wrapping the `/api/**` group (except `/api/auth/redeem`): it reads the signed session cookie, validates the signature, resolves `user_id` from `UserSession`, and returns 401 if absent/expired/tampered. Protected routes sit inside an `authenticate("auth-session") { … }` block; `configureSecurity()` installs both `Sessions` and `Authentication` before routing. This is the frontend's equivalent of phase 1's per-route Slack signature verification — the second door.
 
 ### 1.5 Frontend
 
 - `/enter` route: reads `location.hash`, POSTs redeem, then routes into the app.
 - Expense table: columns (date, amount, category, merchant); client sort + date/category filter; read-only.
+- Activity visual baseline: [mobile default mockup](mockups/activity-mobile-default.svg), with cards on phones and the same fields promoted to a table from medium widths upward. Phone selectors and date pickers follow the shared animated bottom-drawer pattern shown in the [drawer-state mockup](mockups/activity-mobile-drawer-states.svg).
 - CORS: backend permits the static-site origin **with credentials** (so the cookie is sent cross-origin).
 
 ### Definition of Done
 
 - [ ] `auth_nonce` table created (Flyway migration) and registered in the pgen `tableFilter`
-- [ ] A Slack command mints a nonce and posts a magic link to the requesting member
-- [ ] `/api/auth/redeem` validates + consumes the nonce in one transaction, sets `HttpOnly; Secure; SameSite` cookie
+- [ ] `OpenBudgetCommand` mints a nonce (hash stored) and posts a magic link **ephemerally** (`chat.postEphemeral`) to the requesting member; mint failure sends ephemeral feedback
+- [ ] `/api/auth/redeem` hashes + validates + consumes the nonce in one `updateReturning`, sets `HttpOnly; Secure; SameSite=Lax` signed cookie
 - [ ] Consumed or expired nonce is rejected (single-use proven by test)
-- [ ] `/api/**` rejects requests without a valid session; `/api/auth/redeem` is the only public route
+- [ ] `/api/**` rejects requests without a valid session; `/api/auth/redeem` is the only public route (`/api/auth/session` is guarded and returns 401 when unauthenticated)
 - [ ] Session carries the acting member's `user_id`
 - [ ] `GET /api/expenses` returns the phase-1 expenses, filterable by date/category
 - [ ] React app deployed on Render static site; CORS allows its origin with credentials
@@ -283,42 +295,51 @@ Makes convenient what iteration 2 assumed was done directly in the DB: editing b
 
 ### 3.1 Scope
 
-- View/edit the phase-1 `category` table as budget lines: `name`, `description`, `period`, `amount`, `active`, `slack_loggable`.
-- View/edit the iteration-2 `budget_routing` (funder + destination account per line).
+- View/edit/create the phase-1 `category` table as budget lines: `name`, `description`, `period`, `amount`, `active`, `slack_loggable`.
 - Spend-vs-cap view: expenses-in-period against each line's `amount`.
+- **Routing (funder + destination account per line) is deferred** — it depends on iteration 2's `account`/`budget_routing` tables, which don't exist yet. This iteration ships category-only CRUD; routing lands whenever iteration 2 does.
 
-Editing `description` here directly tunes phase-1 categorization (it is the LLM disambiguation hint), and toggling `slack_loggable` adds or removes a line from the extraction enum — both take effect within the `ExtractionService` cache TTL, no redeploy.
+Editing `description` here directly tunes phase-1 categorization (it is the LLM disambiguation hint), and toggling `slack_loggable` adds or removes a line from the extraction enum — both take effect immediately (`CategoryRepository.findActive()` queries on every extraction call; there's no cache yet, so no TTL to wait out).
+
+**Layering.** Mirrors the `AuthService`/`AuthRoutes` split from iteration 1: `BudgetService` owns validation and orchestration and returns a sealed `BudgetMutationResult` (`Created` / `Updated` / `NotFound` / `Invalid` / `DuplicateName`); `budgetApiRoutes` only maps that result to an HTTP status — no business logic in the route layer. `CategoryRepository` does plain persistence (`create`/`update`/`deactivate`/`listBudgets`, the last returning **all** active categories regardless of `slack_loggable`, unlike `findActive()`). A duplicate `name` surfaces as an `ExposedSQLException` from the DB's unique constraint, caught in `BudgetService` and mapped to `DuplicateName` → 409 — there's no separate application-level uniqueness check.
+
+**Deactivate is a dedicated endpoint, not a PUT flag.** `PUT /categories/{id}` is a full replace (every field required), so folding `active: false` into it would mean deactivating requires resending the entire line correctly — and would let a routine edit accidentally *reactivate* a line if the client's edit form ever forgot to carry `active` forward. `PUT /categories/{id}/deactivate` removes that footgun entirely: the frontend's edit form doesn't expose `active` as an editable field at all, and deactivation only happens through its own confirmation flow.
 
 ### 3.2 Endpoints
 
 | Method | Path | Guard | Purpose |
 |--------|------|-------|---------|
-| GET | `/api/budgets` | session | All active categories + routing |
-| PUT | `/api/budgets/categories/{id}` | session | Edit name/description/period/amount/active/slack_loggable |
+| GET | `/api/budgets` | session | All active categories (routing omitted — not yet modeled) |
 | POST | `/api/budgets/categories` | session | Create a budget line |
-| PUT | `/api/budgets/routing/{categoryId}` | session | Set funder + destination account |
-| GET | `/api/budgets/spend?period=` | session | Spend vs cap per line |
+| PUT | `/api/budgets/categories/{id}` | session | Full-replace edit: name/description/period/amount/active/slack_loggable |
+| PUT | `/api/budgets/categories/{id}/deactivate` | session | Deactivate only — the sole way `active` is ever set to `false` |
+| GET | `/api/budgets/spend?date=` | session | Spend vs. cap per line for the bucket containing `date` (defaults to today) |
+
+**Spend-vs-cap bucketing (`3.2a`).** A category's `period` is its own — WEEKLY or MONTHLY — so a single `?period=YYYY-MM` param (the original spec) can't cleanly cover weekly lines: comparing a weekly ¥3,000 cap against a full month's spend would always read as over budget. Instead, `?date=YYYY-MM-DD` (default today) is bucketed **per category**, using that category's own period: `BudgetPeriod.bucketFor(date, zone)` resolves a MONTHLY line to the calendar month containing `date`, and a WEEKLY line to the ISO week (Monday–Sunday) containing it. Bucketing runs on a fixed `Asia/Tokyo` zone (`BudgetService`'s `budgetZone`, defaulted, injectable for tests) — the household's actual "today," not server-local or UTC. At household scale (a handful of budget lines), `BudgetService.spendVsCap` computes this as one small per-category loop (`listBudgets()` then `ExpenseRepository.sumAmount(categoryId, from, to)` per row) rather than one clever aggregate query — consistent with this project's general preference for deterministic, simple queries (see phase 1's iteration-8 stance on deterministic SQL over agent loops).
 
 ### 3.3 Frontend
 
-- Budget editor: one row per budget line (cap, period, description, flags) plus its routing assignment.
-- Spend-vs-cap dashboard for the current period.
-- Edits use a confirm step — a mis-set cap is higher-stakes than a mis-categorized expense.
-- Deactivate rather than delete: expenses reference `category_id` by FK, so removal breaks history.
+- Budget editor: create/edit as a bottom-sheet (mobile) or dialog (desktop) form — `BudgetEditor.jsx`. Routing assignment is not part of this form (deferred, see 3.1).
+- The edit form's initial state is loaded directly from the already-fetched `BudgetRow` (`formFromBudget(budget)`), never a blank/defaulted object — this is what keeps a routine edit from silently touching `active`/`slack_loggable` fields the user didn't intend to change.
+- Edits use a confirm step showing **only the changed fields** (previous → next) before commit; create shows a full summary. A mis-set cap is higher-stakes than a mis-categorized expense.
+- Deactivate rather than delete: expenses reference `category_id` by FK, so removal breaks history. Deactivating has its own confirmation screen, separate from the edit-changes review, and calls the dedicated `/deactivate` endpoint.
+- Unsaved-edit protection: an in-app navigation guard plus a `beforeunload` handler warn before losing dirty form state.
+- Spend-vs-cap renders as a secondary layer on the existing budget cards/table (joined by `categoryId`), not a blocking dependency — the page still renders caps if the spend query fails or is slow.
 
 ### 3.4 Cross-door note
 
-Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are the **same mutation over the same data**, through the Slack door instead of the web door — they belong to phase 1's bot/intent surface (iteration 8), not here. Both doors resolve to the same authorized write; this iteration is the web door for it.
+Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are the **same mutation over the same data**, through the Slack door instead of the web door — they belong to phase 1's bot/intent surface (iteration 8) as a new `SlackCommand` in the dispatcher (see phase 1 appendix), not here. Both doors resolve to the same authorized write; this iteration is the web door for it.
 
 ### Definition of Done
 
-- [ ] Budget-line CRUD wired to the API (create, edit, deactivate)
-- [ ] Routing (funder + destination) editable per line
-- [ ] Spend-vs-cap view for the current period
-- [ ] Edits confirmed before commit
-- [ ] `description` edits reflected in the next phase-1 categorization (no redeploy)
-- [ ] `slack_loggable` toggle adds/removes the line from the extraction enum
-- [ ] Editing an `amount` changes next period's computed payday plan (integration with iter 2)
+- [x] Budget-line CRUD wired to the API (create, edit, deactivate) — `BudgetService` + `budgetApiRoutes`, all four endpoints session-guarded (proven by `BudgetRoutesGuardTest`)
+- [x] Spend-vs-cap computed per category's own period (`GET /api/budgets/spend?date=`), bucketed on `Asia/Tokyo`
+- [ ] Spend-vs-cap **rendered** in the frontend (backend endpoint done; not yet joined into `BudgetsPage`)
+- [x] Edits confirmed before commit — diff-only review step for edits, full summary for create, separate confirmation for deactivate
+- [x] `description` edits reflected in the next phase-1 categorization immediately (no cache yet, so no TTL to wait out — see 3.1)
+- [x] `slack_loggable` toggle adds/removes the line from the extraction enum (unchanged `findActive()` behavior)
+- [ ] **Deferred to iteration 2:** routing (funder + destination) editable per line
+- [ ] **Deferred to iteration 2:** editing an `amount` changes next period's computed payday plan — no payday plan exists yet
 
 ---
 
@@ -389,7 +410,8 @@ Capture each as it becomes clear, then extend this document.
 - **Migrations + codegen:** each iteration adds a Flyway SQL migration (source of truth), registers any new table in the pgen `tableFilter` allowlist, then regenerates (`pgenGenerateSpec` → `pgenGenerateCode`) and commits `pgen-spec.json`. Forgetting the allowlist step means the table silently isn't generated.
 - **Persistence discipline:** all DB access through `dbQuery(db)`; one flat transaction per atomic write; no network calls inside a transaction. Generated tables are plain Exposed `Table`s (not `IdTable`), so ids are generated client-side (`UUID.randomUUID()`) and set explicitly — there is no `insertAndGetId`.
 - **Testing:** Testcontainers + real migrations, as in phase 1. `cleanDatabase()` truncates seed data, so tests needing FK targets (a `category` row for a routing row, an `account` row for a transfer) must re-seed in setup.
-- **CORS:** the backend permits the static-site origin with credentials on all `/api/**` routes.
+- **CORS:** the backend permits the static-site origin with credentials on all `/api/**` routes — `allowCredentials = true` forbids a wildcard origin, so the origin is named explicitly (config, not `*`).
+- **Config keys (added in iter 1):** `session.signKey` ← `SESSION_SIGN_KEY` (HMAC key for the session cookie), `web.baseUrl` ← `WEB_BASE_URL` (full origin, used to build the magic link), `cors.allowedOrigin` ← `CORS_ALLOWED_ORIGIN` (host[:port], no scheme — `allowHost` takes schemes separately). All three are read with `config.property(...)`, which throws on boot if missing; mirror them in `.env.example` and inject them in the test config (`configureWithTestDb`).
 - **Transfer ledger purity:** balances and variance are always derived by summing the append-only `transfer` ledger — never stored as a mutable column.
 
 ---

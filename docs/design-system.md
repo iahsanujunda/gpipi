@@ -8,6 +8,9 @@ Related references:
 
 - [Phase 2 product and API plan](phase2.md)
 - [Budget page, default state](mockups/budget-mobile-default.svg)
+- [Budget utilization states](mockups/budget-spend-vs-cap-views.svg)
+- [Activity page, default state](mockups/activity-mobile-default.svg)
+- [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
 - [Source color palette](https://coolors.co/palette/3fc1c0-20bac5-00b2ca-04a6c2-0899ba-0f80aa-16679a-1a5b92-1c558e-1d4e89)
 
@@ -86,7 +89,8 @@ The dock is a full-width, fixed-position **content-occluding surface**. Its purp
 
 - Dim the page with the navigation scrim.
 - Change the launcher icon to an unambiguous close icon.
-- Stack two labelled navigation pills above the launcher.
+- Cross-fade and rotate the brand and close icons within the unchanged launcher circle over `180 ms`; do not replace the entire control.
+- Stack the labelled navigation pills above the launcher.
 - Each pill is at least `48 px` high, with at least `8 px` between touch targets.
 - Mark the active destination with a filled primary pill, white text, and `aria-current="page"`.
 - Set `aria-expanded="true"` on the launcher.
@@ -98,6 +102,18 @@ The current order from top to bottom is:
 
 Activity sits closest to the thumb because it is expected to be used most frequently. Slack magic links may deep-link directly to any destination.
 
+### Route-aware page actions
+
+The launcher keeps one stable identity, while its expanded contents may include an action contributed by the current page.
+
+- On Budgeting, show `Add budget line` above the navigation group. Do not show it on Activity.
+- Render the contextual action as a button and destinations as links.
+- Separate it semantically and visually with a `Page action` eyebrow, plus icon, two-line action surface, larger width, accent border, and spacing before the labelled `Navigation` group. Do not rely on color alone.
+- Keep the rare page action above the destinations, leaving frequent navigation closer to the thumb.
+- Selecting the action closes the launcher and opens the New budget line adaptive dialog.
+- Do not change the resting launcher icon or accessible name according to the page action.
+- Populated Budgeting views do not repeat a persistent Add button in page content. The empty state is the deliberate exception and exposes `Add first budget line` directly.
+
 ### Interaction rules
 
 - Open by tapping the launcher.
@@ -105,8 +121,6 @@ Activity sits closest to the thumb because it is expected to be used most freque
 - Return focus to the launcher when the menu closes without navigation.
 - If the current page has unsaved edits, navigation must enter the unsaved-changes confirmation flow.
 - Keep the pills in logical DOM and focus order; do not make visual animation order the keyboard order.
-
-The relationship between this launcher and a future contextual budget-edit action bar is not yet locked.
 
 ## Color system
 
@@ -144,6 +158,7 @@ The supplied palette is preserved as a design ramp. Semantic UI roles must use t
 | `color-highlight` | `#DFF4F4` | Chips and selected soft backgrounds |
 | `color-scrim` | `rgba(29, 78, 137, 0.30)` | Navigation overlay |
 | `color-danger` | `#B42318` | Destructive actions and destructive errors |
+| `color-danger-soft` | `#FDECEC` | Over-cap and error-supporting backgrounds |
 
 `color-page`, `color-border`, and `color-highlight` are supporting tints derived for the interface; they are not additional brand colors.
 
@@ -195,6 +210,20 @@ Use a `4 px` base unit. Preferred spacing tokens are `4`, `8`, `12`, `16`, `24`,
 
 ## Component guidance
 
+### Adaptive mobile overlays
+
+Phone interactions use one bottom-drawer language for selection, dates, and future popup dialogs. This is the standard mobile presentation, not an Activity-specific treatment.
+
+- Below the medium breakpoint, selector fields open an option drawer and date fields open a calendar drawer. At medium widths and above, keep the platform-appropriate inline select and date controls.
+- Future popup dialogs must use the same bottom-drawer shell on phones. Their content and action layout may differ, but their position, dismissal, motion, safe-area handling, and focus behavior do not.
+- Anchor the surface to the viewport bottom and round its top corners to `16 px`. Include a visible `36 × 4 px` drag handle.
+- The drawer must never cover the complete viewport. Its global maximum height is `calc(100dvh - max(24px, env(safe-area-inset-top)))`; a feature may set a smaller cap. Option and date drawers use `80dvh`.
+- Keep the revealed area behind the drawer visibly dimmed with `color-scrim`. Tapping that area dismisses the drawer and communicates that the underlying page still exists.
+- Dismiss on backdrop tap, explicit close, `Escape`, downward swipe, or browser Back. A flow that temporarily disables dismissal must explain why.
+- Use one scrolling content region inside the drawer, contain overscroll there, and pad the bottom by at least `max(16px, env(safe-area-inset-bottom))`.
+- Restore focus to the field or control that opened the drawer after the exit animation completes.
+- Option rows are at least `48 px` high, use `listbox`/`option` semantics, and expose selection independently of color. Calendar days are at least `44 × 44 px`, live inside a labelled grid, and expose the selected date with `aria-pressed`.
+
 ### Budget page heading
 
 Use `Budgeting` as the sole page heading. Do not add a persistent subtitle below it; the budget cards provide the necessary context.
@@ -205,10 +234,43 @@ On phones, render each budget line as a card rather than a compressed table row.
 
 - Name as the card title.
 - Description as supporting text.
-- Period as a compact chip.
-- Amount as a prominent, right-aligned money value.
+- The line's exact active window as a compact chip, for example `WEEKLY · 20–26 JUL` or `MONTHLY · JUL 2026`.
+- `SLACK ON` or `PLANNING ONLY` as a second chip, independently of color.
+- Spent and exact difference as the primary financial values. Say `¥3,000 left` or `¥2,000 over`; do not make users infer the difference from a bar.
+- Cap and real utilization percentage as supporting values.
+- A compact utilization bar when the cap is greater than zero.
 
-The complete Iteration 3 editor also needs `active`, `slack_loggable`, funder, destination account, and spend-vs-cap information. Their editing pattern and information hierarchy are still to be designed. Do not squeeze every field into the read-state card by default.
+The utilization bar is a supporting comparison signal. Clamp its visual fill at `100%`, while displaying and announcing the real percentage, such as `110%`. Pair over-cap red with the `OVER CAP` label, exact overage, and percentage. When the cap is zero, say `No cap set` and omit the bar; spend against an unset cap is not an over-cap error.
+
+Fetch budget definitions and spend projections independently. While spend is loading, keep the name, description, period, Slack state, and Edit action usable and show a local skeleton in the financial area. If only spend fails, keep the same budget details available and show an inline `Spending unavailable` state with a safe Retry action. Join the resources by category ID, never by display name.
+
+Show a compact outlined Edit icon button on each phone card. From medium widths upward, adapt the same rows to a table with Budget line, Window, Spent / cap, Difference, Slack, and Edit columns. Weekly and monthly lines retain their own windows; do not combine them into one household utilization bar.
+
+The create/edit flow is locked in:
+
+- On phones, use the shared animated bottom drawer. From medium widths upward, use a bounded centered dialog.
+- Create and edit use the same fields: name, description, integer JPY cap, weekly/monthly period, and Slack logging.
+- Keep `active` implicit for creation. Deactivation is a separate destructive action; there is no delete.
+- A valid form advances to a review surface before any request is sent. Creation reviews the complete record; editing reviews changed fields only.
+- API validation, conflicts, and request errors stay inside the editor without clearing entered values.
+- Closing a dirty editor shows `Discard changes?`; `Keep editing` restores the form, and `Discard changes` closes without writing.
+- Deactivation has its own confirmation surface and explains that historical expenses remain.
+- After a successful write, close the editor, refresh the budget query, announce concise feedback, and temporarily mark the affected row with an accent border.
+
+Funder and destination account information belong to the later payday-routing slice. Do not squeeze them into this editor or the current read-state card.
+
+### Activity page
+
+Use `Activity` as the page heading with one short supporting sentence explaining that the ledger contains household expenses recorded through Slack.
+
+- Keep filters together in one bordered surface above the results. Category and sort span the available phone width; the From and To date fields may share a row.
+- On phones, Category and Sort use option drawers while From and To use calendar drawers. See the [verified mobile drawer states](mockups/activity-mobile-drawer-states.svg).
+- Show the visible result count beside the filter heading when space permits and directly below it on narrow screens.
+- On phones, show one expense per card: merchant and amount form the primary row, category is a compact chip, and date is supporting metadata.
+- From medium widths upward, present the same information as an accessible four-column table ordered Date, Merchant, Category, Amount.
+- Amounts are right-aligned, use tabular numerals, and remain visually prominent without overpowering the merchant.
+- Filters and sorting are client-side for this initial read-only view. Date ranges are inclusive.
+- Loading, request failure, no recorded activity, and no filter matches are distinct states. A filtered empty state offers a direct Clear filters action.
 
 ### Buttons
 
@@ -246,7 +308,15 @@ Motion should explain spatial change, not decorate routine actions.
 - Animate only compositor-friendly properties such as `transform` and `opacity`.
 - Under `prefers-reduced-motion: reduce`, use an opacity-only transition or update immediately.
 
-Most other interface transitions should stay between `150–300 ms` and should not block input.
+### Bottom-drawer motion
+
+- Enter from below the viewport over `380 ms` with `cubic-bezier(0.22, 1, 0.36, 1)`.
+- Exit toward the bottom over `220 ms` with `cubic-bezier(0.4, 0, 1, 1)`.
+- Keep the drawer mounted until its exit movement completes so closing reads as a spatial transition rather than disappearing.
+- Animate `transform`; do not animate layout height or the page behind the drawer.
+- Under `prefers-reduced-motion: reduce`, use a `0 ms` transition and update immediately.
+
+Other interface transitions should generally stay between `150–300 ms` and should not block input.
 
 ## Responsive behavior
 
@@ -271,17 +341,17 @@ Every frontend contribution must meet these minimums:
 - Text can enlarge without clipping, overlap, or horizontal scrolling.
 - Motion respects the user's reduced-motion preference.
 - Safe-area insets keep controls clear of mobile system UI.
+- Drawers expose dialog semantics, keep focus out of the dimmed page, and return focus to their trigger after closing.
 
 ## Implementation boundary
 
-The React app uses Material UI, so these tokens should become semantic theme values and component variants rather than scattered CSS literals. The app shell, navigation launcher, and mobile budget cards should be shared components. Page-specific data fetching remains in page features through TanStack Query.
+The React app uses Material UI, so these tokens should become semantic theme values and component variants rather than scattered CSS literals. The app shell, navigation launcher, mobile budget cards, `AnimatedBottomSheet`, `AdaptiveSelect`, and `AdaptiveDateField` are shared components. Future adaptive popup dialogs must build on `AnimatedBottomSheet` rather than introducing another phone overlay pattern. Page-specific data fetching remains in page features through TanStack Query.
 
 The following decisions are deliberately still open:
 
 - Final brand icon artwork.
 - Exact Slack return deep link and fallback behavior.
 - Location of the secondary sign-out action.
-- Budget card editing interaction, confirmation surface, and contextual action bar.
 - Tablet and desktop navigation adaptation.
 - Full success, warning, and informational status palette.
 - Dark mode.

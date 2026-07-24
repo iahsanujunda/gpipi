@@ -6,8 +6,7 @@ import me.gpipi.generated.db.base.public1.ExpenseDraft
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.updateReturning
 
 data class ExpenseDraftRow(
     val id: UUID,
@@ -53,15 +52,29 @@ class ExpenseDraftRepository {
         return id
     }
 
-    fun consumeIfPending(id: UUID): ExpenseDraftRow? {
-        val updated = ExpenseDraft.update(
-            { (ExpenseDraft.id eq id) and (ExpenseDraft.status eq "PENDING") }
-        ) { it[status] = "CONFIRMED" }
-        if (updated == 0) return null
-        return ExpenseDraft.selectAll()
-            .where { ExpenseDraft.id eq id }
-            .single()
-            .let { r ->
+    fun consumeIfPending(id: UUID): ExpenseDraftRow? =
+        ExpenseDraft.updateReturning(
+            returning = listOf(
+                ExpenseDraft.id,
+                ExpenseDraft.inboundMessageId,
+                ExpenseDraft.userId,
+                ExpenseDraft.channelId,
+                ExpenseDraft.amount,
+                ExpenseDraft.currency,
+                ExpenseDraft.merchant,
+                ExpenseDraft.note,
+                ExpenseDraft.predictedCategoryId,
+                ExpenseDraft.confidence,
+                ExpenseDraft.model,
+            ),
+            where = {
+                (ExpenseDraft.id eq id) and (ExpenseDraft.status eq "PENDING")
+            },
+        ) {
+            it[ExpenseDraft.status] = "CONFIRMED"
+        }
+            .singleOrNull()
+            ?.let { r ->
                 ExpenseDraftRow(
                     id = r[ExpenseDraft.id],
                     inboundMessageId = r[ExpenseDraft.inboundMessageId],
@@ -76,5 +89,4 @@ class ExpenseDraftRepository {
                     model = r[ExpenseDraft.model],
                 )
             }
-    }
 }

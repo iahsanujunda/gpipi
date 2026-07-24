@@ -546,6 +546,7 @@ export default function BudgetsPage() {
   const updateMutation = useUpdateBudget()
   const deactivateMutation = useDeactivateBudget()
   const [editor, setEditor] = useState(null)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [editorDirty, setEditorDirty] = useState(false)
   const [discardRequested, setDiscardRequested] = useState(false)
   const [success, setSuccess] = useState(null)
@@ -554,6 +555,7 @@ export default function BudgetsPage() {
   const openCreate = useCallback(() => {
     setSuccess(null)
     setEditor({ mode: 'create' })
+    setEditorOpen(true)
   }, [])
 
   const pageAction = useMemo(() => ({
@@ -589,19 +591,24 @@ export default function BudgetsPage() {
   function openEdit(budget) {
     setSuccess(null)
     setEditor({ mode: 'edit', budget })
+    setEditorOpen(true)
   }
 
   function closeEditor() {
-    setEditor(null)
+    setEditorOpen(false)
     setEditorDirty(false)
   }
 
-  function resolveDiscard(discarded) {
+  function finishEditorClose() {
+    setEditor(null)
     const continueNavigation = pendingNavigationRef.current
     pendingNavigationRef.current = null
+    continueNavigation?.()
+  }
+
+  function resolveDiscard(discarded) {
     setDiscardRequested(false)
-    if (!discarded || !continueNavigation) return
-    window.setTimeout(continueNavigation, 230)
+    if (!discarded) pendingNavigationRef.current = null
   }
 
   function saved(result) {
@@ -736,8 +743,9 @@ export default function BudgetsPage() {
           onClose={closeEditor}
           onDirtyChange={setEditorDirty}
           onDiscardDecision={resolveDiscard}
+          onExited={finishEditorClose}
           onSaved={saved}
-          open
+          open={editorOpen}
           updateMutation={updateMutation}
         />
       )}

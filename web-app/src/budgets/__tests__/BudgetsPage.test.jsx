@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AppNavigation from '@/app/AppNavigation'
 import BudgetsPage from '@/budgets/BudgetsPage'
@@ -243,7 +243,7 @@ describe('BudgetsPage', () => {
       active: true,
       slackLoggable: true,
     })
-    expect(dialog).not.toBeInTheDocument()
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
     expect(screen.getByRole('status')).toHaveTextContent('Pet care created')
   })
 
@@ -285,6 +285,9 @@ describe('BudgetsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Deactivate budget line' }))
 
     expect(deactivate.mutateAsync).toHaveBeenCalledWith(eatingOut.id)
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Edit Eating Out' })).not.toBeInTheDocument()
+    })
     expect(screen.getByRole('status')).toHaveTextContent('Eating Out deactivated')
   })
 

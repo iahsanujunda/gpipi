@@ -89,7 +89,7 @@ The dock is a full-width, fixed-position **content-occluding surface**. Its purp
 
 - Dim the page with the navigation scrim.
 - Change the launcher icon to an unambiguous close icon.
-- Cross-fade and rotate the brand and close icons within the unchanged launcher circle over `180 ms`; do not replace the entire control.
+- Cross-fade and rotate the brand and close icons within the unchanged launcher circle over `280 ms`; do not replace the entire control.
 - Stack the labelled navigation pills above the launcher.
 - Introduce every action group with the same high-contrast section header: white uppercase text on `color-heading`, followed by a `color-brand-accent` rule. Do not place group labels directly on the scrim.
 - Each pill is at least `48 px` high, with at least `8 px` between touch targets.
@@ -304,16 +304,16 @@ Motion should explain spatial change, not decorate routine actions.
 
 ### Navigation motion
 
-- Open over approximately `200 ms` using `transform`, `opacity`, and a subtle scale.
-- Reveal items from bottom to top with an approximately `30 ms` stagger.
-- Close in reverse over approximately `140 ms`.
+- Open over approximately `320 ms` using `transform`, `opacity`, a subtle scale, and `cubic-bezier(0.2, 0.75, 0.2, 1)` so motion remains visible through the middle of the transition.
+- Reveal items from bottom to top with an approximately `45 ms` stagger.
+- Close in reverse over approximately `220 ms`.
 - Animate only compositor-friendly properties such as `transform` and `opacity`.
 - Under `prefers-reduced-motion: reduce`, use an opacity-only transition or update immediately.
 
 ### Bottom-drawer motion
 
-- Enter from below the viewport over `380 ms` with `cubic-bezier(0.22, 1, 0.36, 1)`.
-- Exit toward the bottom over `220 ms` with `cubic-bezier(0.4, 0, 1, 1)`.
+- Enter from below the viewport over `520 ms` with `cubic-bezier(0.2, 0.75, 0.2, 1)` so meaningful travel remains visible through the middle of the transition.
+- Exit toward the bottom over `320 ms` with `cubic-bezier(0.4, 0, 1, 1)`.
 - Keep the drawer mounted until its exit movement completes so closing reads as a spatial transition rather than disappearing.
 - Animate `transform`; do not animate layout height or the page behind the drawer.
 - Under `prefers-reduced-motion: reduce`, use a `0 ms` transition and update immediately.

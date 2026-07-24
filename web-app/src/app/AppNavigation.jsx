@@ -10,10 +10,12 @@ import {
 } from './AppIcons'
 import { usePageActions } from './pageActions'
 
-const OPEN_DURATION = 200
-const CLOSE_DURATION = 140
-const STAGGER = 30
-const LAUNCHER_ICON_DURATION = 180
+const OPEN_DURATION = 320
+const CLOSE_DURATION = 220
+const STAGGER = 45
+const LAUNCHER_ICON_DURATION = 280
+const OPEN_EASING = 'cubic-bezier(0.2, 0.75, 0.2, 1)'
+const CLOSE_EASING = 'cubic-bezier(0.4, 0, 1, 1)'
 
 const navigationItems = [
   { label: 'Budgets', to: '/budgets', icon: BudgetsIcon },
@@ -36,7 +38,7 @@ function entryMotion(isOpen, visualIndex, entryCount) {
       : 'translate3d(0, 16px, 0) scale(0.96)',
     transitionProperty: 'transform, opacity, visibility, background-color',
     transitionDuration: `${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms`,
-    transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    transitionTimingFunction: isOpen ? OPEN_EASING : CLOSE_EASING,
     transitionDelay: `${isOpen ? openDelay : closeDelay}ms`,
     '@media (prefers-reduced-motion: reduce)': {
       transform: 'none',
@@ -58,7 +60,7 @@ function MenuSectionHeader({ children, id, isOpen }) {
         mb: 1,
         opacity: isOpen ? 1 : 0,
         visibility: isOpen ? 'visible' : 'hidden',
-        transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms ease`,
+        transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms ${isOpen ? OPEN_EASING : CLOSE_EASING}`,
         '@media (prefers-reduced-motion: reduce)': {
           transitionDuration: '0ms',
         },
@@ -151,7 +153,7 @@ export default function AppNavigation() {
           bgcolor: 'scrim.main',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'auto' : 'none',
-          transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+          transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms ${isOpen ? OPEN_EASING : CLOSE_EASING}`,
           '@media (prefers-reduced-motion: reduce)': { transitionDuration: '0ms' },
         })}
       />
@@ -301,7 +303,7 @@ export default function AppNavigation() {
             bgcolor: 'scrim.main',
             opacity: isOpen ? 1 : 0,
             pointerEvents: 'none',
-            transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+            transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms ${isOpen ? OPEN_EASING : CLOSE_EASING}`,
           },
           '@media (prefers-reduced-motion: reduce)': {
             '&::before': { transitionDuration: '0ms' },
@@ -329,7 +331,7 @@ export default function AppNavigation() {
             color: 'primary.contrastText',
             bgcolor: 'primary.main',
             boxShadow: '0 5px 14px rgba(29, 78, 137, 0.22)',
-            transition: 'background-color 160ms ease, transform 160ms cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: `background-color 200ms ease, transform 200ms ${OPEN_EASING}`,
             '&:hover': { bgcolor: 'primary.dark' },
             '&:active': { transform: 'translateX(-50%) scale(0.96)' },
             '@media (prefers-reduced-motion: reduce)': { transitionDuration: '0ms' },
@@ -343,7 +345,7 @@ export default function AppNavigation() {
               fontSize: 30,
               opacity: isOpen ? 0 : 1,
               transform: isOpen ? 'rotate(-45deg) scale(0.72)' : 'rotate(0deg) scale(1)',
-              transition: `opacity ${LAUNCHER_ICON_DURATION}ms ease, transform ${LAUNCHER_ICON_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+              transition: `opacity ${LAUNCHER_ICON_DURATION}ms ease, transform ${LAUNCHER_ICON_DURATION}ms ${OPEN_EASING}`,
               '@media (prefers-reduced-motion: reduce)': {
                 transitionDuration: '0ms',
               },
@@ -357,7 +359,7 @@ export default function AppNavigation() {
               fontSize: 28,
               opacity: isOpen ? 1 : 0,
               transform: isOpen ? 'rotate(0deg) scale(1)' : 'rotate(45deg) scale(0.72)',
-              transition: `opacity ${LAUNCHER_ICON_DURATION}ms ease, transform ${LAUNCHER_ICON_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+              transition: `opacity ${LAUNCHER_ICON_DURATION}ms ease, transform ${LAUNCHER_ICON_DURATION}ms ${OPEN_EASING}`,
               '@media (prefers-reduced-motion: reduce)': {
                 transitionDuration: '0ms',
               },

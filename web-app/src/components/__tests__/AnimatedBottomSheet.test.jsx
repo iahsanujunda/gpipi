@@ -36,8 +36,8 @@ describe('AnimatedBottomSheet', () => {
 
     const sheet = screen.getByRole('dialog', { name: 'Test sheet' })
     expect(sheet).toHaveAttribute('data-motion', 'slide-from-bottom')
-    expect(sheet).toHaveAttribute('data-enter-duration-ms', '380')
-    expect(sheet).toHaveAttribute('data-exit-duration-ms', '220')
+    expect(sheet).toHaveAttribute('data-enter-duration-ms', '520')
+    expect(sheet).toHaveAttribute('data-exit-duration-ms', '320')
     expect(sheet).toHaveAttribute('data-swipe-to-dismiss', 'true')
     expect(sheet).toHaveStyle({
       position: 'fixed',

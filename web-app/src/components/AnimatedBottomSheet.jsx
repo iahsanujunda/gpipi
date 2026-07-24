@@ -2,13 +2,13 @@ import { useEffect, useId, useRef } from 'react'
 import { SwipeableDrawer, useMediaQuery } from '@mui/material'
 
 const BOTTOM_SHEET_MOTION = {
-  enter: 380,
-  exit: 220,
+  enter: 520,
+  exit: 320,
 }
 
 const BOTTOM_SHEET_MAX_HEIGHT = 'calc(100dvh - max(24px, env(safe-area-inset-top)))'
 const BOTTOM_SHEET_FEATURE_MAX_HEIGHT = '--bottom-sheet-feature-max-height'
-const ENTER_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
+const ENTER_EASING = 'cubic-bezier(0.2, 0.75, 0.2, 1)'
 const EXIT_EASING = 'cubic-bezier(0.4, 0, 1, 1)'
 
 const HISTORY_KEY = '__gpipiBottomSheet'
@@ -156,7 +156,7 @@ export default function AnimatedBottomSheet({
         backdrop: {
           ...backdropSlot,
           sx: [
-            { bgcolor: 'rgba(29, 78, 137, 0.30)' },
+            { bgcolor: 'scrim.main' },
             backdropSlot.sx,
           ],
         },

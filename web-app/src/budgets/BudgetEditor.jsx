@@ -454,6 +454,7 @@ export default function BudgetEditor({
   onClose,
   onDirtyChange,
   onDiscardDecision,
+  onExited,
   onSaved,
   open,
   updateMutation,
@@ -570,6 +571,7 @@ export default function BudgetEditor({
               '--bottom-sheet-feature-max-height': 'calc(100dvh - max(24px, env(safe-area-inset-top)))',
             },
           },
+          transition: { onExited },
         }}
       >
         {surface}
@@ -584,7 +586,10 @@ export default function BudgetEditor({
       fullWidth
       maxWidth="sm"
       aria-labelledby="budget-editor-dialog-title"
-      slotProps={{ paper: { sx: { maxHeight: 'min(760px, calc(100dvh - 48px))' } } }}
+      slotProps={{
+        paper: { sx: { maxHeight: 'min(760px, calc(100dvh - 48px))' } },
+        transition: { onExited },
+      }}
     >
       <DialogTitle id="budget-editor-dialog-title" sx={{ display: 'none' }}>
         {mode === 'create' ? 'New budget line' : `Edit ${budget.name}`}

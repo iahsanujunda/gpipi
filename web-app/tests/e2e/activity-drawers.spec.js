@@ -24,22 +24,47 @@ test.beforeEach(async ({ page }) => {
 
 test('mobile select drawer animates, stays below the viewport top, and dismisses through the revealed backdrop', async ({ page }) => {
   const category = page.getByRole('combobox', { name: 'Category' })
-  await category.click()
+  const samples = await category.evaluate(async (trigger) => {
+    trigger.click()
+    await new Promise(requestAnimationFrame)
+    await new Promise(requestAnimationFrame)
+
+    const sheet = document.querySelector('[data-presentation="bottom-sheet-options"]')
+    const sample = () => {
+      const transform = getComputedStyle(sheet).transform
+      return {
+        height: sheet.getBoundingClientRect().height,
+        y: transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42,
+      }
+    }
+
+    const start = sample()
+    await new Promise((resolve) => setTimeout(resolve, 180))
+    const middle = sample()
+    await new Promise((resolve) => setTimeout(resolve, 420))
+    const end = sample()
+    return { start, middle, end }
+  })
+
+  expect(samples.start.y).toBeGreaterThan(samples.start.height * 0.15)
+  expect(samples.middle.y).toBeGreaterThan(samples.middle.height * 0.08)
+  expect(samples.middle.y).toBeLessThan(samples.start.y)
+  expect(samples.end.y).toBeCloseTo(0, 0)
 
   const sheet = page.locator('[data-presentation="bottom-sheet-options"]')
   await expectBottomSheetGeometry(page, sheet)
   await expect(sheet).toHaveAttribute('data-motion', 'slide-from-bottom')
-  await expect(sheet).toHaveAttribute('data-enter-duration-ms', '380')
-  await expect(sheet).toHaveAttribute('data-exit-duration-ms', '220')
-  await expect(sheet).toHaveCSS('transition-duration', '0.38s')
+  await expect(sheet).toHaveAttribute('data-enter-duration-ms', '520')
+  await expect(sheet).toHaveAttribute('data-exit-duration-ms', '320')
+  await expect(sheet).toHaveCSS('transition-duration', '0.52s')
   await expect(sheet).toHaveCSS(
     'transition-timing-function',
-    'cubic-bezier(0.22, 1, 0.36, 1)',
+    'cubic-bezier(0.2, 0.75, 0.2, 1)',
   )
 
   await page.mouse.click(12, 12)
   await expect(sheet).toBeAttached()
-  await expect(sheet).toHaveCSS('transition-duration', '0.22s')
+  await expect(sheet).toHaveCSS('transition-duration', '0.32s')
   await expect(sheet).toBeHidden()
   await expect(category).toBeFocused()
 })

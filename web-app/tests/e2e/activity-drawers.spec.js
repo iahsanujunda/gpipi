@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { holdAndSampleTactileMotion } from './motion'
 
 async function expectBottomSheetGeometry(page, sheet) {
   await expect(sheet).toBeVisible()
@@ -69,6 +70,47 @@ test('mobile select drawer animates, stays below the viewport top, and dismisses
   await expect(category).toBeFocused()
 })
 
+test('ordinary action buttons provide tactile feedback while pressed', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Category' }).click()
+  await page.getByRole('option', { name: 'Monthly Groceries' }).click()
+
+  const pressed = await holdAndSampleTactileMotion(
+    page,
+    page.getByRole('button', { name: 'Clear filters' }),
+  )
+
+  expect(pressed.scale).toBeCloseTo(0.98, 2)
+  expect(pressed.y).toBeCloseTo(1, 1)
+})
+
+test('icon buttons provide tactile feedback while pressed', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'From' }).click()
+  const dateSheet = page.locator('[data-presentation="bottom-sheet-date-picker"]')
+  await expectBottomSheetGeometry(page, dateSheet)
+
+  const pressed = await holdAndSampleTactileMotion(
+    page,
+    dateSheet.getByRole('button', { name: 'Previous month' }),
+  )
+
+  expect(pressed.scale).toBeCloseTo(0.98, 2)
+  expect(pressed.y).toBeCloseTo(1, 1)
+})
+
+test('list action buttons provide tactile feedback while pressed', async ({ page }) => {
+  await page.getByRole('combobox', { name: 'Category' }).click()
+  const optionSheet = page.locator('[data-presentation="bottom-sheet-options"]')
+  await expectBottomSheetGeometry(page, optionSheet)
+
+  const pressed = await holdAndSampleTactileMotion(
+    page,
+    optionSheet.getByRole('option', { name: 'Monthly Groceries' }),
+  )
+
+  expect(pressed.scale).toBeCloseTo(0.98, 2)
+  expect(pressed.y).toBeCloseTo(1, 1)
+})
+
 test('mobile select and date drawers complete their interactions and restore focus', async ({ page }) => {
   const category = page.getByRole('combobox', { name: 'Category' })
   await category.click()
@@ -105,4 +147,12 @@ test('reduced motion removes the drawer transition', async ({ page }) => {
   await expect(sheet).toHaveAttribute('data-enter-duration-ms', '0')
   await expect(sheet).toHaveAttribute('data-exit-duration-ms', '0')
   await expect(sheet).toHaveCSS('transition-duration', '0s')
+
+  const pressed = await holdAndSampleTactileMotion(
+    page,
+    sheet.getByRole('option', { name: 'Oldest first' }),
+  )
+  expect(pressed.scale).toBeCloseTo(1, 2)
+  expect(pressed.y).toBeCloseTo(0, 1)
+  expect(pressed.rippleDisplay).toBe('none')
 })

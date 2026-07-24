@@ -318,6 +318,13 @@ Motion should explain spatial change, not decorate routine actions.
 - Animate `transform`; do not animate layout height or the page behind the drawer.
 - Under `prefers-reduced-motion: reduce`, use a `0 ms` transition and update immediately.
 
+### Tactile control motion
+
+- Buttons, icon buttons, list actions, and toggle buttons compress to `98%` scale and move down `1 px` while pressed.
+- Reach the pressed state over `90 ms`, then settle back over `160 ms` with `cubic-bezier(0.2, 0.75, 0.2, 1)`.
+- Apply this behavior to explicit action components rather than the raw button primitive so switches and checkbox internals do not shift.
+- Under `prefers-reduced-motion: reduce`, remove the transform, transition, and ripple animation.
+
 Other interface transitions should generally stay between `150–300 ms` and should not block input.
 
 ## Responsive behavior

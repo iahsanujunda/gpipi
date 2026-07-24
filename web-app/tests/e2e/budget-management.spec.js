@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { holdAndSampleTactileMotion } from './motion'
 
 async function expectBottomSheetGeometry(page, sheet) {
   await expect(sheet).toBeVisible()
@@ -20,6 +21,20 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/budgets')
   await expect(page.getByRole('heading', { name: 'Budgeting', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Eating Out' })).toBeVisible()
+})
+
+test('toggle buttons provide tactile feedback while pressed', async ({ page }) => {
+  await page.getByRole('button', { name: 'Edit Eating Out' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Edit Eating Out' })
+  await expectBottomSheetGeometry(page, sheet)
+
+  const pressed = await holdAndSampleTactileMotion(
+    page,
+    sheet.getByRole('button', { name: 'Monthly' }),
+  )
+
+  expect(pressed.scale).toBeCloseTo(0.98, 2)
+  expect(pressed.y).toBeCloseTo(1, 1)
 })
 
 test('shows exact utilization states on mobile and in the wider budget table', async ({ page }) => {

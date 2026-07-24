@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1010" viewBox="0 0 900 1010" role="img" aria-labelledby="title description">
+  <title id="title">Household Assistant mobile navigation in resting and expanded states</title>
+  <desc id="description">Two mobile screens show the budget page. The resting state has one centered branded button near the bottom. The expanded state dims the page and reveals labeled navigation items rising above a close button, with Budgets marked as the current page.</desc>
+
+  <defs>
+    <clipPath id="screen-clip">
+      <rect x="8" y="10" width="374" height="904" rx="40" />
+    </clipPath>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity="0.18" />
+    </filter>
+    <filter id="control-shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1D4E89" flood-opacity="0.22" />
+    </filter>
+
+    <symbol id="phone" viewBox="0 0 390 924">
+      <rect width="390" height="924" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+      <rect x="8" y="10" width="374" height="904" rx="40" fill="#F4FAFB" />
+
+      <g clip-path="url(#screen-clip)" font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+        <rect x="8" y="10" width="374" height="904" fill="#F4FAFB" />
+
+        <rect x="8" y="10" width="374" height="38" fill="#ffffff" />
+        <text x="28" y="34" fill="#1D4E89" font-size="13" font-weight="700">9:41</text>
+        <g fill="none" stroke="#1D4E89" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M328 30c4-5 9-5 13 0" />
+          <path d="M331 33c2-3 5-3 7 0" />
+          <circle cx="334.5" cy="36" r="1" fill="#1D4E89" stroke="none" />
+          <rect x="350" y="25" width="18" height="10" rx="2" />
+          <path d="M369 28v4" />
+        </g>
+        <rect x="352.5" y="27.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+
+        <rect x="8" y="48" width="374" height="58" fill="#ffffff" />
+        <rect x="16" y="55" width="44" height="44" rx="10" fill="#ffffff" />
+        <path d="M39 67L29 77L39 87M30 77H48" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+        <text x="68" y="83" fill="#1D4E89" font-size="17" font-weight="700" letter-spacing="-0.2">Household Assistant</text>
+        <line x1="8" y1="105.5" x2="382" y2="105.5" stroke="#C9E2E5" />
+
+        <text x="24" y="151" fill="#1D4E89" font-size="30" font-weight="720" letter-spacing="-0.8">Budgeting</text>
+
+        <g>
+          <rect x="24" y="184" width="342" height="126" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+          <text x="48" y="216" fill="#1D4E89" font-size="18" font-weight="700">Eating Out</text>
+          <text x="48" y="244" fill="#526966" font-size="14">Restaurants, cafes, and takeout meals</text>
+          <rect x="48" y="268" width="70" height="26" rx="13" fill="#DFF4F4" />
+          <text x="83" y="286" fill="#526966" font-size="11" font-weight="650" text-anchor="middle" letter-spacing="0.4">WEEKLY</text>
+          <text x="342" y="288" fill="#1D4E89" font-size="18" font-weight="700" text-anchor="end">¥15,000</text>
+        </g>
+
+        <g>
+          <rect x="24" y="332" width="342" height="126" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+          <text x="48" y="364" fill="#1D4E89" font-size="18" font-weight="700">Monthly Groceries</text>
+          <text x="48" y="392" fill="#526966" font-size="14">Supermarket and bulk food shopping</text>
+          <rect x="48" y="416" width="82" height="26" rx="13" fill="#DFF4F4" />
+          <text x="89" y="434" fill="#526966" font-size="11" font-weight="650" text-anchor="middle" letter-spacing="0.4">MONTHLY</text>
+          <text x="342" y="436" fill="#1D4E89" font-size="18" font-weight="700" text-anchor="end">¥60,000</text>
+        </g>
+
+        <g>
+          <rect x="24" y="480" width="342" height="126" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+          <text x="48" y="512" fill="#1D4E89" font-size="18" font-weight="700">Transport</text>
+          <text x="48" y="540" fill="#526966" font-size="14">Trains, buses, taxis, and IC top-ups</text>
+          <rect x="48" y="564" width="82" height="26" rx="13" fill="#DFF4F4" />
+          <text x="89" y="582" fill="#526966" font-size="11" font-weight="650" text-anchor="middle" letter-spacing="0.4">MONTHLY</text>
+          <text x="342" y="584" fill="#1D4E89" font-size="18" font-weight="700" text-anchor="end">¥20,000</text>
+        </g>
+
+        <g>
+          <rect x="24" y="628" width="342" height="126" rx="12" fill="#ffffff" stroke="#C9E2E5" />
+          <text x="48" y="660" fill="#1D4E89" font-size="18" font-weight="700">Household</text>
+          <text x="48" y="688" fill="#526966" font-size="14">Daily goods, drugstore, and home supplies</text>
+          <rect x="48" y="712" width="82" height="26" rx="13" fill="#DFF4F4" />
+          <text x="89" y="730" fill="#526966" font-size="11" font-weight="650" text-anchor="middle" letter-spacing="0.4">MONTHLY</text>
+          <text x="342" y="732" fill="#1D4E89" font-size="18" font-weight="700" text-anchor="end">¥20,000</text>
+        </g>
+      </g>
+
+      <rect x="146" y="19" width="98" height="24" rx="12" fill="#1D4E89" />
+    </symbol>
+  </defs>
+
+  <rect width="900" height="1010" fill="#E7F5F7" />
+
+  <g font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="235" y="30" fill="#1D4E89" font-size="13" font-weight="750" text-anchor="middle" letter-spacing="1.8">REST</text>
+    <text x="235" y="49" fill="#526966" font-size="13" text-anchor="middle">Brand launcher</text>
+    <text x="665" y="30" fill="#1D4E89" font-size="13" font-weight="750" text-anchor="middle" letter-spacing="1.8">OPEN</text>
+    <text x="665" y="49" fill="#526966" font-size="13" text-anchor="middle">Navigation destinations</text>
+  </g>
+
+  <use href="#phone" x="40" y="60" width="390" height="924" />
+  <use href="#phone" x="470" y="60" width="390" height="924" />
+
+  <g transform="translate(40 60)" font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <circle cx="195" cy="850" r="29" fill="#16679A" filter="url(#control-shadow)" />
+    <rect x="181" y="836" width="11" height="11" rx="3" fill="#3FC1C0" />
+    <rect x="198" y="836" width="11" height="11" rx="3" fill="#ffffff" />
+    <rect x="181" y="853" width="11" height="11" rx="3" fill="#ffffff" />
+    <rect x="198" y="853" width="11" height="11" rx="3" fill="#3FC1C0" />
+    <rect x="139" y="897" width="112" height="5" rx="2.5" fill="#1D4E89" fill-opacity="0.72" />
+  </g>
+
+  <g transform="translate(470 60)" font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <rect x="8" y="48" width="374" height="866" rx="0" fill="#1D4E89" fill-opacity="0.30" />
+
+    <path d="M195 830V585" fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2" stroke-dasharray="4 8" />
+
+    <g filter="url(#control-shadow)">
+      <rect x="85" y="556" width="220" height="48" rx="24" fill="#ffffff" />
+      <circle cx="113" cy="580" r="12" fill="#DFF4F4" />
+      <path d="M108 581l4 4 7-10" fill="none" stroke="#16679A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="137" y="586" fill="#1D4E89" font-size="16" font-weight="650">Savings</text>
+
+      <rect x="85" y="616" width="220" height="48" rx="24" fill="#16679A" />
+      <rect x="102" y="630" width="22" height="16" rx="3" fill="none" stroke="#ffffff" stroke-width="1.8" />
+      <path d="M106 630v-3h14v3M115 635v6" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" />
+      <text x="137" y="646" fill="#ffffff" font-size="16" font-weight="700">Budgets</text>
+      <circle cx="281" cy="640" r="4" fill="#ffffff" />
+
+      <rect x="85" y="676" width="220" height="48" rx="24" fill="#ffffff" />
+      <path d="M104 694h18M118 690l4 4-4 4M122 706h-18M108 702l-4 4 4 4" fill="none" stroke="#16679A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="137" y="706" fill="#1D4E89" font-size="16" font-weight="650">Payday</text>
+
+      <rect x="85" y="736" width="220" height="48" rx="24" fill="#ffffff" />
+      <path d="M105 750h16v20l-4-3-4 3-4-3-4 3zM109 756h8M109 761h6" fill="none" stroke="#16679A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="137" y="766" fill="#1D4E89" font-size="16" font-weight="650">Activity</text>
+    </g>
+
+    <circle cx="195" cy="850" r="29" fill="#16679A" filter="url(#control-shadow)" />
+    <path d="M185 840l20 20M205 840l-20 20" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" />
+    <rect x="139" y="897" width="112" height="5" rx="2.5" fill="#1D4E89" fill-opacity="0.72" />
+  </g>
+
+  <g font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="450" y="1002" fill="#526966" font-size="13" text-anchor="middle">Items enter from the launcher, bottom to top · 200ms · 30ms stagger</text>
+  </g>
+</svg>

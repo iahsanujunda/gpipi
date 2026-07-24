@@ -13,7 +13,6 @@ import me.gpipi.extraction.Extraction
 import me.gpipi.extraction.ExtractionException
 import me.gpipi.extraction.ExtractionResult
 import me.gpipi.extraction.ExtractionService
-import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.generated.db.base.public1.InboundMessage
@@ -42,18 +41,13 @@ class SlackEventHandlerTest : PersistenceTest() {
     @BeforeEach fun seedCategory() {
         runBlocking {
             dbQuery(db) {
-                val envId = UUID.randomUUID()
-                BudgetEnvelope.insert {
-                    it[BudgetEnvelope.id] = envId
-                    it[BudgetEnvelope.name] = "Weekly Food"
-                    it[BudgetEnvelope.period] = "WEEKLY"
-                    it[BudgetEnvelope.amount] = 15000L
-                }
                 Category.insert {
                     it[Category.id] = testCategoryId
-                    it[Category.envelopeId] = envId
                     it[Category.name] = "Eating Out"
                     it[Category.description] = "restaurants, cafes, ramen"
+                    it[Category.amount] = 15000L
+                    it[Category.period] = "WEEKLY"
+                    it[Category.slackLoggable] = true
                 }
             }
         }

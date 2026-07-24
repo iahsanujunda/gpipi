@@ -4,7 +4,7 @@
       "name": "base",
       "tables": [
         {
-          "name": "public.budget_envelope",
+          "name": "public.auth_nonce",
           "columns": [
             {
               "name": "id",
@@ -12,16 +12,21 @@
               "defaultExpr": "gen_random_uuid()"
             },
             {
-              "name": "name",
+              "name": "nonce_hash",
               "type": "text"
             },
             {
-              "name": "period",
+              "name": "user_id",
               "type": "text"
             },
             {
-              "name": "amount",
-              "type": "int8"
+              "name": "expires_at",
+              "type": "pg_catalog.timestamptz"
+            },
+            {
+              "name": "consumed_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
             },
             {
               "name": "created_at",
@@ -30,11 +35,16 @@
             }
           ],
           "primaryKey": {
-            "name": "budget_envelope_pkey",
+            "name": "auth_nonce_pkey",
             "columns": [
               "id"
             ]
-          }
+          },
+          "uniqueConstraints": [
+            {
+              "name": "auth_nonce_nonce_hash_key"
+            }
+          ]
         },
         {
           "name": "public.categorization_event",
@@ -141,10 +151,6 @@
               "defaultExpr": "gen_random_uuid()"
             },
             {
-              "name": "envelope_id",
-              "type": "uuid"
-            },
-            {
               "name": "name",
               "type": "text"
             },
@@ -161,6 +167,21 @@
               "name": "created_at",
               "type": "pg_catalog.timestamptz",
               "defaultExpr": "now()"
+            },
+            {
+              "name": "period",
+              "type": "text",
+              "defaultExpr": "'MONTHLY'::text"
+            },
+            {
+              "name": "amount",
+              "type": "int8",
+              "defaultExpr": "0"
+            },
+            {
+              "name": "slack_loggable",
+              "type": "bool",
+              "defaultExpr": "true"
             }
           ],
           "primaryKey": {
@@ -169,18 +190,6 @@
               "id"
             ]
           },
-          "foreignKeys": [
-            {
-              "name": "category_envelope_id_fkey",
-              "targetTable": "public.budget_envelope",
-              "references": [
-                {
-                  "sourceColumn": "envelope_id",
-                  "targetColumn": "id"
-                }
-              ]
-            }
-          ],
           "uniqueConstraints": [
             {
               "name": "category_name_key"

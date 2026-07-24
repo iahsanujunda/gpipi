@@ -10,7 +10,6 @@ import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.extraction.Extraction
-import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.CategorizationEvent
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.inbound.InboundRepository
@@ -30,19 +29,14 @@ class CategorizationEventRepositoryTest : PersistenceTest() {
     }
 
     private fun givenCategory(name: String): UUID = query {
-        val envId = UUID.randomUUID()
-        BudgetEnvelope.insert {
-            it[BudgetEnvelope.id] = envId
-            it[BudgetEnvelope.name] = "Env $name"
-            it[BudgetEnvelope.period] = "MONTHLY"
-            it[BudgetEnvelope.amount] = 60000L
-        }
         val catId = UUID.randomUUID()
         Category.insert {
             it[Category.id] = catId
-            it[Category.envelopeId] = envId
             it[Category.name] = name
             it[Category.description] = "desc for $name"
+            it[Category.period] = "MONTHLY"
+            it[Category.amount] = 60000L
+            it[Category.slackLoggable] = true
         }
         catId
     }

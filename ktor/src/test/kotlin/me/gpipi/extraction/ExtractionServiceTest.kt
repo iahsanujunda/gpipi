@@ -18,7 +18,6 @@ import me.gpipi.ai.OpenRouterClient
 import me.gpipi.category.CategoryRepository
 import me.gpipi.category.CategoryRow
 import me.gpipi.config.dbQuery
-import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.support.PersistenceTest
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -34,19 +33,14 @@ class ExtractionServiceTest : PersistenceTest() {
     private fun service() = ExtractionService(db, CategoryRepository(), orClient)
 
     private fun seedCategory(name: String, description: String = "desc"): UUID = query {
-        val envId = UUID.randomUUID()
-        BudgetEnvelope.insert {
-            it[BudgetEnvelope.id] = envId
-            it[BudgetEnvelope.name] = "Env $name"
-            it[BudgetEnvelope.period] = "MONTHLY"
-            it[BudgetEnvelope.amount] = 50000L
-        }
         val catId = UUID.randomUUID()
         Category.insert {
             it[Category.id] = catId
-            it[Category.envelopeId] = envId
             it[Category.name] = name
             it[Category.description] = description
+            it[Category.period] = "MONTHLY"
+            it[Category.amount] = 50000L
+            it[Category.slackLoggable] = true
         }
         catId
     }
@@ -68,6 +62,8 @@ class ExtractionServiceTest : PersistenceTest() {
         assertTrue("- Eating Out — restaurants, cafes" in prompt)
         assertTrue("- Transport — trains, buses" in prompt)
         assertTrue("{{CATEGORIES}}" !in prompt)
+        assertTrue("Leisure" !in prompt)
+        assertTrue("Sapi mupi" !in prompt)
     }
 
     @Test

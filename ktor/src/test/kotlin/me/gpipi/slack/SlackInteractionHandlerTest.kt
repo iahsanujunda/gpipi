@@ -5,6 +5,7 @@ import io.mockk.mockk
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -12,7 +13,6 @@ import me.gpipi.categorization.CategorizationEventRepository
 import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.expense.ExpenseRepository
-import me.gpipi.generated.db.base.public1.BudgetEnvelope
 import me.gpipi.generated.db.base.public1.CategorizationEvent
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
@@ -22,6 +22,7 @@ import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 
 /**
  * Confirm-path tests: real repos + Testcontainers DB so the atomic write (expense +
@@ -44,19 +45,14 @@ class SlackInteractionHandlerTest : PersistenceTest() {
     }
 
     private fun givenCategory(name: String): UUID = query {
-        val envId = UUID.randomUUID()
-        BudgetEnvelope.insert {
-            it[BudgetEnvelope.id] = envId
-            it[BudgetEnvelope.name] = "Env $name"
-            it[BudgetEnvelope.period] = "WEEKLY"
-            it[BudgetEnvelope.amount] = 15000L
-        }
         val catId = UUID.randomUUID()
         Category.insert {
             it[Category.id] = catId
-            it[Category.envelopeId] = envId
             it[Category.name] = name
             it[Category.description] = "desc for $name"
+            it[Category.period] = "WEEKLY"
+            it[Category.amount] = 15000L
+            it[Category.slackLoggable] = true
         }
         catId
     }
@@ -119,6 +115,39 @@ class SlackInteractionHandlerTest : PersistenceTest() {
         assertEquals(predicted, event[CategorizationEvent.predictedCategoryId])
         assertEquals(corrected, event[CategorizationEvent.finalCategoryId])
         assertTrue(event[CategorizationEvent.wasCorrected])
+    }
+
+    @Test
+    fun `a failed confirm rolls back every write and does not notify Slack`() {
+        val msgId = givenInbound()
+        val predicted = givenCategory("Convenience Store")
+        val draftId = givenDraft(msgId, predicted)
+
+        // NOT VALID skips checking existing rows but still rejects every new event. This makes the
+        // real event insert fail after the expense and draft writes have already run in the same tx.
+        query {
+            checkNotNull(TransactionManager.currentOrNull()).exec(
+                """alter table categorization_event
+                    add constraint categorization_event_force_failure check (false) not valid"""
+            )
+        }
+
+        try {
+            assertFailsWith<Exception> { confirm(draftId, predicted) }
+        } finally {
+            query {
+                checkNotNull(TransactionManager.currentOrNull()).exec(
+                    "alter table categorization_event drop constraint if exists categorization_event_force_failure"
+                )
+            }
+        }
+
+        assertEquals(0L, query { Expense.selectAll().count() })
+        assertEquals(0L, query { CategorizationEvent.selectAll().count() })
+        assertEquals("RECEIVED", query { InboundMessage.selectAll().single()[InboundMessage.status] })
+        assertEquals("PENDING", query { ExpenseDraft.selectAll().single()[ExpenseDraft.status] })
+        coVerify(exactly = 0) { slack.replaceCard(any(), any()) }
+        coVerify(exactly = 0) { slack.postMessage(any(), any()) }
     }
 
     @Test

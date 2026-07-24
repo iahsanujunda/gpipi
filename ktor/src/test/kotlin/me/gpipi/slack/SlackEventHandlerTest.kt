@@ -5,6 +5,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
+import me.gpipi.auth.AuthService
 import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.generated.db.base.public1.ExpenseDraft
@@ -34,8 +35,17 @@ class SlackEventHandlerTest : PersistenceTest() {
 
     private val testCategoryId: UUID = UUID.randomUUID()
     private val extractionService = mockk<ExtractionService>()
+    private val authService = mockk<AuthService>()
     private val slack = mockk<SlackClient>(relaxUnitFun = true)   // postMessage returns Unit → relaxed
-    private val handler = SlackEventHandler(db, InboundRepository(), extractionService, ExpenseDraftRepository(), slack)
+    private val handler = SlackEventHandler(
+        db = db,
+        inboundRepo = InboundRepository(),
+        extractionService = extractionService,
+        draftRepo = ExpenseDraftRepository(),
+        authService = authService,
+        slack = slack,
+        webBaseUrl = "https://budget.test",
+    )
 
     // Superclass @BeforeEach (clean) runs first, then this seeds the FK target.
     @BeforeEach fun seedCategory() {

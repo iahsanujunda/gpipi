@@ -1,5 +1,6 @@
 package me.gpipi.slack
 
+import me.gpipi.auth.AuthService
 import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.extraction.ExtractionException
@@ -12,15 +13,18 @@ class SlackEventHandler(
     private val inboundRepo: InboundRepository,
     private val extractionService: ExtractionService,
     private val draftRepo: ExpenseDraftRepository,
-    private val slack: SlackClient
+    private val authService: AuthService,
+    private val slack: SlackClient,
+    private val webBaseUrl: String
 ) {
     suspend fun handle(payload: SlackEnvelope) {
-        val event = payload.event ?: return
-        val eventId = payload.eventId ?: return
-        val (user, channel, ts) = Triple(event.user, event.channel, event.ts)
-        val text = event.text
+        val (eventId, user, channel, ts, text, body) = SlackMessage.from(payload) ?: return
 
-        if (event.type != "app_mention" || user == null || channel == null || ts == null || text.isNullOrBlank()) return
+        if (body.equals("open", true) || body.startsWith("open ", true)) {
+            val raw = authService.mint(user)
+            slack.postMessage(channel, "Open your budget: ${webBaseUrl}/enter#$raw")
+            return
+        }
 
         val msgId = dbQuery(db) {
             inboundRepo.captureOrSkip(eventId, user, channel, text, ts)

@@ -20,26 +20,37 @@ import org.slf4j.LoggerFactory
 class SlackClient(
     private val http: HttpClient,
     private val botToken: String,
+    apiBaseUrl: String = "https://slack.com/api",
 ) {
     private val log = LoggerFactory.getLogger(SlackClient::class.java)
+    private val apiBaseUrl = apiBaseUrl.trimEnd('/')
 
-    private suspend fun chatPostMessage(body: JsonObject) {
-        val res = http.post("https://slack.com/api/chat.postMessage") {
+    private suspend fun postChat(method: String, body: JsonObject) {
+        val res = http.post("$apiBaseUrl/$method") {
             bearerAuth(botToken); contentType(Application.Json); setBody(body)
         }
         val text = res.bodyAsText()
         val ok = Json.parseToJsonElement(text).jsonObject["ok"]?.jsonPrimitive?.booleanOrNull == true
-        if (!ok) log.warn("chat.postMessage failed: ${text.take(200)}")
+        if (!ok) log.warn("$method failed: ${text.take(200)}")
     }
 
     suspend fun postMessage(channel: String, text: String) {
         val body = buildJsonObject { put("channel", channel); put("text", text) }
-        this.chatPostMessage(body)
+        postChat("chat.postMessage", body)
+    }
+
+    suspend fun postEphemeral(channel: String, user: String, text: String) {
+        val body = buildJsonObject {
+            put("channel", channel)
+            put("user", user)
+            put("text", text)
+        }
+        postChat("chat.postEphemeral", body)
     }
 
     suspend fun postCard(channel: String, text: String, blocks: JsonArray) {
         val body = buildJsonObject { put("channel", channel); put("text", text); put("blocks", blocks) }
-        this.chatPostMessage(body)
+        postChat("chat.postMessage", body)
     }
 
     suspend fun replaceCard(responseUrl: String, text: String) {

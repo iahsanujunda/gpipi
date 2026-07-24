@@ -88,12 +88,15 @@ fun Application.configureRouting() {
         orClient = orClient,
     )
 
+    val webBaseUrl = cfg.property("web.baseUrl").getString()
     val eventHandler = SlackEventHandler(
         db = db,
         inboundRepo = InboundRepository(),
         extractionService = extractionService,
         draftRepo = ExpenseDraftRepository(),
-        slack = slack
+        authService = authService,
+        webBaseUrl = webBaseUrl,
+        slack = slack,
     )
 
     val interactionHandler = SlackInteractionHandler(

@@ -19,9 +19,11 @@ import me.gpipi.auth.AuthNonceRepository
 import me.gpipi.auth.AuthService
 import me.gpipi.auth.authRoutes
 import me.gpipi.category.CategoryRepository
+import me.gpipi.category.budgetApiRoutes
 import me.gpipi.config.DbKey
 import me.gpipi.dev.devRoutes
 import me.gpipi.expense.ExpenseRepository
+import me.gpipi.expense.expenseApiRoutes
 import me.gpipi.ai.OpenRouterClient
 import me.gpipi.categorization.CategorizationEventRepository
 import me.gpipi.expense.ExpenseDraftRepository
@@ -54,10 +56,6 @@ fun Application.configureRouting() {
     }
 
     val db = attributes[DbKey].database
-    val authService = AuthService(
-        db = db,
-        nonceRepo = AuthNonceRepository(),
-    )
     val cfg = environment.config
     val botToken = cfg.propertyOrNull("slack.botToken")?.getString().orEmpty()
     val openRouterKey = cfg.propertyOrNull("openrouter.apiKey")?.getString().orEmpty()
@@ -84,13 +82,20 @@ fun Application.configureRouting() {
         cfg.property("openrouter.model").getString()
     )
 
-    val extractionService = ExtractionService(
+    val categoryRepo = CategoryRepository()
+    val inboundRepo = InboundRepository()
+    val expenseRepo = ExpenseRepository()
+
+    val authService = AuthService(
         db = db,
-        categoryRepo = CategoryRepository(),
-        orClient = orClient,
+        nonceRepo = AuthNonceRepository(),
     )
 
-    val inboundRepo = InboundRepository()
+    val extractionService = ExtractionService(
+        db = db,
+        categoryRepo = categoryRepo,
+        orClient = orClient,
+    )
 
     val webBaseUrl = cfg.property("web.baseUrl").getString()
     val eventHandler = SlackEventHandler(
@@ -109,7 +114,7 @@ fun Application.configureRouting() {
     val interactionHandler = SlackInteractionHandler(
         db = db,
         draftRepo = ExpenseDraftRepository(),
-        expenseRepo = ExpenseRepository(),
+        expenseRepo = expenseRepo,
         inboundRepo = InboundRepository(),
         eventRepo = CategorizationEventRepository(),
         slack = slack
@@ -129,7 +134,10 @@ fun Application.configureRouting() {
         authRoutes(authService)
         slackRoutes(signingSecret, eventHandler)
         slackInteractionRoutes(signingSecret, interactionHandler)
-        authenticate("auth-session") {  }
+        authenticate("auth-session") {
+            expenseApiRoutes(db, expenseRepo)
+            budgetApiRoutes(db, categoryRepo)
+        }
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")
             devRoutes(extractionService)

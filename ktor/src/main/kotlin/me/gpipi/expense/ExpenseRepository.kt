@@ -1,9 +1,28 @@
 package me.gpipi.expense
 
+import java.time.OffsetDateTime
 import java.util.UUID
+import kotlinx.serialization.Serializable
 import me.gpipi.extraction.Extraction
+import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
+
+@Serializable
+data class ExpenseRow(
+    val id: String,
+    val amount: Long,
+    val merchant: String?,
+    val spentAt: String,
+    val categoryName: String,
+)
 
 class ExpenseRepository {
     fun insert(x: Extraction, inboundMessageId: UUID, userId: String, categoryId: UUID): UUID {
@@ -39,5 +58,37 @@ class ExpenseRepository {
             it[Expense.note]             = note
         }
         return id
+    }
+
+    fun list(
+        from: OffsetDateTime?,
+        to: OffsetDateTime?,
+        categoryId: UUID?,
+    ): List<ExpenseRow> {
+        val query = (Expense innerJoin Category)
+            .select(
+                Expense.id,
+                Expense.amount,
+                Expense.merchant,
+                Expense.spentAt,
+                Category.name,
+            )
+            .where { Op.TRUE }
+
+        from?.let { query.andWhere { Expense.spentAt greaterEq it } }
+        to?.let { query.andWhere { Expense.spentAt lessEq it } }
+        categoryId?.let { query.andWhere { Expense.categoryId eq it } }
+
+        return query
+            .orderBy(Expense.spentAt to SortOrder.DESC)
+            .map {
+                ExpenseRow(
+                    id = it[Expense.id].toString(),
+                    amount = it[Expense.amount],
+                    merchant = it[Expense.merchant],
+                    spentAt = it[Expense.spentAt].toString(),
+                    categoryName = it[Category.name],
+                )
+            }
     }
 }

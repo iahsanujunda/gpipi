@@ -12,6 +12,13 @@ export function useBudgets() {
   })
 }
 
+export function useBudgetSpend(date) {
+  return useQuery({
+    queryKey: [...budgetKeys.all, 'spend', date],
+    queryFn: ({ signal }) => apiFetch(`/api/budgets/spend?date=${encodeURIComponent(date)}`, { signal }),
+  })
+}
+
 export function useCreateBudget() {
   const queryClient = useQueryClient()
 

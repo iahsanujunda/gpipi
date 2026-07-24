@@ -6,12 +6,14 @@ import BudgetsPage from '@/budgets/BudgetsPage'
 import { renderWithProviders } from '@/test/renderWithProviders'
 
 const mockUseBudgets = vi.fn()
+const mockUseBudgetSpend = vi.fn()
 const mockUseCreateBudget = vi.fn()
 const mockUseUpdateBudget = vi.fn()
 const mockUseDeactivateBudget = vi.fn()
 
 vi.mock('@/budgets/queries', () => ({
   useBudgets: () => mockUseBudgets(),
+  useBudgetSpend: (date) => mockUseBudgetSpend(date),
   useCreateBudget: () => mockUseCreateBudget(),
   useUpdateBudget: () => mockUseUpdateBudget(),
   useDeactivateBudget: () => mockUseDeactivateBudget(),
@@ -25,6 +27,47 @@ const eatingOut = {
   amount: 15000,
   active: true,
   slackLoggable: true,
+}
+
+const groceries = {
+  id: '00000000-0000-0000-0000-000000000002',
+  name: 'Monthly Groceries',
+  description: 'Supermarket and pantry spending',
+  period: 'MONTHLY',
+  amount: 75000,
+  active: true,
+  slackLoggable: true,
+}
+
+const transport = {
+  id: '00000000-0000-0000-0000-000000000003',
+  name: 'Transport',
+  description: 'Trains, buses, taxis, and IC top-ups',
+  period: 'MONTHLY',
+  amount: 20000,
+  active: true,
+  slackLoggable: true,
+}
+
+const homeRepairs = {
+  id: '00000000-0000-0000-0000-000000000004',
+  name: 'Home repairs',
+  description: 'Unplanned household maintenance',
+  period: 'MONTHLY',
+  amount: 0,
+  active: true,
+  slackLoggable: false,
+}
+
+function spendRow(budget, spent) {
+  return {
+    categoryId: budget.id,
+    name: budget.name,
+    period: budget.period,
+    cap: budget.amount,
+    spent,
+    remaining: budget.amount - spent,
+  }
 }
 
 function mutation(overrides = {}) {
@@ -54,6 +97,11 @@ describe('BudgetsPage', () => {
       isPending: false,
       isError: false,
     })
+    mockUseBudgetSpend.mockReturnValue({
+      data: [spendRow(eatingOut, 12000)],
+      isPending: false,
+      isError: false,
+    })
     mockUseCreateBudget.mockReturnValue(mutation())
     mockUseUpdateBudget.mockReturnValue(mutation())
     mockUseDeactivateBudget.mockReturnValue(mutation())
@@ -63,10 +111,98 @@ describe('BudgetsPage', () => {
     renderBudgetExperience()
 
     expect(screen.getByRole('heading', { name: 'Eating Out' })).toBeInTheDocument()
-    expect(screen.getAllByText('WEEKLY')).not.toHaveLength(0)
+    expect(screen.getAllByText(/^WEEKLY/)).not.toHaveLength(0)
     expect(screen.getByText('SLACK ON')).toBeInTheDocument()
-    expect(screen.getAllByText('¥15,000')).not.toHaveLength(0)
+    expect(screen.getAllByText(/Cap ¥15,000/)).not.toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Add budget line' })).not.toBeInTheDocument()
+  })
+
+  it('shows exact spend and difference while progress remains a supporting signal', () => {
+    mockUseBudgets.mockReturnValue({
+      data: [eatingOut, groceries],
+      isPending: false,
+      isError: false,
+    })
+    mockUseBudgetSpend.mockReturnValue({
+      data: [
+        spendRow(eatingOut, 12000),
+        spendRow(groceries, 46200),
+      ],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getAllByText('¥12,000')).not.toHaveLength(0)
+    expect(screen.getAllByText('¥3,000 left')).not.toHaveLength(0)
+    expect(screen.getAllByText('¥28,800 left')).not.toHaveLength(0)
+    expect(screen.getAllByRole('progressbar', { name: 'Eating Out utilization' })[0])
+      .toHaveAttribute('aria-valuenow', '80')
+    expect(screen.getAllByRole('progressbar', { name: 'Monthly Groceries utilization' })[0])
+      .toHaveAttribute('aria-valuetext', '62% used; ¥46,200 spent of ¥75,000')
+  })
+
+  it('shows the real percentage when over cap and omits utilization when the cap is zero', () => {
+    mockUseBudgets.mockReturnValue({
+      data: [transport, homeRepairs],
+      isPending: false,
+      isError: false,
+    })
+    mockUseBudgetSpend.mockReturnValue({
+      data: [
+        spendRow(transport, 22000),
+        spendRow(homeRepairs, 2000),
+      ],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getAllByText('¥2,000 over')).toHaveLength(2)
+    expect(screen.getAllByText('110%')).not.toHaveLength(0)
+    expect(screen.getAllByRole('progressbar', { name: 'Transport utilization' })[0])
+      .toHaveAttribute('aria-valuenow', '100')
+    expect(screen.getAllByRole('progressbar', { name: 'Transport utilization' })[0])
+      .toHaveAttribute('aria-valuetext', '110% used; ¥22,000 spent of ¥20,000')
+    expect(screen.getAllByText('No cap set')).not.toHaveLength(0)
+    expect(screen.queryByRole('progressbar', { name: 'Home repairs utilization' }))
+      .not.toBeInTheDocument()
+  })
+
+  it('keeps budget details editable while spending is still loading', () => {
+    mockUseBudgetSpend.mockReturnValue({
+      data: undefined,
+      isPending: true,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getByRole('heading', { name: 'Eating Out' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit Eating Out' })).toBeInTheDocument()
+    expect(screen.getAllByRole('status', { name: 'Loading spending for Eating Out' }))
+      .not.toHaveLength(0)
+  })
+
+  it('keeps budget details editable and retries an unavailable spend projection', async () => {
+    const user = userEvent.setup()
+    const refetch = vi.fn()
+    mockUseBudgetSpend.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      isError: true,
+      refetch,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getByRole('heading', { name: 'Eating Out' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit Eating Out' })).toBeInTheDocument()
+    expect(screen.getAllByText('Spending unavailable')).not.toHaveLength(0)
+    await user.click(screen.getAllByRole('button', { name: 'Retry spending' })[0])
+    expect(refetch).toHaveBeenCalledOnce()
   })
 
   it('opens create from the route-aware launcher and only mutates after review', async () => {

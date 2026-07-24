@@ -48,7 +48,33 @@ const budgets = [
     active: true,
     slackLoggable: false,
   },
+  {
+    id: '10000000-0000-0000-0000-000000000004',
+    name: 'Transport',
+    description: 'Trains, buses, taxis, and IC top-ups',
+    period: 'MONTHLY',
+    amount: 20000,
+    active: true,
+    slackLoggable: true,
+  },
+  {
+    id: '10000000-0000-0000-0000-000000000005',
+    name: 'Home repairs',
+    description: 'Unplanned household maintenance',
+    period: 'MONTHLY',
+    amount: 0,
+    active: true,
+    slackLoggable: false,
+  },
 ]
+
+const budgetSpend = new Map([
+  ['10000000-0000-0000-0000-000000000001', 12000],
+  ['10000000-0000-0000-0000-000000000002', 46200],
+  ['10000000-0000-0000-0000-000000000003', 0],
+  ['10000000-0000-0000-0000-000000000004', 22000],
+  ['10000000-0000-0000-0000-000000000005', 2000],
+])
 
 let nextBudgetId = 10
 
@@ -90,6 +116,26 @@ createServer(async (request, response) => {
   }
   if (request.url?.startsWith('/api/expenses')) {
     sendJson(response, 200, expenses)
+    return
+  }
+  if (request.url?.startsWith('/api/budgets/spend') && request.method === 'GET') {
+    sendJson(
+      response,
+      200,
+      budgets
+        .filter((budget) => budget.active)
+        .map((budget) => {
+          const spent = budgetSpend.get(budget.id) ?? 0
+          return {
+            categoryId: budget.id,
+            name: budget.name,
+            period: budget.period,
+            cap: budget.amount,
+            spent,
+            remaining: budget.amount - spent,
+          }
+        }),
+    )
     return
   }
   if (request.url === '/api/budgets' && request.method === 'GET') {

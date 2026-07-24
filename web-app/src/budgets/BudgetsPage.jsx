@@ -10,18 +10,258 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { AddIcon, CheckIcon, EditIcon } from '@/app/AppIcons'
+import {
+  AddIcon,
+  CheckIcon,
+  EditIcon,
+  WarningIcon,
+} from '@/app/AppIcons'
 import { useNavigationGuard, usePageAction } from '@/app/pageActions'
 import BudgetEditor from './BudgetEditor'
 import {
+  useBudgetSpend,
   useBudgets,
   useCreateBudget,
   useDeactivateBudget,
   useUpdateBudget,
 } from './queries'
 
+const BUDGET_ZONE = 'Asia/Tokyo'
+
 function formatMoney(value) {
   return `¥${Number(value).toLocaleString('ja-JP')}`
+}
+
+function currentBudgetDate() {
+  const parts = new Intl.DateTimeFormat('en', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: BUDGET_ZONE,
+    year: 'numeric',
+  }).formatToParts(new Date())
+  const part = (type) => parts.find((candidate) => candidate.type === type)?.value
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function dateFromIso(value) {
+  return new Date(`${value}T00:00:00Z`)
+}
+
+function formatAsOf(value) {
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+  }).format(dateFromIso(value))
+}
+
+function dateParts(date) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+    year: 'numeric',
+  }).formatToParts(date)
+  const part = (type) => parts.find((candidate) => candidate.type === type)?.value
+  return {
+    day: part('day'),
+    month: part('month').toUpperCase(),
+    year: part('year'),
+  }
+}
+
+function formatPeriodWindow(period, budgetDate) {
+  const selected = dateFromIso(budgetDate)
+  if (period === 'MONTHLY') {
+    const selectedParts = dateParts(selected)
+    return `MONTHLY · ${selectedParts.month} ${selectedParts.year}`
+  }
+
+  const start = new Date(selected)
+  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7))
+  const end = new Date(start)
+  end.setUTCDate(end.getUTCDate() + 6)
+  const startParts = dateParts(start)
+  const endParts = dateParts(end)
+  const range = startParts.month === endParts.month
+    ? `${startParts.day}–${endParts.day} ${endParts.month}`
+    : `${startParts.day} ${startParts.month}–${endParts.day} ${endParts.month}`
+  return `WEEKLY · ${range}`
+}
+
+function utilizationFor(spend) {
+  if (!spend || spend.cap === 0) return null
+  return Math.round((spend.spent / spend.cap) * 100)
+}
+
+function UtilizationBar({ name, spend }) {
+  const percentage = utilizationFor(spend)
+  if (percentage === null) return null
+
+  const overCap = spend.cap > 0 && spend.remaining < 0
+  const visualPercentage = Math.max(0, Math.min(percentage, 100))
+  return (
+    <Box
+      aria-label={`${name} utilization`}
+      aria-valuemax={100}
+      aria-valuemin={0}
+      aria-valuenow={visualPercentage}
+      aria-valuetext={`${percentage}% used; ${formatMoney(spend.spent)} spent of ${formatMoney(spend.cap)}`}
+      role="progressbar"
+      sx={{
+        height: 8,
+        overflow: 'hidden',
+        borderRadius: 999,
+        bgcolor: overCap ? 'error.light' : 'highlight.main',
+      }}
+    >
+      <Box
+        sx={{
+          width: `${visualPercentage}%`,
+          height: '100%',
+          borderRadius: 'inherit',
+          bgcolor: overCap ? 'error.main' : 'primary.main',
+          transition: 'width 280ms cubic-bezier(0.16, 1, 0.3, 1)',
+          '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+        }}
+      />
+    </Box>
+  )
+}
+
+function SpendingLoading({ name, compact = false }) {
+  return (
+    <Stack
+      aria-label={`Loading spending for ${name}`}
+      role="status"
+      spacing={compact ? 0.75 : 1}
+      sx={{ py: compact ? 0 : 0.5 }}
+    >
+      <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+        <Skeleton width={compact ? '34%' : '28%'} />
+        <Skeleton width={compact ? '34%' : '30%'} />
+      </Stack>
+      <Skeleton height={compact ? 16 : 20} />
+    </Stack>
+  )
+}
+
+function SpendingUnavailable({ onRetry, compact = false }) {
+  return (
+    <Stack
+      direction={compact ? 'row' : { xs: 'column', sm: 'row' }}
+      spacing={1.25}
+      sx={{
+        alignItems: compact ? 'center' : { xs: 'flex-start', sm: 'center' },
+        justifyContent: 'space-between',
+        p: compact ? 0 : 1.5,
+        border: compact ? 0 : 1,
+        borderColor: 'divider',
+        borderRadius: 2,
+        bgcolor: compact ? 'transparent' : 'background.default',
+      }}
+    >
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+        <Box sx={{ color: 'error.main', display: 'flex' }}>
+          <WarningIcon fontSize="small" aria-hidden="true" />
+        </Box>
+        <Stack spacing={0}>
+          <Typography sx={{ fontSize: compact ? '0.75rem' : '0.8125rem', fontWeight: 700 }}>
+            Spending unavailable
+          </Typography>
+          {!compact && (
+            <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+              Budget details are still available.
+            </Typography>
+          )}
+        </Stack>
+      </Stack>
+      <Button
+        aria-label="Retry spending"
+        onClick={onRetry}
+        size="small"
+        variant="outlined"
+        sx={{ minHeight: 34, flexShrink: 0 }}
+      >
+        Retry
+      </Button>
+    </Stack>
+  )
+}
+
+function MobileSpending({ budget, isError, isPending, onRetry, spend }) {
+  if (isPending) return <SpendingLoading name={budget.name} />
+  if (isError || !spend) return <SpendingUnavailable onRetry={onRetry} />
+
+  const overCap = spend.cap > 0 && spend.remaining < 0
+  const percentage = utilizationFor(spend)
+  if (percentage === null) {
+    return (
+      <Stack spacing={0.75}>
+        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+          <Stack spacing={0.25}>
+            <Typography sx={metricLabelSx}>Spent</Typography>
+            <Typography sx={metricValueSx}>{formatMoney(spend.spent)}</Typography>
+          </Stack>
+          <Stack spacing={0.25} sx={{ alignItems: 'flex-end' }}>
+            <Typography sx={metricLabelSx}>Cap</Typography>
+            <Typography sx={{ ...metricValueSx, color: 'text.secondary' }}>No cap set</Typography>
+          </Stack>
+        </Stack>
+        <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+          Utilization bar omitted when cap is ¥0.
+        </Typography>
+      </Stack>
+    )
+  }
+
+  return (
+    <Stack spacing={0.9}>
+      <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+        <Stack spacing={0.25}>
+          <Typography sx={metricLabelSx}>Spent</Typography>
+          <Typography sx={metricValueSx}>{formatMoney(spend.spent)}</Typography>
+        </Stack>
+        <Stack spacing={0.25} sx={{ alignItems: 'flex-end' }}>
+          <Typography sx={{ ...metricLabelSx, color: overCap ? 'error.main' : 'text.secondary' }}>
+            {overCap ? 'Over cap' : 'Remaining'}
+          </Typography>
+          <Typography sx={{ ...metricValueSx, color: overCap ? 'error.main' : 'text.heading' }}>
+            {formatMoney(Math.abs(spend.remaining))} {overCap ? 'over' : 'left'}
+          </Typography>
+        </Stack>
+      </Stack>
+      <UtilizationBar name={budget.name} spend={spend} />
+      <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+        <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+          Cap {formatMoney(spend.cap)}
+        </Typography>
+        <Typography
+          sx={{
+            color: overCap ? 'error.main' : 'text.secondary',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+          }}
+        >
+          {percentage}%
+        </Typography>
+      </Stack>
+    </Stack>
+  )
+}
+
+const metricLabelSx = {
+  color: 'text.secondary',
+  fontSize: '0.6875rem',
+  fontWeight: 700,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+}
+
+const metricValueSx = {
+  color: 'text.heading',
+  fontSize: '1.125rem',
+  fontWeight: 720,
+  whiteSpace: 'nowrap',
 }
 
 function BudgetSkeleton() {
@@ -61,58 +301,137 @@ function EditButton({ budget, onEdit }) {
   )
 }
 
-function BudgetCards({ budgets, highlightedId, onEdit }) {
+function BudgetCards({
+  budgetDate,
+  budgets,
+  highlightedId,
+  onEdit,
+  onRetrySpend,
+  spendByCategory,
+  spendError,
+  spendPending,
+}) {
   return (
     <Stack spacing={1.5} sx={{ display: { md: 'none' } }}>
-      {budgets.map((budget) => (
-        <Paper
-          key={budget.id}
-          component="article"
-          variant="outlined"
-          data-budget-id={budget.id}
-          sx={{
-            p: 2.25,
-            borderColor: highlightedId === budget.id ? 'brandAccent.main' : 'divider',
-            borderInlineStartWidth: highlightedId === budget.id ? 4 : 1,
-            transition: 'border-color 200ms ease',
-          }}
-        >
-          <Stack spacing={1.5}>
-            <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
-              <Stack spacing={0.5} sx={{ minWidth: 0, flexGrow: 1 }}>
-                <Typography variant="h6" component="h2">{budget.name}</Typography>
-                <Typography color="text.secondary" variant="body2">{budget.description}</Typography>
+      {budgets.map((budget) => {
+        const spend = spendByCategory.get(budget.id)
+        const overCap = spend?.cap > 0 && spend.remaining < 0
+        return (
+          <Paper
+            key={budget.id}
+            component="article"
+            variant="outlined"
+            data-budget-id={budget.id}
+            sx={{
+              p: 2.25,
+              borderColor: overCap
+                ? 'error.main'
+                : highlightedId === budget.id ? 'brandAccent.main' : 'divider',
+              borderInlineStartWidth: overCap || highlightedId === budget.id ? 4 : 1,
+              transition: 'border-color 200ms ease',
+            }}
+          >
+            <Stack spacing={1.5}>
+              <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+                <Stack spacing={0.5} sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography variant="h6" component="h2">{budget.name}</Typography>
+                  <Typography color="text.secondary" variant="body2">{budget.description}</Typography>
+                </Stack>
+                <EditButton budget={budget} onEdit={onEdit} />
               </Stack>
-              <EditButton budget={budget} onEdit={onEdit} />
-            </Stack>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Chip label={budget.period} size="small" />
-              <Chip
-                label={budget.slackLoggable ? 'SLACK ON' : 'PLANNING ONLY'}
-                size="small"
-                variant="outlined"
-                sx={{ bgcolor: 'background.default' }}
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                <Chip label={formatPeriodWindow(budget.period, budgetDate)} size="small" />
+                <Chip
+                  label={budget.slackLoggable ? 'SLACK ON' : 'PLANNING ONLY'}
+                  size="small"
+                  variant="outlined"
+                  sx={{ bgcolor: 'background.default' }}
+                />
+              </Stack>
+              <MobileSpending
+                budget={budget}
+                isError={spendError}
+                isPending={spendPending}
+                onRetry={onRetrySpend}
+                spend={spend}
               />
-              <Typography
-                sx={{
-                  ml: 'auto !important',
-                  color: 'text.heading',
-                  fontSize: 18,
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {formatMoney(budget.amount)}
-              </Typography>
             </Stack>
-          </Stack>
-        </Paper>
-      ))}
+          </Paper>
+        )
+      })}
     </Stack>
   )
 }
 
-function BudgetTable({ budgets, highlightedId, onEdit }) {
+function DesktopSpending({ budget, isError, isPending, onRetry, spend }) {
+  if (isPending) return <SpendingLoading compact name={budget.name} />
+  if (isError || !spend) return <SpendingUnavailable compact onRetry={onRetry} />
+  if (spend.cap === 0) {
+    return (
+      <Stack spacing={0.25}>
+        <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>
+          {formatMoney(spend.spent)} / No cap
+        </Typography>
+        <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>No utilization bar</Typography>
+      </Stack>
+    )
+  }
+
+  const percentage = utilizationFor(spend)
+  return (
+    <Stack spacing={0.75}>
+      <Typography sx={{ color: 'text.heading', fontSize: '0.8125rem', fontWeight: 700 }}>
+        {formatMoney(spend.spent)} / {formatMoney(spend.cap)}
+      </Typography>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+          <UtilizationBar name={budget.name} spend={spend} />
+        </Box>
+        <Typography
+          sx={{
+            color: spend.cap > 0 && spend.remaining < 0 ? 'error.main' : 'text.secondary',
+            fontSize: '0.6875rem',
+            fontWeight: spend.remaining < 0 ? 700 : 500,
+            minWidth: 34,
+            textAlign: 'right',
+          }}
+        >
+          {percentage}%
+        </Typography>
+      </Stack>
+    </Stack>
+  )
+}
+
+function Difference({ spend }) {
+  if (!spend) return <Typography color="text.secondary">—</Typography>
+  if (spend.cap === 0) return <Typography color="text.secondary">No cap set</Typography>
+  const overCap = spend.remaining < 0
+  return (
+    <Typography
+      sx={{
+        color: overCap ? 'error.main' : 'text.heading',
+        fontWeight: 700,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {formatMoney(Math.abs(spend.remaining))} {overCap ? 'over' : 'left'}
+    </Typography>
+  )
+}
+
+const tableGrid = 'minmax(210px, 1.25fr) 120px minmax(245px, 1.4fr) 140px 60px 48px'
+
+function BudgetTable({
+  budgetDate,
+  budgets,
+  highlightedId,
+  onEdit,
+  onRetrySpend,
+  spendByCategory,
+  spendError,
+  spendPending,
+}) {
   return (
     <Box
       role="table"
@@ -131,7 +450,7 @@ function BudgetTable({ budgets, highlightedId, onEdit }) {
           role="row"
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(240px, 1.5fr) 120px 140px 140px 64px',
+            gridTemplateColumns: tableGrid,
             gap: 2,
             alignItems: 'center',
             px: 3,
@@ -141,7 +460,7 @@ function BudgetTable({ budgets, highlightedId, onEdit }) {
             borderColor: 'divider',
           }}
         >
-          {['Budget line', 'Period', 'Slack', 'Cap', ''].map((label, index) => (
+          {['Budget line', 'Window', 'Spent / cap', 'Difference', 'Slack', ''].map((label, index) => (
             <Typography
               key={`${label}-${index}`}
               role="columnheader"
@@ -150,7 +469,6 @@ function BudgetTable({ budgets, highlightedId, onEdit }) {
                 fontSize: '0.75rem',
                 fontWeight: 700,
                 letterSpacing: '0.06em',
-                textAlign: label === 'Cap' ? 'right' : 'left',
                 textTransform: 'uppercase',
               }}
             >
@@ -160,48 +478,64 @@ function BudgetTable({ budgets, highlightedId, onEdit }) {
         </Box>
       </Box>
       <Box role="rowgroup">
-        {budgets.map((budget) => (
-          <Box
-            key={budget.id}
-            role="row"
-            data-budget-id={budget.id}
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(240px, 1.5fr) 120px 140px 140px 64px',
-              gap: 2,
-              alignItems: 'center',
-              px: 3,
-              py: 2,
-              borderBottom: 1,
-              borderInlineStart: 4,
-              borderBottomColor: 'divider',
-              borderInlineStartColor: highlightedId === budget.id ? 'brandAccent.main' : 'transparent',
-              '&:last-of-type': { borderBottom: 0 },
-            }}
-          >
-            <Box role="cell" sx={{ minWidth: 0 }}>
-              <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>{budget.name}</Typography>
-              <Typography color="text.secondary" variant="body2" noWrap>{budget.description}</Typography>
+        {budgets.map((budget) => {
+          const spend = spendByCategory.get(budget.id)
+          return (
+            <Box
+              key={budget.id}
+              role="row"
+              data-budget-id={budget.id}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: tableGrid,
+                gap: 2,
+                alignItems: 'center',
+                px: 3,
+                py: 2,
+                borderBottom: 1,
+                borderInlineStart: 4,
+                borderBottomColor: 'divider',
+                borderInlineStartColor: highlightedId === budget.id ? 'brandAccent.main' : 'transparent',
+                '&:last-of-type': { borderBottom: 0 },
+              }}
+            >
+              <Box role="cell" sx={{ minWidth: 0 }}>
+                <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>{budget.name}</Typography>
+                <Typography color="text.secondary" variant="body2" noWrap>{budget.description}</Typography>
+              </Box>
+              <Typography role="cell" color="text.secondary" variant="body2">
+                {formatPeriodWindow(budget.period, budgetDate).replace(`${budget.period} · `, '')}
+              </Typography>
+              <Box role="cell" sx={{ minWidth: 0 }}>
+                <DesktopSpending
+                  budget={budget}
+                  isError={spendError}
+                  isPending={spendPending}
+                  onRetry={onRetrySpend}
+                  spend={spend}
+                />
+              </Box>
+              <Box role="cell">
+                {!spendPending && !spendError && <Difference spend={spend} />}
+              </Box>
+              <Typography role="cell" color="text.secondary" variant="body2">
+                {budget.slackLoggable ? 'On' : 'Off'}
+              </Typography>
+              <Box role="cell">
+                <Button onClick={() => onEdit(budget)} sx={{ minWidth: 0 }}>Edit</Button>
+              </Box>
             </Box>
-            <Typography role="cell" color="text.secondary" variant="body2">{budget.period}</Typography>
-            <Typography role="cell" color="text.secondary" variant="body2">
-              {budget.slackLoggable ? 'On' : 'Off'}
-            </Typography>
-            <Typography role="cell" sx={{ color: 'text.heading', fontWeight: 700, textAlign: 'right' }}>
-              {formatMoney(budget.amount)}
-            </Typography>
-            <Box role="cell">
-              <Button onClick={() => onEdit(budget)} sx={{ minWidth: 0 }}>Edit</Button>
-            </Box>
-          </Box>
-        ))}
+          )
+        })}
       </Box>
     </Box>
   )
 }
 
 export default function BudgetsPage() {
+  const budgetDate = currentBudgetDate()
   const budgets = useBudgets()
+  const budgetSpend = useBudgetSpend(budgetDate)
   const createMutation = useCreateBudget()
   const updateMutation = useUpdateBudget()
   const deactivateMutation = useDeactivateBudget()
@@ -269,6 +603,9 @@ export default function BudgetsPage() {
   }
 
   const rows = budgets.data ?? []
+  const spendByCategory = new Map(
+    (budgetSpend.data ?? []).map((row) => [row.categoryId, row]),
+  )
 
   return (
     <Stack spacing={3}>
@@ -333,10 +670,31 @@ export default function BudgetsPage() {
         <Stack spacing={1.5}>
           <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
             <Typography variant="h6" component="h2">Active budget lines</Typography>
-            <Typography color="text.secondary" variant="body2">{rows.length} lines</Typography>
+            <Stack spacing={0.1} sx={{ alignItems: 'flex-end' }}>
+              <Typography color="text.secondary" variant="body2">As of {formatAsOf(budgetDate)}</Typography>
+              <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>{rows.length} lines</Typography>
+            </Stack>
           </Stack>
-          <BudgetCards budgets={rows} highlightedId={success?.id} onEdit={openEdit} />
-          <BudgetTable budgets={rows} highlightedId={success?.id} onEdit={openEdit} />
+          <BudgetCards
+            budgetDate={budgetDate}
+            budgets={rows}
+            highlightedId={success?.id}
+            onEdit={openEdit}
+            onRetrySpend={() => budgetSpend.refetch()}
+            spendByCategory={spendByCategory}
+            spendError={budgetSpend.isError}
+            spendPending={budgetSpend.isPending}
+          />
+          <BudgetTable
+            budgetDate={budgetDate}
+            budgets={rows}
+            highlightedId={success?.id}
+            onEdit={openEdit}
+            onRetrySpend={() => budgetSpend.refetch()}
+            spendByCategory={spendByCategory}
+            spendError={budgetSpend.isError}
+            spendPending={budgetSpend.isPending}
+          />
         </Stack>
       )}
 

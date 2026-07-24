@@ -8,6 +8,7 @@ Related references:
 
 - [Phase 2 product and API plan](phase2.md)
 - [Budget page, default state](mockups/budget-mobile-default.svg)
+- [Budget utilization states](mockups/budget-spend-vs-cap-views.svg)
 - [Activity page, default state](mockups/activity-mobile-default.svg)
 - [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
@@ -157,6 +158,7 @@ The supplied palette is preserved as a design ramp. Semantic UI roles must use t
 | `color-highlight` | `#DFF4F4` | Chips and selected soft backgrounds |
 | `color-scrim` | `rgba(29, 78, 137, 0.30)` | Navigation overlay |
 | `color-danger` | `#B42318` | Destructive actions and destructive errors |
+| `color-danger-soft` | `#FDECEC` | Over-cap and error-supporting backgrounds |
 
 `color-page`, `color-border`, and `color-highlight` are supporting tints derived for the interface; they are not additional brand colors.
 
@@ -232,10 +234,17 @@ On phones, render each budget line as a card rather than a compressed table row.
 
 - Name as the card title.
 - Description as supporting text.
-- Period as a compact chip.
-- Amount as a prominent, right-aligned money value.
+- The line's exact active window as a compact chip, for example `WEEKLY · 20–26 JUL` or `MONTHLY · JUL 2026`.
+- `SLACK ON` or `PLANNING ONLY` as a second chip, independently of color.
+- Spent and exact difference as the primary financial values. Say `¥3,000 left` or `¥2,000 over`; do not make users infer the difference from a bar.
+- Cap and real utilization percentage as supporting values.
+- A compact utilization bar when the cap is greater than zero.
 
-Show a compact outlined Edit icon button on each phone card. Show `slack_loggable` as either `SLACK ON` or `PLANNING ONLY`, independently of color. From medium widths upward, adapt the same rows to a table with Budget line, Period, Slack, Cap, and Edit columns.
+The utilization bar is a supporting comparison signal. Clamp its visual fill at `100%`, while displaying and announcing the real percentage, such as `110%`. Pair over-cap red with the `OVER CAP` label, exact overage, and percentage. When the cap is zero, say `No cap set` and omit the bar; spend against an unset cap is not an over-cap error.
+
+Fetch budget definitions and spend projections independently. While spend is loading, keep the name, description, period, Slack state, and Edit action usable and show a local skeleton in the financial area. If only spend fails, keep the same budget details available and show an inline `Spending unavailable` state with a safe Retry action. Join the resources by category ID, never by display name.
+
+Show a compact outlined Edit icon button on each phone card. From medium widths upward, adapt the same rows to a table with Budget line, Window, Spent / cap, Difference, Slack, and Edit columns. Weekly and monthly lines retain their own windows; do not combine them into one household utilization bar.
 
 The create/edit flow is locked in:
 
@@ -248,7 +257,7 @@ The create/edit flow is locked in:
 - Deactivation has its own confirmation surface and explains that historical expenses remain.
 - After a successful write, close the editor, refresh the budget query, announce concise feedback, and temporarily mark the affected row with an accent border.
 
-Funder, destination account, and spend-vs-cap information belong to the later payday-routing slice. Do not squeeze them into this editor or the read-state card yet.
+Funder and destination account information belong to the later payday-routing slice. Do not squeeze them into this editor or the current read-state card.
 
 ### Activity page
 

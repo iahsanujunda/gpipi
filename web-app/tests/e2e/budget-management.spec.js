@@ -22,6 +22,42 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Eating Out' })).toBeVisible()
 })
 
+test('shows exact utilization states on mobile and in the wider budget table', async ({ page }) => {
+  const eatingOut = page.getByRole('progressbar', { name: 'Eating Out utilization' })
+  await expect(eatingOut).toHaveAttribute('aria-valuenow', '80')
+  await expect(eatingOut).toHaveAttribute(
+    'aria-valuetext',
+    '80% used; ¥12,000 spent of ¥15,000',
+  )
+  await expect(page.getByText('¥3,000 left').first()).toBeVisible()
+
+  const transport = page.getByRole('progressbar', { name: 'Transport utilization' })
+  await transport.scrollIntoViewIfNeeded()
+  await expect(transport).toHaveAttribute('aria-valuenow', '100')
+  await expect(transport).toHaveAttribute(
+    'aria-valuetext',
+    '110% used; ¥22,000 spent of ¥20,000',
+  )
+  await expect(page.getByText('¥2,000 over').first()).toBeVisible()
+
+  const homeRepairs = page
+    .locator('[data-budget-id="10000000-0000-0000-0000-000000000005"]')
+    .first()
+  await expect(homeRepairs.getByText('No cap set')).toBeVisible()
+  await expect(homeRepairs.getByRole('progressbar')).toHaveCount(0)
+
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await page.reload()
+
+  const table = page.getByRole('table', { name: 'Active budget lines' })
+  await expect(table).toBeVisible()
+  await expect(table.getByRole('columnheader', { name: 'Spent / cap' })).toBeVisible()
+  await expect(table.getByRole('columnheader', { name: 'Difference' })).toBeVisible()
+  await expect(table.getByRole('row', { name: /Transport/ })).toContainText('¥2,000 over')
+  await expect(table.getByRole('row', { name: /Home repairs/ })).toContainText('No cap set')
+  await expect(table.getByRole('row', { name: /Home repairs/ })).not.toContainText('over')
+})
+
 test('launcher animates its main icon and staggered page action, then removes the action on Activity', async ({ page }) => {
   const launcher = page.getByRole('button', { name: 'Open navigation' })
   await expect(launcher).toHaveAttribute('data-launcher-state', 'closed')

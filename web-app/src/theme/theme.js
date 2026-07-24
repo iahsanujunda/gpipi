@@ -20,7 +20,10 @@ export const theme = createTheme({
       heading: '#1D4E89',
     },
     divider: '#C9E2E5',
-    error: { main: '#B42318' },
+    error: {
+      main: '#B42318',
+      light: '#FDECEC',
+    },
   },
   shape: { borderRadius: 12 },
   typography: {

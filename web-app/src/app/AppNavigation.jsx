@@ -46,14 +46,63 @@ function entryMotion(isOpen, visualIndex, entryCount) {
   }
 }
 
+function MenuSectionHeader({ children, id, isOpen }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+        width: 220,
+        mx: 'auto',
+        mb: 1,
+        opacity: isOpen ? 1 : 0,
+        visibility: isOpen ? 'visible' : 'hidden',
+        transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms ease`,
+        '@media (prefers-reduced-motion: reduce)': {
+          transitionDuration: '0ms',
+        },
+      }}
+    >
+      <Typography
+        id={id}
+        component="div"
+        sx={{
+          flex: '0 0 auto',
+          px: 1.25,
+          py: 0.5,
+          borderRadius: 999,
+          color: 'primary.contrastText',
+          bgcolor: 'text.heading',
+          fontSize: '0.6875rem',
+          fontWeight: 750,
+          letterSpacing: '0.1em',
+          lineHeight: 1.45,
+          textTransform: 'uppercase',
+        }}
+      >
+        {children}
+      </Typography>
+      <Box
+        aria-hidden="true"
+        sx={{
+          flexGrow: 1,
+          height: 2,
+          borderRadius: 999,
+          bgcolor: 'brandAccent.main',
+        }}
+      />
+    </Stack>
+  )
+}
+
 export default function AppNavigation() {
   const [isOpen, setIsOpen] = useState(false)
   const launcherRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
-  const { navigationGuard, pageAction } = usePageActions()
-  const PageActionIcon = pageAction?.icon ?? AddIcon
-  const entryCount = navigationItems.length + (pageAction ? 1 : 0)
+  const { navigationGuard, pageActions } = usePageActions()
+  const entryCount = navigationItems.length + pageActions.length
 
   function closeNavigation({ restoreFocus = true } = {}) {
     setIsOpen(false)
@@ -74,9 +123,9 @@ export default function AppNavigation() {
     continueNavigation()
   }
 
-  function selectPageAction() {
+  function selectPageAction(action) {
     closeNavigation({ restoreFocus: false })
-    pageAction?.onSelect()
+    action.onSelect()
   }
 
   useEffect(() => {
@@ -99,7 +148,7 @@ export default function AppNavigation() {
           position: 'fixed',
           inset: 0,
           zIndex: theme.zIndex.modal,
-          bgcolor: 'rgba(29, 78, 137, 0.30)',
+          bgcolor: 'scrim.main',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'auto' : 'none',
           transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1)`,
@@ -116,123 +165,79 @@ export default function AppNavigation() {
           insetInlineStart: '50%',
           bottom: 'calc(88px + env(safe-area-inset-bottom))',
           width: 'min(268px, calc(100vw - 32px))',
+          maxHeight: 'calc(100dvh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+          py: 1,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          scrollbarWidth: 'none',
           transform: 'translateX(-50%)',
           zIndex: theme.zIndex.modal + 1,
           pointerEvents: isOpen ? 'auto' : 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
         })}
       >
-        {pageAction && (
+        {pageActions.length > 0 && (
           <Box
             component="section"
-            aria-labelledby="page-action-label"
+            aria-labelledby="page-actions-label"
             sx={{ mb: 2.25 }}
           >
-            <ButtonBase
-              data-menu-entry="page-action"
-              data-enter-duration-ms={OPEN_DURATION}
-              data-exit-duration-ms={CLOSE_DURATION}
-              tabIndex={isOpen ? 0 : -1}
-              onClick={selectPageAction}
-              sx={{
-                ...entryMotion(isOpen, 0, entryCount),
-                width: '100%',
-                minHeight: 66,
-                px: 1.5,
-                border: 2,
-                borderColor: 'brandAccent.main',
-                borderRadius: 3.5,
-                justifyContent: 'flex-start',
-                gap: 1.5,
-                color: 'text.heading',
-                bgcolor: 'background.paper',
-                boxShadow: '0 5px 14px rgba(29, 78, 137, 0.22)',
-                textAlign: 'left',
-                '&:hover': { bgcolor: 'background.paper' },
-                '&:active': { transform: 'translate3d(0, 1px, 0) scale(0.99)' },
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'grid',
-                  placeItems: 'center',
-                  width: 38,
-                  height: 38,
-                  flex: '0 0 auto',
-                  borderRadius: '50%',
-                  color: 'primary.contrastText',
-                  bgcolor: 'primary.main',
-                }}
-              >
-                <PageActionIcon aria-hidden="true" sx={{ fontSize: 24 }} />
-              </Box>
-              <Stack spacing={0.125}>
-                <Typography
-                  id="page-action-label"
-                  component="span"
-                  sx={{
-                    color: 'primary.main',
-                    fontSize: '0.625rem',
-                    fontWeight: 750,
-                    letterSpacing: '0.1em',
-                    lineHeight: 1.4,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Page action
-                </Typography>
-                <Typography component="span" sx={{ fontSize: '1rem', fontWeight: 700 }}>
-                  {pageAction.label}
-                </Typography>
-              </Stack>
-            </ButtonBase>
+            <MenuSectionHeader id="page-actions-label" isOpen={isOpen}>
+              Page actions
+            </MenuSectionHeader>
+            <Stack spacing={1} sx={{ width: 220, mx: 'auto' }}>
+              {pageActions.map((action, index) => {
+                const PageActionIcon = action.icon ?? AddIcon
+
+                return (
+                  <ButtonBase
+                    key={action.id}
+                    data-menu-entry={`page-action-${action.id}`}
+                    data-enter-duration-ms={OPEN_DURATION}
+                    data-exit-duration-ms={CLOSE_DURATION}
+                    tabIndex={isOpen ? 0 : -1}
+                    onClick={() => selectPageAction(action)}
+                    sx={{
+                      ...entryMotion(isOpen, index, entryCount),
+                      minHeight: 50,
+                      px: 2,
+                      border: 2,
+                      borderColor: 'brandAccent.main',
+                      borderRadius: 999,
+                      justifyContent: 'flex-start',
+                      gap: 1.5,
+                      color: 'text.heading',
+                      bgcolor: 'background.paper',
+                      boxShadow: '0 5px 14px rgba(29, 78, 137, 0.22)',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      '&:hover': { bgcolor: 'highlight.main' },
+                      '&:active': { transform: 'translate3d(0, 1px, 0) scale(0.98)' },
+                    }}
+                  >
+                    <PageActionIcon
+                      aria-hidden="true"
+                      sx={{ fontSize: 24, color: 'primary.main', flex: '0 0 auto' }}
+                    />
+                    <Box component="span" sx={{ flexGrow: 1, textAlign: 'left' }}>
+                      {action.label}
+                    </Box>
+                  </ButtonBase>
+                )
+              })}
+            </Stack>
           </Box>
         )}
 
-        <Box
-          component="nav"
-          aria-label="Primary"
-          sx={{
-            position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              zIndex: -1,
-              insetInline: 25,
-              top: -9,
-              borderTop: '1px solid rgba(255, 255, 255, 0.55)',
-              opacity: isOpen ? 1 : 0,
-              transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms ease`,
-            },
-          }}
-        >
-          <Typography
-            component="div"
-            sx={{
-              width: 'fit-content',
-              mb: 1,
-              px: 1,
-              color: 'common.white',
-              bgcolor: 'rgba(29, 78, 137, 0.12)',
-              fontSize: '0.625rem',
-              fontWeight: 750,
-              letterSpacing: '0.12em',
-              lineHeight: 1.4,
-              textTransform: 'uppercase',
-              opacity: isOpen ? 1 : 0,
-              visibility: isOpen ? 'visible' : 'hidden',
-              transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms ease`,
-              '@media (prefers-reduced-motion: reduce)': {
-                transitionDuration: '0ms',
-              },
-            }}
-          >
+        <Box component="nav" aria-label="Primary">
+          <MenuSectionHeader isOpen={isOpen}>
             Navigation
-          </Typography>
+          </MenuSectionHeader>
           <Stack spacing={1} sx={{ width: 220, mx: 'auto' }}>
             {navigationItems.map((item, index) => {
               const current = isCurrentPath(location.pathname, item.to)
               const Icon = item.icon
-              const visualIndex = index + (pageAction ? 1 : 0)
+              const visualIndex = index + pageActions.length
 
               return (
                 <ButtonBase
@@ -258,7 +263,7 @@ export default function AppNavigation() {
                     fontSize: '1rem',
                     fontWeight: current ? 700 : 650,
                     '&:hover': {
-                      bgcolor: current ? 'primary.dark' : 'background.paper',
+                      bgcolor: current ? 'primary.dark' : 'highlight.main',
                     },
                     '&:active': { transform: 'translate3d(0, 1px, 0) scale(0.98)' },
                   }}
@@ -281,6 +286,7 @@ export default function AppNavigation() {
 
       <Box
         data-testid="navigation-mask"
+        data-mask-state={isOpen ? 'dimmed' : 'clear'}
         sx={(theme) => ({
           position: 'fixed',
           insetInline: 0,
@@ -288,6 +294,18 @@ export default function AppNavigation() {
           height: 'calc(72px + env(safe-area-inset-bottom))',
           bgcolor: 'background.default',
           zIndex: theme.zIndex.modal + 2,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            inset: 0,
+            bgcolor: 'scrim.main',
+            opacity: isOpen ? 1 : 0,
+            pointerEvents: 'none',
+            transition: `opacity ${isOpen ? OPEN_DURATION : CLOSE_DURATION}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+          },
+          '@media (prefers-reduced-motion: reduce)': {
+            '&::before': { transitionDuration: '0ms' },
+          },
         })}
       >
         <ButtonBase
@@ -301,6 +319,7 @@ export default function AppNavigation() {
           sx={{
             '--brand-icon-accent': (theme) => theme.palette.brandAccent.main,
             position: 'absolute',
+            zIndex: 1,
             insetBlockStart: 8,
             insetInlineStart: '50%',
             width: 56,

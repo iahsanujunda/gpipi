@@ -10,6 +10,7 @@ export const theme = createTheme({
     },
     brandAccent: { main: '#3FC1C0' },
     highlight: { main: '#DFF4F4' },
+    scrim: { main: 'rgba(29, 78, 137, 0.30)' },
     background: {
       default: '#F4FAFB',
       paper: '#ffffff',

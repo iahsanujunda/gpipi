@@ -24,17 +24,38 @@ function NavigationWithBudgetAction({ onSelect }) {
   return <AppNavigation />
 }
 
+function NavigationWithTwoActions({ onAdd, onDuplicate }) {
+  const addAction = useMemo(() => ({
+    id: 'add-budget-line',
+    label: 'Add budget line',
+    icon: AddIcon,
+    onSelect: onAdd,
+  }), [onAdd])
+  const duplicateAction = useMemo(() => ({
+    id: 'duplicate-budget-line',
+    label: 'Duplicate budget line',
+    icon: AddIcon,
+    onSelect: onDuplicate,
+  }), [onDuplicate])
+  usePageAction(addAction)
+  usePageAction(duplicateAction)
+  return <AppNavigation />
+}
+
 describe('AppNavigation', () => {
   it('reveals only Budgets and Activity and marks the current page', async () => {
     const user = userEvent.setup()
     renderWithProviders(<AppNavigation />, { route: '/budgets' })
 
     const launcher = screen.getByRole('button', { name: 'Open navigation' })
+    const navigationMask = screen.getByTestId('navigation-mask')
     expect(launcher).toHaveAttribute('aria-expanded', 'false')
+    expect(navigationMask).toHaveAttribute('data-mask-state', 'clear')
     expect(screen.queryByRole('link', { name: 'Budgets' })).not.toBeInTheDocument()
 
     await user.click(launcher)
 
+    expect(navigationMask).toHaveAttribute('data-mask-state', 'dimmed')
     expect(screen.getByRole('link', { name: 'Budgets' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Activity' })).not.toHaveAttribute('aria-current')
     expect(screen.getAllByRole('link')).toHaveLength(2)
@@ -86,8 +107,12 @@ describe('AppNavigation', () => {
     await user.click(launcher)
 
     const pageAction = screen.getByRole('button', { name: /add budget line/i })
-    expect(pageAction).toHaveAttribute('data-menu-entry', 'page-action')
+    const pageActionsLabel = screen.getByText('Page actions')
+    expect(pageAction).toHaveAttribute('data-menu-entry', 'page-action-add-budget-line')
+    expect(pageAction).not.toContainElement(pageActionsLabel)
+    expect(pageAction.closest('section')).toHaveAccessibleName('Page actions')
     expect(pageAction.closest('section')).not.toBe(screen.getByRole('navigation', { name: 'Primary' }))
+    expect(screen.getByText('Navigation')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Close navigation' })).toHaveAttribute('data-launcher-state', 'open')
     expect(container.querySelector('[data-launcher-icon="brand"]')).toHaveStyle({ opacity: '0' })
     expect(container.querySelector('[data-launcher-icon="close"]')).toHaveStyle({ opacity: '1' })
@@ -95,6 +120,28 @@ describe('AppNavigation', () => {
     await user.click(pageAction)
 
     expect(onSelect).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('lists multiple route-provided page actions in registration order', async () => {
+    const user = userEvent.setup()
+    const onAdd = vi.fn()
+    const onDuplicate = vi.fn()
+    renderWithProviders(
+      <NavigationWithTwoActions onAdd={onAdd} onDuplicate={onDuplicate} />,
+      { route: '/budgets' },
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Open navigation' }))
+
+    const pageActions = screen.getByRole('region', { name: 'Page actions' })
+    expect(pageActions).toContainElement(screen.getByRole('button', { name: 'Add budget line' }))
+    expect(pageActions).toContainElement(screen.getByRole('button', { name: 'Duplicate budget line' }))
+
+    await user.click(screen.getByRole('button', { name: 'Duplicate budget line' }))
+
+    expect(onDuplicate).toHaveBeenCalledOnce()
+    expect(onAdd).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false')
   })
 })

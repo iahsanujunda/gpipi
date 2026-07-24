@@ -2,13 +2,17 @@ import { useCallback, useMemo, useState } from 'react'
 import { PageActionsContext } from './pageActions'
 
 export function PageActionsProvider({ children }) {
-  const [pageAction, setPageAction] = useState(null)
+  const [pageActions, setPageActions] = useState([])
   const [navigationGuard, setNavigationGuard] = useState(null)
 
   const registerPageAction = useCallback((action) => {
-    setPageAction(action)
+    setPageActions((current) => {
+      const existingIndex = current.findIndex((item) => item.id === action.id)
+      if (existingIndex === -1) return [...current, action]
+      return current.map((item, index) => (index === existingIndex ? action : item))
+    })
     return () => {
-      setPageAction((current) => (current?.id === action.id ? null : current))
+      setPageActions((current) => current.filter((item) => item.id !== action.id))
     }
   }, [])
 
@@ -22,11 +26,11 @@ export function PageActionsProvider({ children }) {
   const value = useMemo(
     () => ({
       navigationGuard,
-      pageAction,
+      pageActions,
       registerNavigationGuard,
       registerPageAction,
     }),
-    [navigationGuard, pageAction, registerNavigationGuard, registerPageAction],
+    [navigationGuard, pageActions, registerNavigationGuard, registerPageAction],
   )
 
   return (

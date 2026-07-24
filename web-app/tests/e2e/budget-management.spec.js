@@ -73,13 +73,15 @@ test('shows exact utilization states on mobile and in the wider budget table', a
 
 test('launcher animates its main icon and staggered page action, then removes the action on Activity', async ({ page }) => {
   const launcher = page.getByRole('button', { name: 'Open navigation' })
+  const navigationMask = page.getByTestId('navigation-mask')
   await expect(launcher).toHaveAttribute('data-launcher-state', 'closed')
   await expect(launcher).toHaveAttribute('data-icon-duration-ms', '180')
+  await expect(navigationMask).toHaveAttribute('data-mask-state', 'clear')
 
   const samples = await launcher.evaluate(async (button) => {
     const brand = button.querySelector('[data-launcher-icon="brand"]')
     const close = button.querySelector('[data-launcher-icon="close"]')
-    const action = document.querySelector('[data-menu-entry="page-action"]')
+    const action = document.querySelector('[data-menu-entry^="page-action-"]')
     const sample = () => {
       const actionTransform = getComputedStyle(action).transform
       return {
@@ -118,6 +120,14 @@ test('launcher animates its main icon and staggered page action, then removes th
   expect(samples.end.closeOpacity).toBeCloseTo(1, 1)
 
   const action = page.getByRole('button', { name: /add budget line/i })
+  await expect(navigationMask).toHaveAttribute('data-mask-state', 'dimmed')
+  await expect.poll(
+    () => navigationMask.evaluate(
+      (element) => getComputedStyle(element, '::before').opacity,
+    ),
+  ).toBe('1')
+  await expect(page.getByText('Page actions')).toBeVisible()
+  await expect(page.getByText('Navigation')).toBeVisible()
   await expect(action).toBeVisible()
   await expect(action).toHaveCSS('transition-duration', '0.2s')
   await expect(action).toHaveCSS('transition-timing-function', 'cubic-bezier(0.16, 1, 0.3, 1)')

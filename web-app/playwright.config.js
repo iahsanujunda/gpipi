@@ -9,8 +9,7 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     ...devices['Pixel 7'],
-    browserName: 'chromium',
-    channel: 'chrome',
+    browserName: 'firefox',
     baseURL: webOrigin,
     headless: true,
     screenshot: 'only-on-failure',

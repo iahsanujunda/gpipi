@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1320" height="965" viewBox="0 0 1320 965" role="img" aria-labelledby="title description">
   <title id="title">Route-aware mobile launcher states</title>
-  <desc id="description">Three mobile screens compare the stable resting launcher, the expanded Budgeting launcher with a visually separate Add budget line page action, and the expanded Activity launcher with navigation only.</desc>
+  <desc id="description">Three mobile screens compare the stable resting launcher, the expanded Budgeting launcher with a labelled page-actions group, and the expanded Activity launcher with a high-contrast navigation group.</desc>
 
   <defs>
     <clipPath id="screen-clip">
@@ -136,7 +136,7 @@
 
   <rect width="1320" height="965" fill="#E7F5F7" />
   <text x="48" y="50" fill="#1D4E89" font-size="28" font-weight="750">Route-aware launcher · contextual actions stay distinct from navigation</text>
-  <text x="48" y="78" fill="#526966" font-size="14">The launcher keeps one identity. Its menu adds a page-specific button only where that action is relevant.</text>
+  <text x="48" y="78" fill="#526966" font-size="14">Matched section headers clarify the menu hierarchy, while each page can contribute one or more actions.</text>
 
   <text class="board-label" x="230" y="120" text-anchor="middle">01 · REST</text>
   <text class="board-note" x="230" y="140" text-anchor="middle">Stable brand launcher</text>
@@ -157,19 +157,25 @@
     <rect x="8" y="96" width="374" height="616" fill="#1D4E89" fill-opacity="0.34" />
     <path d="M195 648V386" fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="2" stroke-dasharray="4 8" />
 
+    <g>
+      <rect x="85" y="338" width="98" height="22" rx="11" fill="#1D4E89" />
+      <text x="134" y="353" fill="#FFFFFF" font-size="9.5" font-weight="750" letter-spacing="1" text-anchor="middle">PAGE ACTIONS</text>
+      <line x1="191" y1="349" x2="305" y2="349" stroke="#3FC1C0" stroke-width="2" stroke-linecap="round" />
+    </g>
     <g filter="url(#control-shadow)">
-      <rect x="61" y="366" width="268" height="66" rx="14" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="2" />
-      <circle cx="94" cy="399" r="18" fill="#16679A" />
-      <path d="M94 391v16m-8-8h16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
-      <text x="124" y="391" fill="#16679A" font-size="9.5" font-weight="750" letter-spacing="1">PAGE ACTION</text>
-      <text x="124" y="414" fill="#1D4E89" font-size="16" font-weight="700">Add budget line</text>
+      <rect x="85" y="370" width="220" height="50" rx="25" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="2" />
+      <path d="M113 378v16m-8-8h16" transform="translate(0 9)" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" />
+      <text x="137" y="401" fill="#1D4E89" font-size="15" font-weight="700">Add budget line</text>
     </g>
 
-    <text x="85" y="462" fill="#FFFFFF" font-size="9.5" font-weight="750" letter-spacing="1.2">NAVIGATION</text>
-    <line x1="170" y1="459" x2="305" y2="459" stroke="#FFFFFF" stroke-opacity="0.52" />
+    <g>
+      <rect x="85" y="438" width="88" height="22" rx="11" fill="#1D4E89" />
+      <text x="129" y="453" fill="#FFFFFF" font-size="9.5" font-weight="750" letter-spacing="1" text-anchor="middle">NAVIGATION</text>
+      <line x1="181" y1="449" x2="305" y2="449" stroke="#3FC1C0" stroke-width="2" stroke-linecap="round" />
+    </g>
     <g filter="url(#control-shadow)">
-      <use href="#budget-nav-item" y="476" />
-      <use href="#activity-nav-link" y="532" />
+      <use href="#budget-nav-item" y="470" />
+      <use href="#activity-nav-link" y="526" />
     </g>
     <use href="#close-launcher" />
   </g>
@@ -179,8 +185,11 @@
     <use href="#activity-content" />
     <rect x="8" y="96" width="374" height="616" fill="#1D4E89" fill-opacity="0.34" />
     <path d="M195 648V480" fill="none" stroke="#FFFFFF" stroke-opacity="0.28" stroke-width="2" stroke-dasharray="4 8" />
-    <text x="85" y="498" fill="#FFFFFF" font-size="9.5" font-weight="750" letter-spacing="1.2">NAVIGATION</text>
-    <line x1="170" y1="495" x2="305" y2="495" stroke="#FFFFFF" stroke-opacity="0.52" />
+    <g>
+      <rect x="85" y="482" width="88" height="22" rx="11" fill="#1D4E89" />
+      <text x="129" y="497" fill="#FFFFFF" font-size="9.5" font-weight="750" letter-spacing="1" text-anchor="middle">NAVIGATION</text>
+      <line x1="181" y1="493" x2="305" y2="493" stroke="#3FC1C0" stroke-width="2" stroke-linecap="round" />
+    </g>
     <g filter="url(#control-shadow)">
       <use href="#budget-nav-link" y="512" />
       <use href="#activity-nav-item" y="568" />
@@ -191,6 +200,6 @@
   <g>
     <rect x="48" y="912" width="1224" height="1" fill="#C9E2E5" />
     <circle cx="63" cy="939" r="8" fill="#3FC1C0" />
-    <text x="80" y="943" fill="#526966" font-size="12">Page action is a button with a verb and group label; destinations remain links. Both groups use the established launcher animation.</text>
+    <text x="80" y="943" fill="#526966" font-size="12">Page actions and navigation share one high-contrast group-header pattern; actions remain buttons and destinations remain links.</text>
   </g>
 </svg>

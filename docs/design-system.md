@@ -74,9 +74,9 @@ The dock is a full-width, fixed-position **content-occluding surface**. Its purp
 - Fix the dock to the bottom of the viewport across its full width.
 - Use the page background color so the dock reads as protected space rather than a separate toolbar.
 - Set its height to `72 px` plus `env(safe-area-inset-bottom)`, slightly taller than the `56 px` launcher.
-- Layer it above scrolling page content and the navigation scrim. Only the launcher sits visually above the dock.
+- Layer it above scrolling page content. While navigation is open, continue the same `color-scrim` overlay across the dock so it dims exactly like the page background; only the launcher remains visually above that dimming layer.
 - Allow content to scroll behind the dock, where it is occluded, while reserving enough page-bottom padding for the final content to scroll fully clear of it.
-- Do not call this surface a scrim: a scrim is translucent and de-emphasizes background content only while the navigation menu is open.
+- The dock remains the content-occluding surface; its temporary translucent overlay is the scrim continuation.
 
 ### Resting state
 
@@ -91,6 +91,7 @@ The dock is a full-width, fixed-position **content-occluding surface**. Its purp
 - Change the launcher icon to an unambiguous close icon.
 - Cross-fade and rotate the brand and close icons within the unchanged launcher circle over `180 ms`; do not replace the entire control.
 - Stack the labelled navigation pills above the launcher.
+- Introduce every action group with the same high-contrast section header: white uppercase text on `color-heading`, followed by a `color-brand-accent` rule. Do not place group labels directly on the scrim.
 - Each pill is at least `48 px` high, with at least `8 px` between touch targets.
 - Mark the active destination with a filled primary pill, white text, and `aria-current="page"`.
 - Set `aria-expanded="true"` on the launcher.
@@ -104,13 +105,14 @@ Activity sits closest to the thumb because it is expected to be used most freque
 
 ### Route-aware page actions
 
-The launcher keeps one stable identity, while its expanded contents may include an action contributed by the current page.
+The launcher keeps one stable identity, while its expanded contents may include one or more actions contributed by the current page.
 
 - On Budgeting, show `Add budget line` above the navigation group. Do not show it on Activity.
-- Render the contextual action as a button and destinations as links.
-- Separate it semantically and visually with a `Page action` eyebrow, plus icon, two-line action surface, larger width, accent border, and spacing before the labelled `Navigation` group. Do not rely on color alone.
+- Render contextual actions as buttons and destinations as links.
+- Label the action group `Page actions` outside its buttons, using the same section-header treatment as `Navigation`. An action button contains only its icon and action label.
+- Stack multiple page actions in registration order with the same `220 px` pill width and `8 px` gap as navigation. Retain the accent border so action buttons remain distinguishable from destination links without relying on the group label alone.
 - Keep the rare page action above the destinations, leaving frequent navigation closer to the thumb.
-- Selecting the action closes the launcher and opens the New budget line adaptive dialog.
+- Selecting an action closes the launcher before invoking that action. `Add budget line` opens the New budget line adaptive dialog.
 - Do not change the resting launcher icon or accessible name according to the page action.
 - Populated Budgeting views do not repeat a persistent Add button in page content. The empty state is the deliberate exception and exposes `Add first budget line` directly.
 
@@ -345,7 +347,7 @@ Every frontend contribution must meet these minimums:
 
 ## Implementation boundary
 
-The React app uses Material UI, so these tokens should become semantic theme values and component variants rather than scattered CSS literals. The app shell, navigation launcher, mobile budget cards, `AnimatedBottomSheet`, `AdaptiveSelect`, and `AdaptiveDateField` are shared components. Future adaptive popup dialogs must build on `AnimatedBottomSheet` rather than introducing another phone overlay pattern. Page-specific data fetching remains in page features through TanStack Query.
+The React app uses Material UI, so these tokens should become semantic theme values and component variants rather than scattered CSS literals. The app shell, navigation launcher, multi-action page-action registry, mobile budget cards, `AnimatedBottomSheet`, `AdaptiveSelect`, and `AdaptiveDateField` are shared components. Future adaptive popup dialogs must build on `AnimatedBottomSheet` rather than introducing another phone overlay pattern. Page-specific data fetching remains in page features through TanStack Query.
 
 The following decisions are deliberately still open:
 

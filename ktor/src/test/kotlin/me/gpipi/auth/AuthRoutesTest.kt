@@ -41,7 +41,7 @@ class AuthRoutesTest {
         }
         application {
             configureSerialization()
-            configureSecurity()
+            configureSecurity(clock)
             routing {
                 authRoutes(auth, clock)
             }

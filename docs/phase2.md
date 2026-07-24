@@ -52,7 +52,7 @@ User clicks
           match on nonce_hash WHERE expires_at > now AND consumed_at IS NULL, set consumed_at = now
       → the atomic update returns the user_id iff the row was still redeemable
         (a leaked/double-clicked nonce cannot be reused — the second update matches nothing)
-      → set session cookie: HttpOnly; Secure; SameSite=Lax; short lifetime
+      → set session cookie: HttpOnly; Secure; SameSite=Lax; 8-hour idle window
   ← nonce is dead; the URL in history is worthless
 
 Subsequent /api/** calls → carry the session cookie; endpoints check the SESSION, never the nonce
@@ -66,10 +66,11 @@ The raw nonce lives only in the link (and briefly in the browser); at rest we ke
 2. **Session lives in an `HttpOnly` cookie** — never the URL, never `localStorage`. Set `Secure` (HTTPS only) and `SameSite=Lax` (CSRF mitigation).
 3. **Verify before trust** — `/api/auth/redeem` is the only public route; every other `/api/**` requires a valid session.
 
-### Two independent lifetimes
+### Session lifetime policy
 
 - **Nonce: ~5–10 min** — only needs to survive from link-post to click.
-- **Session: the working window** (~30 min, or idle-timeout) — covers the editing session.
+- **Session idle timeout: 8 hours** — each authenticated request renews the cookie's browser-side `Max-Age`.
+- **Session absolute lifetime: 24 hours** — the server validates the signed `issuedAt` on every request and requires a new Slack-issued nonce once the full day elapses, regardless of activity.
 
 ### Identity carried through
 
@@ -90,7 +91,7 @@ create table auth_nonce (
 
 > Two deliberate deviations from a naive design: the primary key is a surrogate `id` and the nonce is keyed by a **hashed** column (`nonce_hash unique`), never the raw value — so a DB leak can't be replayed. And `consumed` is a **timestamp** (`consumed_at`), not a boolean, so redemption is observable ("when was this consumed") for free. `AuthNonceRepository.consume` does the validate-and-flip as a single `updateReturning`; `AuthService` owns the hashing (mint hashes before insert, redeem hashes before lookup) so the two sides can never drift.
 
-**Session mechanism (concrete).** A signed **stateless** cookie via Ktor's `Sessions` plugin — no `session` table. The payload is `UserSession(userId, issuedAt)`, signed (not encrypted) with `SessionTransportTransformerMessageAuthentication` keyed on `SESSION_SIGN_KEY`; the cookie is `HttpOnly`, `Secure` (gated on env so local http still works), `SameSite=Lax`, ~30 min. The guard is a Ktor `Authentication` provider named `"auth-session"` wrapping the protected `/api/**` routes. Add a server-side `session` table only if revocation is ever wanted. Expired/consumed nonces are swept by a periodic cleanup job.
+**Session mechanism (concrete).** A signed **stateless** cookie via Ktor's `Sessions` plugin — no `session` table. The payload is `UserSession(userId, issuedAt)`, signed (not encrypted) with `SessionTransportTransformerMessageAuthentication` keyed on `SESSION_SIGN_KEY`; the cookie is `HttpOnly`, `Secure` (gated on env so local http still works), and `SameSite=Lax`. Its `Max-Age` is renewed to 8 hours on each authenticated request, while the guard rejects the signed payload once `issuedAt` reaches the server-enforced 24-hour absolute lifetime. A fresh `@ai open` flow then mints a new nonce and session. Add a server-side `session` table only if revocation is ever wanted. Expired/consumed nonces are swept by a periodic cleanup job.
 
 ---
 
@@ -183,6 +184,7 @@ A Ktor `Authentication` provider named `"auth-session"` wrapping the `/api/**` g
 - [ ] Consumed or expired nonce is rejected (single-use proven by test)
 - [ ] `/api/**` rejects requests without a valid session; `/api/auth/redeem` is the only public route (`/api/auth/session` is guarded and returns 401 when unauthenticated)
 - [ ] Session carries the acting member's `user_id`
+- [ ] Session renews an 8-hour idle cookie on authenticated activity and is rejected after its 24-hour absolute lifetime
 - [ ] `GET /api/expenses` returns the phase-1 expenses, filterable by date/category
 - [ ] React app deployed on Render static site; CORS allows its origin with credentials
 - [ ] Nonce cleanup runs on a schedule

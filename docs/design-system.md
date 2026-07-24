@@ -9,6 +9,7 @@ Related references:
 - [Phase 2 product and API plan](phase2.md)
 - [Budget page, default state](mockups/budget-mobile-default.svg)
 - [Activity page, default state](mockups/activity-mobile-default.svg)
+- [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
 - [Source color palette](https://coolors.co/palette/3fc1c0-20bac5-00b2ca-04a6c2-0899ba-0f80aa-16679a-1a5b92-1c558e-1d4e89)
 
@@ -196,6 +197,20 @@ Use a `4 px` base unit. Preferred spacing tokens are `4`, `8`, `12`, `16`, `24`,
 
 ## Component guidance
 
+### Adaptive mobile overlays
+
+Phone interactions use one bottom-drawer language for selection, dates, and future popup dialogs. This is the standard mobile presentation, not an Activity-specific treatment.
+
+- Below the medium breakpoint, selector fields open an option drawer and date fields open a calendar drawer. At medium widths and above, keep the platform-appropriate inline select and date controls.
+- Future popup dialogs must use the same bottom-drawer shell on phones. Their content and action layout may differ, but their position, dismissal, motion, safe-area handling, and focus behavior do not.
+- Anchor the surface to the viewport bottom and round its top corners to `16 px`. Include a visible `36 × 4 px` drag handle.
+- The drawer must never cover the complete viewport. Its global maximum height is `calc(100dvh - max(24px, env(safe-area-inset-top)))`; a feature may set a smaller cap. Option and date drawers use `80dvh`.
+- Keep the revealed area behind the drawer visibly dimmed with `color-scrim`. Tapping that area dismisses the drawer and communicates that the underlying page still exists.
+- Dismiss on backdrop tap, explicit close, `Escape`, downward swipe, or browser Back. A flow that temporarily disables dismissal must explain why.
+- Use one scrolling content region inside the drawer, contain overscroll there, and pad the bottom by at least `max(16px, env(safe-area-inset-bottom))`.
+- Restore focus to the field or control that opened the drawer after the exit animation completes.
+- Option rows are at least `48 px` high, use `listbox`/`option` semantics, and expose selection independently of color. Calendar days are at least `44 × 44 px`, live inside a labelled grid, and expose the selected date with `aria-pressed`.
+
 ### Budget page heading
 
 Use `Budgeting` as the sole page heading. Do not add a persistent subtitle below it; the budget cards provide the necessary context.
@@ -216,6 +231,7 @@ The complete Iteration 3 editor also needs `active`, `slack_loggable`, funder, d
 Use `Activity` as the page heading with one short supporting sentence explaining that the ledger contains household expenses recorded through Slack.
 
 - Keep filters together in one bordered surface above the results. Category and sort span the available phone width; the From and To date fields may share a row.
+- On phones, Category and Sort use option drawers while From and To use calendar drawers. See the [verified mobile drawer states](mockups/activity-mobile-drawer-states.svg).
 - Show the visible result count beside the filter heading when space permits and directly below it on narrow screens.
 - On phones, show one expense per card: merchant and amount form the primary row, category is a compact chip, and date is supporting metadata.
 - From medium widths upward, present the same information as an accessible four-column table ordered Date, Merchant, Category, Amount.
@@ -259,7 +275,15 @@ Motion should explain spatial change, not decorate routine actions.
 - Animate only compositor-friendly properties such as `transform` and `opacity`.
 - Under `prefers-reduced-motion: reduce`, use an opacity-only transition or update immediately.
 
-Most other interface transitions should stay between `150–300 ms` and should not block input.
+### Bottom-drawer motion
+
+- Enter from below the viewport over `380 ms` with `cubic-bezier(0.22, 1, 0.36, 1)`.
+- Exit toward the bottom over `220 ms` with `cubic-bezier(0.4, 0, 1, 1)`.
+- Keep the drawer mounted until its exit movement completes so closing reads as a spatial transition rather than disappearing.
+- Animate `transform`; do not animate layout height or the page behind the drawer.
+- Under `prefers-reduced-motion: reduce`, use a `0 ms` transition and update immediately.
+
+Other interface transitions should generally stay between `150–300 ms` and should not block input.
 
 ## Responsive behavior
 
@@ -284,10 +308,11 @@ Every frontend contribution must meet these minimums:
 - Text can enlarge without clipping, overlap, or horizontal scrolling.
 - Motion respects the user's reduced-motion preference.
 - Safe-area insets keep controls clear of mobile system UI.
+- Drawers expose dialog semantics, keep focus out of the dimmed page, and return focus to their trigger after closing.
 
 ## Implementation boundary
 
-The React app uses Material UI, so these tokens should become semantic theme values and component variants rather than scattered CSS literals. The app shell, navigation launcher, and mobile budget cards should be shared components. Page-specific data fetching remains in page features through TanStack Query.
+The React app uses Material UI, so these tokens should become semantic theme values and component variants rather than scattered CSS literals. The app shell, navigation launcher, mobile budget cards, `AnimatedBottomSheet`, `AdaptiveSelect`, and `AdaptiveDateField` are shared components. Future adaptive popup dialogs must build on `AnimatedBottomSheet` rather than introducing another phone overlay pattern. Page-specific data fetching remains in page features through TanStack Query.
 
 The following decisions are deliberately still open:
 

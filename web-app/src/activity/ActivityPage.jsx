@@ -8,10 +8,11 @@ import {
   Paper,
   Skeleton,
   Stack,
-  TextField,
   Typography,
 } from '@mui/material'
 import { ActivityIcon } from '@/app/AppIcons'
+import AdaptiveDateField from '@/components/AdaptiveDateField'
+import AdaptiveSelect from '@/components/AdaptiveSelect'
 import { useExpenses } from './queries'
 
 const dateFormatter = new Intl.DateTimeFormat('en-GB', {
@@ -333,8 +334,8 @@ export default function ActivityPage() {
               gap: 1.5,
             }}
           >
-            <TextField
-              select
+            <AdaptiveSelect
+              name="category"
               label="Category"
               value={category}
               onChange={(event) => setCategory(event.target.value)}
@@ -342,25 +343,23 @@ export default function ActivityPage() {
             >
               <MenuItem value="">All categories</MenuItem>
               {categories.map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
-            </TextField>
-            <TextField
+            </AdaptiveSelect>
+            <AdaptiveDateField
+              name="from"
               label="From"
-              type="date"
               value={from}
               error={invalidRange}
               onChange={(event) => setFrom(event.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
             />
-            <TextField
+            <AdaptiveDateField
+              name="to"
               label="To"
-              type="date"
               value={to}
               error={invalidRange}
               onChange={(event) => setTo(event.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
             />
-            <TextField
-              select
+            <AdaptiveSelect
+              name="sort"
               label="Sort"
               value={sort}
               onChange={(event) => setSort(event.target.value)}
@@ -369,7 +368,7 @@ export default function ActivityPage() {
               {sortOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
               ))}
-            </TextField>
+            </AdaptiveSelect>
           </Box>
 
           {invalidRange && (

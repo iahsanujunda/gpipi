@@ -172,7 +172,7 @@ A Ktor `Authentication` provider named `"auth-session"` wrapping the `/api/**` g
 
 - `/enter` route: reads `location.hash`, POSTs redeem, then routes into the app.
 - Expense table: columns (date, amount, category, merchant); client sort + date/category filter; read-only.
-- Activity visual baseline: [mobile default mockup](mockups/activity-mobile-default.svg), with cards on phones and the same fields promoted to a table from medium widths upward.
+- Activity visual baseline: [mobile default mockup](mockups/activity-mobile-default.svg), with cards on phones and the same fields promoted to a table from medium widths upward. Phone selectors and date pickers follow the shared animated bottom-drawer pattern shown in the [drawer-state mockup](mockups/activity-mobile-drawer-states.svg).
 - CORS: backend permits the static-site origin **with credentials** (so the cookie is sent cross-origin).
 
 ### Definition of Done

@@ -6,7 +6,9 @@ import me.gpipi.generated.db.base.public1.Category
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.update
 
 data class CategoryRow(
     val id: UUID,
@@ -21,6 +23,8 @@ data class BudgetRow(
     val description: String,
     val period: String,
     val amount: Long,
+    val active: Boolean,
+    val slackLoggable: Boolean,
 )
 
 class CategoryRepository {
@@ -46,6 +50,8 @@ class CategoryRepository {
                 Category.description,
                 Category.period,
                 Category.amount,
+                Category.active,
+                Category.slackLoggable,
             )
             .where { Category.active eq true }
             .orderBy(Category.name to SortOrder.ASC)
@@ -56,6 +62,51 @@ class CategoryRepository {
                     description = row[Category.description],
                     period = row[Category.period],
                     amount = row[Category.amount],
+                    active = row[Category.active],
+                    slackLoggable = row[Category.slackLoggable]
                 )
             }
+
+    fun create(name: String,
+               description: String,
+               period: String,
+               amount: Long,
+               active: Boolean,
+               slackLoggable: Boolean): UUID {
+        val id = UUID.randomUUID()
+        Category.insert {
+            it[Category.id] = id
+            it[Category.name] = name
+            it[Category.description] = description
+            it[Category.period] = period
+            it[Category.amount] = amount
+            it[Category.active] = active
+            it[Category.slackLoggable] = slackLoggable
+        }
+        return id
+    }
+
+    fun update(id: UUID,
+               name: String,
+               description: String,
+               period: String,
+               amount: Long,
+               active: Boolean,
+               slackLoggable: Boolean): Boolean =
+        Category.update(
+            { Category.id eq id }
+        ) {
+            it[Category.name] = name
+            it[Category.description] = description
+            it[Category.period] = period
+            it[Category.amount] = amount
+            it[Category.active] = active
+            it[Category.slackLoggable] = slackLoggable
+        }
+            .let { rowsUpdated -> rowsUpdated > 0 }
+
+    fun deactivate(id: UUID): Boolean =
+        Category.update({ Category.id eq id }) {
+            it[Category.active] = false
+        } > 0
 }

@@ -18,6 +18,7 @@ import io.ktor.server.routing.routing
 import me.gpipi.auth.AuthNonceRepository
 import me.gpipi.auth.AuthService
 import me.gpipi.auth.authRoutes
+import me.gpipi.category.BudgetService
 import me.gpipi.category.CategoryRepository
 import me.gpipi.category.budgetApiRoutes
 import me.gpipi.config.DbKey
@@ -83,6 +84,7 @@ fun Application.configureRouting() {
     )
 
     val categoryRepo = CategoryRepository()
+    val budgetService = BudgetService(db, categoryRepo)
     val inboundRepo = InboundRepository()
     val expenseRepo = ExpenseRepository()
 
@@ -136,7 +138,7 @@ fun Application.configureRouting() {
         slackInteractionRoutes(signingSecret, interactionHandler)
         authenticate("auth-session") {
             expenseApiRoutes(db, expenseRepo)
-            budgetApiRoutes(db, categoryRepo)
+            budgetApiRoutes(budgetService)
         }
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")

@@ -57,7 +57,7 @@ describe('adaptive mobile fields', () => {
     const trigger = screen.getByRole('combobox', { name: 'Sort' })
     await user.click(trigger)
 
-    const sheet = screen.getByRole('dialog', { name: 'Sort' })
+    const sheet = await screen.findByRole('dialog', { name: 'Sort' })
     expect(sheet).toHaveAttribute('data-presentation', 'bottom-sheet-options')
     expect(sheet).toHaveAttribute('data-motion', 'slide-from-bottom')
     expect(screen.getByRole('option', { name: 'Newest first' })).toHaveAttribute('aria-selected', 'true')
@@ -77,7 +77,7 @@ describe('adaptive mobile fields', () => {
     const trigger = screen.getByRole('combobox', { name: 'From' })
     await user.click(trigger)
 
-    const sheet = screen.getByRole('dialog', { name: 'From' })
+    const sheet = await screen.findByRole('dialog', { name: 'From' })
     expect(sheet).toHaveAttribute('data-presentation', 'bottom-sheet-date-picker')
     expect(screen.getByText('July 2026')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '24 July 2026' })).toHaveAttribute('aria-pressed', 'true')
@@ -94,7 +94,7 @@ describe('adaptive mobile fields', () => {
     renderWithProviders(<DateHarness />)
 
     await user.click(screen.getByRole('combobox', { name: 'From' }))
-    await user.click(screen.getByRole('button', { name: 'Next month' }))
+    await user.click(await screen.findByRole('button', { name: 'Next month' }))
 
     expect(screen.getByText('August 2026')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '1 August 2026' })).toBeInTheDocument()

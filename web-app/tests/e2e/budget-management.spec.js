@@ -155,6 +155,40 @@ test('launcher animates its main icon and staggered page action, then removes th
   await expect(page.getByRole('button', { name: /add budget line/i })).toHaveCount(0)
 })
 
+test('new budget drawer visibly enters when it is mounted open', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  const action = page.getByRole('button', { name: /add budget line/i })
+
+  const samples = await action.evaluate(async (button) => {
+    button.click()
+
+    let sheet = null
+    while (!sheet) {
+      await new Promise(requestAnimationFrame)
+      sheet = document.querySelector('[aria-label="New budget line"]')
+    }
+    const sample = () => {
+      const transform = getComputedStyle(sheet).transform
+      return {
+        height: sheet.getBoundingClientRect().height,
+        y: transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m42,
+      }
+    }
+
+    const start = sample()
+    await new Promise((resolve) => setTimeout(resolve, 180))
+    const middle = sample()
+    await new Promise((resolve) => setTimeout(resolve, 420))
+    const end = sample()
+    return { start, middle, end }
+  })
+
+  expect(samples.start.y).toBeGreaterThan(samples.start.height * 0.15)
+  expect(samples.middle.y).toBeGreaterThan(samples.middle.height * 0.08)
+  expect(samples.middle.y).toBeLessThan(samples.start.y)
+  expect(samples.end.y).toBeCloseTo(0, 0)
+})
+
 test('creates a budget through the mobile drawer review flow', async ({ page }) => {
   await page.getByRole('button', { name: 'Open navigation' }).click()
   await page.getByRole('button', { name: /add budget line/i }).click()

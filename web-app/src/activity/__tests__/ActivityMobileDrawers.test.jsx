@@ -44,7 +44,7 @@ describe('Activity mobile drawers', () => {
     const trigger = screen.getByRole('combobox', { name: 'Category' })
     await user.click(trigger)
 
-    expect(screen.getByRole('dialog', { name: 'Category' })).toHaveAttribute(
+    expect(await screen.findByRole('dialog', { name: 'Category' })).toHaveAttribute(
       'data-presentation',
       'bottom-sheet-options',
     )
@@ -61,7 +61,7 @@ describe('Activity mobile drawers', () => {
 
     const from = screen.getByRole('combobox', { name: 'From' })
     await user.click(from)
-    expect(screen.getByRole('dialog', { name: 'From' })).toHaveAttribute(
+    expect(await screen.findByRole('dialog', { name: 'From' })).toHaveAttribute(
       'data-presentation',
       'bottom-sheet-date-picker',
     )
@@ -71,7 +71,7 @@ describe('Activity mobile drawers', () => {
 
     const to = screen.getByRole('combobox', { name: 'To' })
     await user.click(to)
-    expect(screen.getByRole('dialog', { name: 'To' })).toHaveAttribute(
+    expect(await screen.findByRole('dialog', { name: 'To' })).toHaveAttribute(
       'data-presentation',
       'bottom-sheet-date-picker',
     )

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { SwipeableDrawer, useMediaQuery } from '@mui/material'
 
 const BOTTOM_SHEET_MOTION = {
@@ -101,6 +101,14 @@ export default function AnimatedBottomSheet({
   const sheetIdRef = useRef(`bottom-sheet-${reactId}`)
   const onCloseRef = useRef(onClose)
   const disableDismissRef = useRef(disableDismiss)
+  const [enterReady, setEnterReady] = useState(false)
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(
+      () => setEnterReady(open && !reduceMotion),
+    )
+    return () => window.cancelAnimationFrame(frame)
+  }, [open, reduceMotion])
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -133,12 +141,13 @@ export default function AnimatedBottomSheet({
   const exitDuration = typeof resolvedTransitionDuration === 'number'
     ? resolvedTransitionDuration
     : resolvedTransitionDuration.exit
+  const presentedOpen = open && (reduceMotion || enterReady)
 
   return (
     <SwipeableDrawer
       {...drawerProps}
       anchor="bottom"
-      open={open}
+      open={presentedOpen}
       onOpen={onOpen ?? (() => {})}
       onClose={requestClose}
       ModalProps={{ keepMounted: false, ...drawerProps.ModalProps }}

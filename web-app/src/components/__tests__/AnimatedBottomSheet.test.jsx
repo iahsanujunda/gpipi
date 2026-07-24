@@ -31,10 +31,10 @@ function Sheet({ open = true, onClose = vi.fn(), children = 'Body' }) {
 describe('AnimatedBottomSheet', () => {
   beforeEach(() => vi.mocked(useMediaQuery).mockReturnValue(false))
 
-  it('advertises bottom motion, swipe dismissal, and the global viewport reveal cap', () => {
+  it('advertises bottom motion, swipe dismissal, and the global viewport reveal cap', async () => {
     render(<Sheet />)
 
-    const sheet = screen.getByRole('dialog', { name: 'Test sheet' })
+    const sheet = await screen.findByRole('dialog', { name: 'Test sheet' })
     expect(sheet).toHaveAttribute('data-motion', 'slide-from-bottom')
     expect(sheet).toHaveAttribute('data-enter-duration-ms', '520')
     expect(sheet).toHaveAttribute('data-exit-duration-ms', '320')
@@ -47,10 +47,11 @@ describe('AnimatedBottomSheet', () => {
     })
   })
 
-  it('dismisses from the backdrop', () => {
+  it('dismisses from the backdrop', async () => {
     const onClose = vi.fn()
     render(<Sheet onClose={onClose} />)
 
+    await screen.findByRole('dialog', { name: 'Test sheet' })
     const backdrop = document.querySelector('.MuiBackdrop-root')
     fireEvent.mouseDown(backdrop)
     fireEvent.mouseUp(backdrop)
@@ -70,7 +71,7 @@ describe('AnimatedBottomSheet', () => {
     }
 
     render(<Harness />)
-    await userEvent.click(screen.getByRole('button', { name: 'Close sheet' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Close sheet' }))
 
     const exitingSheet = screen.getByRole('dialog', { name: 'Test sheet', hidden: true })
     expect(exitingSheet).toBeInTheDocument()

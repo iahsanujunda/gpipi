@@ -1,0 +1,491 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="3060" viewBox="0 0 1320 3060" role="img" aria-labelledby="title description">
+  <title id="title">Household Assistant budget management view inventory</title>
+  <desc id="description">A complete mobile-first storyboard for managing budget lines: overview, create, review, edit, save confirmation, deactivate confirmation, unsaved changes, saved feedback, system states, and desktop adaptations.</desc>
+
+  <defs>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#1D4E89" flood-opacity="0.18" />
+    </filter>
+    <filter id="sheet-shadow" x="-15%" y="-20%" width="130%" height="150%">
+      <feDropShadow dx="0" dy="-5" stdDeviation="10" flood-color="#1D4E89" flood-opacity="0.14" />
+    </filter>
+    <filter id="dialog-shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#1D4E89" flood-opacity="0.20" />
+    </filter>
+
+    <g id="phone-shell">
+      <rect x="0" y="0" width="390" height="720" rx="48" fill="#1D4E89" filter="url(#phone-shadow)" />
+      <rect x="8" y="8" width="374" height="704" rx="40" fill="#F4FAFB" />
+      <rect x="8" y="8" width="374" height="32" rx="40" fill="#FFFFFF" />
+      <rect x="8" y="28" width="374" height="12" fill="#FFFFFF" />
+      <text x="27" y="29" fill="#1D4E89" font-size="11" font-weight="700">9:41</text>
+      <g fill="none" stroke="#1D4E89" stroke-width="1.5" stroke-linecap="round">
+        <path d="M329 25c4-5 9-5 13 0" />
+        <path d="M332 28c2-3 5-3 7 0" />
+        <rect x="350" y="20" width="18" height="10" rx="2" />
+      </g>
+      <rect x="352.5" y="22.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+      <rect x="8" y="40" width="374" height="56" fill="#FFFFFF" />
+      <path d="M35 58 26 68l9 10M27 68h17" fill="none" stroke="#1D4E89" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="54" y="74" fill="#1D4E89" font-size="16" font-weight="700">Household Assistant</text>
+      <line x1="8" y1="95.5" x2="382" y2="95.5" stroke="#C9E2E5" />
+      <rect x="146" y="14" width="98" height="20" rx="10" fill="#1D4E89" />
+    </g>
+
+    <g id="nav-dock">
+      <rect x="8" y="640" width="374" height="72" fill="#F4FAFB" fill-opacity="0.97" />
+      <circle cx="195" cy="674" r="27" fill="#16679A" />
+      <rect x="184" y="663" width="9" height="9" rx="2" fill="#3FC1C0" />
+      <rect x="198" y="663" width="9" height="9" rx="2" fill="#FFFFFF" />
+      <rect x="184" y="677" width="9" height="9" rx="2" fill="#FFFFFF" />
+      <rect x="198" y="677" width="9" height="9" rx="2" fill="#3FC1C0" />
+    </g>
+
+    <g id="budget-underlay">
+      <text x="24" y="137" fill="#1D4E89" font-size="28" font-weight="700">Budgeting</text>
+      <rect x="24" y="158" width="342" height="48" rx="10" fill="#16679A" />
+      <text x="195" y="188" fill="#FFFFFF" font-size="15" font-weight="700" text-anchor="middle">+ Add budget line</text>
+      <rect x="24" y="230" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="24" y="356" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="24" y="482" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    </g>
+
+    <g id="drawer-handle">
+      <rect x="177" y="8" width="36" height="4" rx="2" fill="#526966" opacity="0.5" />
+    </g>
+
+    <style>
+      text { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .board-label { fill: #1D4E89; font-size: 13px; font-weight: 700; letter-spacing: 1.25px; }
+      .board-note { fill: #526966; font-size: 12px; }
+      .heading { fill: #1D4E89; font-weight: 700; }
+      .body { fill: #17312E; }
+      .secondary { fill: #526966; }
+      .field-label { fill: #526966; font-size: 10px; font-weight: 700; letter-spacing: 0.6px; }
+      .field-value { fill: #17312E; font-size: 14px; }
+      .button-label { font-size: 14px; font-weight: 700; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <rect width="1320" height="3060" fill="#E7F5F7" />
+  <text id="title-visible" x="48" y="62" fill="#1D4E89" font-size="30" font-weight="750">Budget management · complete view inventory</text>
+  <text x="48" y="91" fill="#526966" font-size="15">Current slice: active budget lines, create, edit, Slack logging, and deactivate. Mobile first; mutation flows use the shared bottom drawer.</text>
+  <g transform="translate(48 112)">
+    <rect width="188" height="28" rx="14" fill="#DFF4F4" />
+    <text x="94" y="19" fill="#16679A" font-size="11" font-weight="700" text-anchor="middle">MOBILE DRAWER · 380 / 220 MS</text>
+    <rect x="200" width="174" height="28" rx="14" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="287" y="19" fill="#526966" font-size="11" font-weight="700" text-anchor="middle">CONFIRM EVERY MUTATION</text>
+    <rect x="386" width="154" height="28" rx="14" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="463" y="19" fill="#526966" font-size="11" font-weight="700" text-anchor="middle">DEACTIVATE · NO DELETE</text>
+  </g>
+
+  <!-- Row 1 -->
+  <text class="board-label" x="230" y="184" text-anchor="middle">01 · ACTIVE OVERVIEW</text>
+  <text class="board-label" x="660" y="184" text-anchor="middle">02 · CREATE BUDGET LINE</text>
+  <text class="board-label" x="1090" y="184" text-anchor="middle">03 · REVIEW BEFORE CREATE</text>
+
+  <g transform="translate(35 210)">
+    <use href="#phone-shell" />
+    <text x="24" y="137" class="heading" font-size="28">Budgeting</text>
+    <rect x="24" y="158" width="342" height="48" rx="10" fill="#16679A" />
+    <text x="195" y="188" fill="#FFFFFF" class="button-label">+ Add budget line</text>
+    <text x="24" y="236" class="heading" font-size="15">Active budget lines</text>
+    <text x="366" y="236" class="secondary" font-size="12" text-anchor="end">5 lines</text>
+
+    <g>
+      <rect x="24" y="252" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="278" class="heading" font-size="17">Eating Out</text>
+      <rect x="318" y="263" width="34" height="34" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m328 286 2-8 12-12 6 6-12 12-8 2Z" fill="none" stroke="#16679A" stroke-width="1.6" stroke-linejoin="round" />
+      <text x="42" y="301" class="secondary" font-size="12">Restaurants, cafes, and takeout</text>
+      <rect x="42" y="317" width="58" height="24" rx="12" fill="#DFF4F4" />
+      <text x="71" y="333" class="secondary" font-size="10" font-weight="700" text-anchor="middle">WEEKLY</text>
+      <rect x="108" y="317" width="86" height="24" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="151" y="333" class="secondary" font-size="9.5" font-weight="700" text-anchor="middle">SLACK ON</text>
+      <text x="348" y="334" class="heading" font-size="17" text-anchor="end">¥15,000</text>
+    </g>
+
+    <g>
+      <rect x="24" y="378" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="404" class="heading" font-size="17">Monthly Groceries</text>
+      <rect x="318" y="389" width="34" height="34" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m328 412 2-8 12-12 6 6-12 12-8 2Z" fill="none" stroke="#16679A" stroke-width="1.6" stroke-linejoin="round" />
+      <text x="42" y="427" class="secondary" font-size="12">Supermarket and pantry spending</text>
+      <rect x="42" y="443" width="66" height="24" rx="12" fill="#DFF4F4" />
+      <text x="75" y="459" class="secondary" font-size="9.5" font-weight="700" text-anchor="middle">MONTHLY</text>
+      <rect x="116" y="443" width="86" height="24" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="159" y="459" class="secondary" font-size="9.5" font-weight="700" text-anchor="middle">SLACK ON</text>
+      <text x="348" y="460" class="heading" font-size="17" text-anchor="end">¥75,000</text>
+    </g>
+
+    <g>
+      <rect x="24" y="504" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="530" class="heading" font-size="17">Mortgage</text>
+      <rect x="318" y="515" width="34" height="34" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m328 538 2-8 12-12 6 6-12 12-8 2Z" fill="none" stroke="#16679A" stroke-width="1.6" stroke-linejoin="round" />
+      <text x="42" y="553" class="secondary" font-size="12">Fixed monthly household obligation</text>
+      <rect x="42" y="569" width="66" height="24" rx="12" fill="#DFF4F4" />
+      <text x="75" y="585" class="secondary" font-size="9.5" font-weight="700" text-anchor="middle">MONTHLY</text>
+      <rect x="116" y="569" width="96" height="24" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="164" y="585" class="secondary" font-size="9.5" font-weight="700" text-anchor="middle">PLANNING ONLY</text>
+      <text x="348" y="586" class="heading" font-size="17" text-anchor="end">¥120,000</text>
+    </g>
+    <use href="#nav-dock" />
+  </g>
+
+  <g transform="translate(465 210)">
+    <use href="#phone-shell" />
+    <use href="#budget-underlay" opacity="0.78" />
+    <rect x="8" y="8" width="374" height="704" rx="40" fill="#1D4E89" opacity="0.30" />
+    <g filter="url(#sheet-shadow)">
+      <path d="M8 90q0-16 16-16h342q16 0 16 16v622H8Z" fill="#FFFFFF" />
+      <use href="#drawer-handle" transform="translate(0 74)" />
+      <text x="28" y="121" class="heading" font-size="20">New budget line</text>
+      <path d="m344 103 18 18m0-18-18 18" fill="none" stroke="#526966" stroke-width="2.4" stroke-linecap="round" />
+
+      <rect x="28" y="145" width="334" height="52" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="40" y="161" class="field-label">NAME</text>
+      <text x="40" y="184" class="secondary" font-size="14">e.g. Pet care</text>
+
+      <rect x="28" y="210" width="334" height="74" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="40" y="226" class="field-label">DESCRIPTION</text>
+      <text x="40" y="249" class="secondary" font-size="14">What belongs in this budget line?</text>
+
+      <rect x="28" y="297" width="334" height="52" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="40" y="313" class="field-label">BUDGET CAP</text>
+      <text x="40" y="337" class="secondary" font-size="14">¥ 0</text>
+
+      <text x="28" y="376" class="field-label">PERIOD</text>
+      <rect x="28" y="388" width="334" height="46" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+      <rect x="195" y="388" width="167" height="46" rx="10" fill="#16679A" />
+      <text x="111" y="417" class="secondary" font-size="13" font-weight="700" text-anchor="middle">Weekly</text>
+      <text x="278" y="417" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">Monthly</text>
+
+      <rect x="28" y="449" width="334" height="64" rx="10" fill="#F4FAFB" />
+      <text x="44" y="475" class="body" font-size="14" font-weight="700">Log expenses from Slack</text>
+      <text x="44" y="495" class="secondary" font-size="11">Include this line in expense categorization</text>
+      <rect x="308" y="466" width="42" height="24" rx="12" fill="#16679A" />
+      <circle cx="338" cy="478" r="9" fill="#FFFFFF" />
+
+      <rect x="8" y="596" width="374" height="116" fill="#FFFFFF" />
+      <line x1="8" y1="596" x2="382" y2="596" stroke="#C9E2E5" />
+      <text x="195" y="627" fill="#16679A" font-size="13" font-weight="700" text-anchor="middle">Cancel</text>
+      <rect x="28" y="642" width="334" height="48" rx="10" fill="#16679A" />
+      <text x="195" y="672" fill="#FFFFFF" class="button-label">Review budget line</text>
+    </g>
+  </g>
+
+  <g transform="translate(895 210)">
+    <use href="#phone-shell" />
+    <use href="#budget-underlay" opacity="0.78" />
+    <rect x="8" y="8" width="374" height="704" rx="40" fill="#1D4E89" opacity="0.30" />
+    <g filter="url(#sheet-shadow)">
+      <path d="M8 286q0-16 16-16h342q16 0 16 16v426H8Z" fill="#FFFFFF" />
+      <use href="#drawer-handle" transform="translate(0 270)" />
+      <text x="28" y="319" class="heading" font-size="20">Review new budget line</text>
+      <path d="m344 300 18 18m0-18-18 18" fill="none" stroke="#526966" stroke-width="2.4" stroke-linecap="round" />
+      <text x="28" y="346" class="secondary" font-size="12">Confirm these details before creating it.</text>
+
+      <rect x="28" y="365" width="334" height="178" rx="12" fill="#F4FAFB" />
+      <text x="44" y="390" class="field-label">NAME</text>
+      <text x="44" y="411" class="body" font-size="14" font-weight="700">Pet care</text>
+      <line x1="44" y1="426" x2="346" y2="426" stroke="#C9E2E5" />
+      <text x="44" y="451" class="field-label">CAP AND PERIOD</text>
+      <text x="346" y="452" class="heading" font-size="15" text-anchor="end">¥12,000 · MONTHLY</text>
+      <line x1="44" y1="467" x2="346" y2="467" stroke="#C9E2E5" />
+      <text x="44" y="492" class="field-label">SLACK LOGGING</text>
+      <text x="346" y="493" class="body" font-size="14" font-weight="700" text-anchor="end">On</text>
+      <text x="44" y="523" class="secondary" font-size="11">Vet visits, pet food, medicine, and supplies</text>
+
+      <text x="195" y="581" fill="#16679A" font-size="13" font-weight="700" text-anchor="middle">Back to edit</text>
+      <rect x="28" y="598" width="334" height="48" rx="10" fill="#16679A" />
+      <text x="195" y="628" fill="#FFFFFF" class="button-label">Create budget line</text>
+      <text x="195" y="677" class="secondary" font-size="11" text-anchor="middle">Creates one active budget line</text>
+    </g>
+  </g>
+
+  <!-- Row 2 -->
+  <text class="board-label" x="230" y="974" text-anchor="middle">04 · EDIT BUDGET LINE</text>
+  <text class="board-label" x="660" y="974" text-anchor="middle">05 · REVIEW CHANGES</text>
+  <text class="board-label" x="1090" y="974" text-anchor="middle">06 · DEACTIVATE CONFIRMATION</text>
+
+  <g transform="translate(35 1000)">
+    <use href="#phone-shell" />
+    <use href="#budget-underlay" opacity="0.78" />
+    <rect x="8" y="8" width="374" height="704" rx="40" fill="#1D4E89" opacity="0.30" />
+    <g filter="url(#sheet-shadow)">
+      <path d="M8 90q0-16 16-16h342q16 0 16 16v622H8Z" fill="#FFFFFF" />
+      <use href="#drawer-handle" transform="translate(0 74)" />
+      <text x="28" y="121" class="heading" font-size="20">Edit budget line</text>
+      <path d="m344 103 18 18m0-18-18 18" fill="none" stroke="#526966" stroke-width="2.4" stroke-linecap="round" />
+
+      <rect x="28" y="145" width="334" height="52" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="40" y="161" class="field-label">NAME</text>
+      <text x="40" y="184" class="field-value">Monthly Groceries</text>
+
+      <rect x="28" y="210" width="334" height="74" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="40" y="226" class="field-label">DESCRIPTION</text>
+      <text x="40" y="249" class="field-value">Supermarket, pantry, and bulk food</text>
+      <text x="40" y="269" class="field-value">shopping</text>
+
+      <rect x="28" y="297" width="334" height="52" rx="9" fill="#FFFFFF" stroke="#16679A" stroke-width="1.5" />
+      <text x="40" y="313" class="field-label">BUDGET CAP</text>
+      <text x="40" y="337" class="field-value">¥ 75,000</text>
+
+      <text x="28" y="376" class="field-label">PERIOD</text>
+      <rect x="28" y="388" width="334" height="46" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+      <rect x="195" y="388" width="167" height="46" rx="10" fill="#16679A" />
+      <text x="111" y="417" class="secondary" font-size="13" font-weight="700" text-anchor="middle">Weekly</text>
+      <text x="278" y="417" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">Monthly</text>
+
+      <rect x="28" y="449" width="334" height="64" rx="10" fill="#F4FAFB" />
+      <text x="44" y="475" class="body" font-size="14" font-weight="700">Log expenses from Slack</text>
+      <text x="44" y="495" class="secondary" font-size="11">Include this line in expense categorization</text>
+      <rect x="308" y="466" width="42" height="24" rx="12" fill="#16679A" />
+      <circle cx="338" cy="478" r="9" fill="#FFFFFF" />
+
+      <text x="195" y="555" fill="#B42318" font-size="13" font-weight="700" text-anchor="middle">Deactivate budget line</text>
+      <rect x="8" y="596" width="374" height="116" fill="#FFFFFF" />
+      <line x1="8" y1="596" x2="382" y2="596" stroke="#C9E2E5" />
+      <text x="195" y="627" fill="#16679A" font-size="13" font-weight="700" text-anchor="middle">Cancel</text>
+      <rect x="28" y="642" width="334" height="48" rx="10" fill="#16679A" />
+      <text x="195" y="672" fill="#FFFFFF" class="button-label">Review changes</text>
+    </g>
+  </g>
+
+  <g transform="translate(465 1000)">
+    <use href="#phone-shell" />
+    <use href="#budget-underlay" opacity="0.78" />
+    <rect x="8" y="8" width="374" height="704" rx="40" fill="#1D4E89" opacity="0.30" />
+    <g filter="url(#sheet-shadow)">
+      <path d="M8 252q0-16 16-16h342q16 0 16 16v460H8Z" fill="#FFFFFF" />
+      <use href="#drawer-handle" transform="translate(0 236)" />
+      <text x="28" y="285" class="heading" font-size="20">Review changes</text>
+      <path d="m344 266 18 18m0-18-18 18" fill="none" stroke="#526966" stroke-width="2.4" stroke-linecap="round" />
+      <text x="28" y="312" class="secondary" font-size="12">Only changed fields are shown.</text>
+
+      <rect x="28" y="332" width="334" height="184" rx="12" fill="#F4FAFB" />
+      <text x="44" y="357" class="field-label">BUDGET CAP</text>
+      <text x="44" y="380" class="secondary" font-size="13">¥60,000</text>
+      <path d="M119 376h34m-6-6 6 6-6 6" fill="none" stroke="#526966" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="346" y="380" class="heading" font-size="14" text-anchor="end">¥75,000</text>
+      <line x1="44" y1="398" x2="346" y2="398" stroke="#C9E2E5" />
+      <text x="44" y="423" class="field-label">DESCRIPTION</text>
+      <text x="44" y="446" class="secondary" font-size="12">Supermarket and pantry spending</text>
+      <text x="44" y="466" class="body" font-size="12" font-weight="700">+ bulk food shopping</text>
+      <line x1="44" y1="482" x2="346" y2="482" stroke="#C9E2E5" />
+      <text x="44" y="503" class="field-label">SLACK LOGGING</text>
+      <text x="346" y="504" class="body" font-size="13" font-weight="700" text-anchor="end">Remains on</text>
+
+      <text x="195" y="556" fill="#16679A" font-size="13" font-weight="700" text-anchor="middle">Back to edit</text>
+      <rect x="28" y="573" width="334" height="48" rx="10" fill="#16679A" />
+      <text x="195" y="603" fill="#FFFFFF" class="button-label">Save changes</text>
+      <text x="195" y="650" class="secondary" font-size="11" text-anchor="middle">Updates future planning and categorization</text>
+    </g>
+  </g>
+
+  <g transform="translate(895 1000)">
+    <use href="#phone-shell" />
+    <use href="#budget-underlay" opacity="0.78" />
+    <rect x="8" y="8" width="374" height="704" rx="40" fill="#1D4E89" opacity="0.30" />
+    <g filter="url(#sheet-shadow)">
+      <path d="M8 397q0-16 16-16h342q16 0 16 16v315H8Z" fill="#FFFFFF" />
+      <use href="#drawer-handle" transform="translate(0 381)" />
+      <circle cx="50" cy="445" r="22" fill="#FDECEC" />
+      <path d="M50 431v18m0 8v1" fill="none" stroke="#B42318" stroke-width="2.5" stroke-linecap="round" />
+      <text x="82" y="438" class="heading" font-size="18">Deactivate</text>
+      <text x="82" y="461" class="heading" font-size="18">Monthly Groceries?</text>
+      <text x="28" y="495" class="secondary" font-size="12">
+        <tspan x="28" dy="0">Past expenses stay intact. This line will stop</tspan>
+        <tspan x="28" dy="19">appearing in budgets and Slack categorization.</tspan>
+      </text>
+      <rect x="28" y="548" width="334" height="48" rx="10" fill="#B42318" />
+      <text x="195" y="578" fill="#FFFFFF" class="button-label">Deactivate budget line</text>
+      <rect x="28" y="608" width="334" height="48" rx="10" fill="#FFFFFF" stroke="#16679A" />
+      <text x="195" y="638" fill="#16679A" class="button-label">Keep active</text>
+      <text x="195" y="680" class="secondary" font-size="11" text-anchor="middle">Deactivation can be reversed through admin tooling</text>
+    </g>
+  </g>
+
+  <!-- Row 3 -->
+  <text class="board-label" x="230" y="1764" text-anchor="middle">07 · UNSAVED CHANGES</text>
+  <text class="board-label" x="660" y="1764" text-anchor="middle">08 · SAVED FEEDBACK</text>
+  <text class="board-label" x="1090" y="1764" text-anchor="middle">09 · SYSTEM STATES</text>
+
+  <g transform="translate(35 1790)">
+    <use href="#phone-shell" />
+    <use href="#budget-underlay" opacity="0.68" />
+    <rect x="8" y="8" width="374" height="704" rx="40" fill="#1D4E89" opacity="0.30" />
+    <g filter="url(#sheet-shadow)">
+      <path d="M8 430q0-16 16-16h342q16 0 16 16v282H8Z" fill="#FFFFFF" />
+      <use href="#drawer-handle" transform="translate(0 414)" />
+      <text x="28" y="468" class="heading" font-size="20">Discard changes?</text>
+      <text x="28" y="499" class="secondary" font-size="12">
+        <tspan x="28" dy="0">Your edits to Monthly Groceries have not</tspan>
+        <tspan x="28" dy="19">been saved.</tspan>
+      </text>
+      <rect x="28" y="548" width="334" height="48" rx="10" fill="#16679A" />
+      <text x="195" y="578" fill="#FFFFFF" class="button-label">Keep editing</text>
+      <rect x="28" y="608" width="334" height="48" rx="10" fill="#FFFFFF" stroke="#B42318" />
+      <text x="195" y="638" fill="#B42318" class="button-label">Discard changes</text>
+      <text x="195" y="684" class="secondary" font-size="11" text-anchor="middle">Shown for close, backdrop, Back, or navigation</text>
+    </g>
+  </g>
+
+  <g transform="translate(465 1790)">
+    <use href="#phone-shell" />
+    <text x="24" y="137" class="heading" font-size="28">Budgeting</text>
+    <rect x="24" y="156" width="342" height="48" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+    <path d="m42 180 7 7 14-16" fill="none" stroke="#16679A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="75" y="185" class="body" font-size="13" font-weight="700">Monthly Groceries saved</text>
+    <text x="24" y="235" class="heading" font-size="15">Active budget lines</text>
+    <text x="366" y="235" class="secondary" font-size="12" text-anchor="end">5 lines</text>
+
+    <g>
+      <rect x="24" y="252" width="342" height="120" rx="12" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="2" />
+      <rect x="24" y="252" width="5" height="120" rx="2.5" fill="#3FC1C0" />
+      <text x="44" y="280" class="heading" font-size="17">Monthly Groceries</text>
+      <rect x="318" y="263" width="34" height="34" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m328 286 2-8 12-12 6 6-12 12-8 2Z" fill="none" stroke="#16679A" stroke-width="1.6" stroke-linejoin="round" />
+      <text x="44" y="305" class="secondary" font-size="12">Supermarket, pantry, and bulk food</text>
+      <rect x="44" y="322" width="66" height="24" rx="12" fill="#DFF4F4" />
+      <text x="77" y="338" class="secondary" font-size="9.5" font-weight="700" text-anchor="middle">MONTHLY</text>
+      <rect x="118" y="322" width="86" height="24" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="161" y="338" class="secondary" font-size="9.5" font-weight="700" text-anchor="middle">SLACK ON</text>
+      <text x="348" y="339" class="heading" font-size="17" text-anchor="end">¥75,000</text>
+    </g>
+
+    <rect x="24" y="388" width="342" height="104" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="44" y="417" class="heading" font-size="17">Eating Out</text>
+    <text x="44" y="441" class="secondary" font-size="12">Restaurants, cafes, and takeout</text>
+    <text x="348" y="469" class="heading" font-size="17" text-anchor="end">¥15,000</text>
+    <rect x="24" y="508" width="342" height="104" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="44" y="537" class="heading" font-size="17">Mortgage</text>
+    <text x="44" y="561" class="secondary" font-size="12">Fixed monthly household obligation</text>
+    <text x="348" y="589" class="heading" font-size="17" text-anchor="end">¥120,000</text>
+    <use href="#nav-dock" />
+  </g>
+
+  <g transform="translate(895 1790)">
+    <use href="#phone-shell" />
+    <text x="24" y="137" class="heading" font-size="28">Budgeting</text>
+
+    <text x="24" y="172" class="field-label">LOADING</text>
+    <rect x="24" y="184" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <rect x="42" y="204" width="138" height="14" rx="7" fill="#DCE9EB" />
+    <rect x="42" y="230" width="248" height="10" rx="5" fill="#E8F1F2" />
+    <rect x="42" y="250" width="190" height="10" rx="5" fill="#E8F1F2" />
+    <rect x="42" y="272" width="70" height="16" rx="8" fill="#DCE9EB" />
+    <rect x="274" y="270" width="74" height="14" rx="7" fill="#DCE9EB" />
+
+    <text x="24" y="330" class="field-label">EMPTY</text>
+    <rect x="24" y="342" width="342" height="132" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <circle cx="54" cy="373" r="18" fill="#DFF4F4" />
+    <path d="M47 373h14m-7-7v14" stroke="#16679A" stroke-width="2" stroke-linecap="round" />
+    <text x="82" y="370" class="heading" font-size="14">No budget lines yet</text>
+    <text x="82" y="390" class="secondary" font-size="11">Create the household's first line.</text>
+    <rect x="42" y="412" width="306" height="42" rx="9" fill="#16679A" />
+    <text x="195" y="438" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">Add first budget line</text>
+
+    <text x="24" y="508" class="field-label">REQUEST ERROR</text>
+    <rect x="24" y="520" width="342" height="106" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <circle cx="52" cy="548" r="16" fill="#FDECEC" />
+    <text x="52" y="553" fill="#B42318" font-size="16" font-weight="700" text-anchor="middle">!</text>
+    <text x="78" y="548" class="heading" font-size="13">Could not load budget lines</text>
+    <text x="78" y="568" class="secondary" font-size="11">Check the connection and try again.</text>
+    <rect x="278" y="583" width="70" height="30" rx="8" fill="#FFFFFF" stroke="#16679A" />
+    <text x="313" y="603" fill="#16679A" font-size="11" font-weight="700" text-anchor="middle">Retry</text>
+    <use href="#nav-dock" />
+  </g>
+
+  <!-- Desktop adaptations -->
+  <text class="board-label" x="330" y="2574" text-anchor="middle">10 · MEDIUM+ OVERVIEW</text>
+  <text class="board-label" x="990" y="2574" text-anchor="middle">11 · MEDIUM+ EDITOR DIALOG</text>
+
+  <g transform="translate(35 2600)">
+    <rect width="610" height="392" rx="18" fill="#1D4E89" filter="url(#phone-shadow)" />
+    <rect x="5" y="5" width="600" height="382" rx="14" fill="#F4FAFB" />
+    <rect x="5" y="5" width="600" height="52" rx="14" fill="#FFFFFF" />
+    <rect x="5" y="45" width="600" height="12" fill="#FFFFFF" />
+    <path d="M30 23 22 31l8 8M23 31h15" fill="none" stroke="#1D4E89" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="52" y="36" class="heading" font-size="15">Household Assistant</text>
+    <line x1="5" y1="56.5" x2="605" y2="56.5" stroke="#C9E2E5" />
+    <text x="32" y="94" class="heading" font-size="24">Budgeting</text>
+    <rect x="437" y="69" width="142" height="38" rx="9" fill="#16679A" />
+    <text x="508" y="93" fill="#FFFFFF" font-size="12" font-weight="700" text-anchor="middle">+ Add budget line</text>
+    <rect x="32" y="122" width="547" height="222" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <rect x="32" y="122" width="547" height="38" rx="12" fill="#DFF4F4" />
+    <rect x="32" y="148" width="547" height="12" fill="#DFF4F4" />
+    <g class="field-label">
+      <text x="50" y="146">BUDGET LINE</text>
+      <text x="286" y="146">PERIOD</text>
+      <text x="374" y="146">SLACK</text>
+      <text x="479" y="146">CAP</text>
+    </g>
+    <g font-size="12">
+      <text x="50" y="190" class="body" font-weight="700">Eating Out</text>
+      <text x="286" y="190" class="secondary">Weekly</text>
+      <text x="374" y="190" class="secondary">On</text>
+      <text x="523" y="190" class="heading" text-anchor="end">¥15,000</text>
+      <text x="560" y="190" fill="#16679A" font-weight="700">Edit</text>
+      <line x1="50" y1="208" x2="561" y2="208" stroke="#C9E2E5" />
+      <text x="50" y="235" class="body" font-weight="700">Monthly Groceries</text>
+      <text x="286" y="235" class="secondary">Monthly</text>
+      <text x="374" y="235" class="secondary">On</text>
+      <text x="523" y="235" class="heading" text-anchor="end">¥75,000</text>
+      <text x="560" y="235" fill="#16679A" font-weight="700">Edit</text>
+      <line x1="50" y1="253" x2="561" y2="253" stroke="#C9E2E5" />
+      <text x="50" y="280" class="body" font-weight="700">Mortgage</text>
+      <text x="286" y="280" class="secondary">Monthly</text>
+      <text x="374" y="280" class="secondary">Off</text>
+      <text x="523" y="280" class="heading" text-anchor="end">¥120,000</text>
+      <text x="560" y="280" fill="#16679A" font-weight="700">Edit</text>
+      <line x1="50" y1="298" x2="561" y2="298" stroke="#C9E2E5" />
+      <text x="50" y="325" class="body" font-weight="700">Transport</text>
+      <text x="286" y="325" class="secondary">Monthly</text>
+      <text x="374" y="325" class="secondary">On</text>
+      <text x="523" y="325" class="heading" text-anchor="end">¥20,000</text>
+      <text x="560" y="325" fill="#16679A" font-weight="700">Edit</text>
+    </g>
+    <circle cx="305" cy="361" r="19" fill="#16679A" />
+    <rect x="297" y="353" width="7" height="7" rx="1.5" fill="#3FC1C0" />
+    <rect x="307" y="353" width="7" height="7" rx="1.5" fill="#FFFFFF" />
+    <rect x="297" y="363" width="7" height="7" rx="1.5" fill="#FFFFFF" />
+    <rect x="307" y="363" width="7" height="7" rx="1.5" fill="#3FC1C0" />
+  </g>
+
+  <g transform="translate(675 2600)">
+    <rect width="610" height="392" rx="18" fill="#1D4E89" filter="url(#phone-shadow)" />
+    <rect x="5" y="5" width="600" height="382" rx="14" fill="#F4FAFB" />
+    <rect x="5" y="5" width="600" height="52" rx="14" fill="#FFFFFF" />
+    <text x="52" y="36" class="heading" font-size="15">Household Assistant</text>
+    <text x="32" y="94" class="heading" font-size="24">Budgeting</text>
+    <rect x="5" y="5" width="600" height="382" rx="14" fill="#1D4E89" opacity="0.30" />
+    <g filter="url(#dialog-shadow)">
+      <rect x="112" y="34" width="386" height="326" rx="14" fill="#FFFFFF" />
+      <text x="136" y="68" class="heading" font-size="18">Edit Monthly Groceries</text>
+      <path d="m467 52 14 14m0-14-14 14" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" />
+      <rect x="136" y="88" width="338" height="44" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="148" y="102" class="field-label">NAME</text>
+      <text x="148" y="121" class="field-value">Monthly Groceries</text>
+      <rect x="136" y="144" width="338" height="56" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="148" y="158" class="field-label">DESCRIPTION</text>
+      <text x="148" y="179" class="field-value">Supermarket, pantry, and bulk food</text>
+      <rect x="136" y="212" width="158" height="44" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="148" y="226" class="field-label">BUDGET CAP</text>
+      <text x="148" y="246" class="field-value">¥ 75,000</text>
+      <rect x="306" y="212" width="168" height="44" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="318" y="226" class="field-label">PERIOD</text>
+      <text x="318" y="246" class="field-value">Monthly</text>
+      <text x="136" y="282" class="body" font-size="12" font-weight="700">Log expenses from Slack</text>
+      <rect x="432" y="267" width="42" height="24" rx="12" fill="#16679A" />
+      <circle cx="462" cy="279" r="9" fill="#FFFFFF" />
+      <text x="150" y="330" fill="#B42318" font-size="11" font-weight="700">Deactivate</text>
+      <rect x="352" y="304" width="122" height="38" rx="8" fill="#16679A" />
+      <text x="413" y="328" fill="#FFFFFF" font-size="12" font-weight="700" text-anchor="middle">Review changes</text>
+      <text x="319" y="328" fill="#16679A" font-size="11" font-weight="700" text-anchor="end">Cancel</text>
+    </g>
+  </g>
+
+  <text x="660" y="3028" fill="#526966" font-size="12" text-anchor="middle">Interaction contract: phone dialogs are bottom drawers with a visible top reveal; medium and larger screens use a centered dialog. All writes pass through review.</text>
+</svg>

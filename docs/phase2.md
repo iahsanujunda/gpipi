@@ -41,22 +41,28 @@ A credential placed *in a URL* leaks — through browser history, server/proxy a
 
 ```
 User issues a command in Slack (e.g. "@ai open budget")
-  → backend mints a nonce: { nonce, user_id, expires_at (~5 min), consumed=false } → Postgres
-  → posts a link back:  https://<frontend>/enter#<nonce>          (fragment — kept out of logs/Referer)
+  → backend mints a random nonce; stores only its SHA-256 HASH:
+      { nonce_hash, user_id, expires_at (~10 min), consumed_at=null } → Postgres
+  → posts the raw nonce back EPHEMERALLY (chat.postEphemeral, only the issuer sees it):
+      https://<frontend>/enter#<nonce>                     (fragment — kept out of logs/Referer)
 
 User clicks
   → frontend reads nonce from location.hash → POST /api/auth/redeem { nonce }
-      → validate: unexpired AND unconsumed
-      → flip consumed=true IN THE SAME TRANSACTION (a leaked/double-clicked nonce cannot be reused)
+      → backend hashes the presented nonce, then validates + consumes in ONE updateReturning:
+          match on nonce_hash WHERE expires_at > now AND consumed_at IS NULL, set consumed_at = now
+      → the atomic update returns the user_id iff the row was still redeemable
+        (a leaked/double-clicked nonce cannot be reused — the second update matches nothing)
       → set session cookie: HttpOnly; Secure; SameSite=Lax; short lifetime
   ← nonce is dead; the URL in history is worthless
 
 Subsequent /api/** calls → carry the session cookie; endpoints check the SESSION, never the nonce
 ```
 
+The raw nonce lives only in the link (and briefly in the browser); at rest we keep just its hash, so a Postgres dump can't be replayed into sessions. Delivering the link **ephemerally to the issuer** also closes an identity trap: the nonce is minted for whoever ran `@ai open`, so if another member could see and click it they'd get a session acting *as* the issuer. `chat.postEphemeral` means only the issuer ever sees their own link.
+
 ### Three non-negotiables
 
-1. **Nonce is single-use**, enforced transactionally — validation and the `consumed` flip in one `dbQuery` block, so concurrent/repeat redemptions can't both succeed.
+1. **Nonce is single-use**, enforced transactionally — validation and the `consumed_at` flip in one `updateReturning` inside a `dbQuery` block, so concurrent/repeat redemptions can't both succeed (proven by a concurrent-consumers test).
 2. **Session lives in an `HttpOnly` cookie** — never the URL, never `localStorage`. Set `Secure` (HTTPS only) and `SameSite=Lax` (CSRF mitigation).
 3. **Verify before trust** — `/api/auth/redeem` is the only public route; every other `/api/**` requires a valid session.
 
@@ -73,15 +79,18 @@ The nonce stores the `user_id` of the member who issued the command, so the sess
 
 ```sql
 create table auth_nonce (
-    nonce       text primary key,          -- random, single-use
-    user_id     text        not null,      -- the member the link was minted for
-    expires_at  timestamptz not null,      -- ~5-10 minutes out
-    consumed    boolean     not null default false,
+    id          uuid        primary key default gen_random_uuid(),
+    nonce_hash  text        not null unique,  -- SHA-256 of the raw nonce; the raw is NEVER stored
+    user_id     text        not null,         -- the member the link was minted for
+    expires_at  timestamptz not null,         -- ~10 minutes out
+    consumed_at timestamptz,                   -- null = unconsumed; set on redeem (single-use)
     created_at  timestamptz not null default now()
 );
 ```
 
-Session storage: start with a signed stateless cookie (no table); add a `session` table only if server-side revocation is wanted. Expired/consumed nonces are swept by a periodic cleanup job.
+> Two deliberate deviations from a naive design: the primary key is a surrogate `id` and the nonce is keyed by a **hashed** column (`nonce_hash unique`), never the raw value — so a DB leak can't be replayed. And `consumed` is a **timestamp** (`consumed_at`), not a boolean, so redemption is observable ("when was this consumed") for free. `AuthNonceRepository.consume` does the validate-and-flip as a single `updateReturning`; `AuthService` owns the hashing (mint hashes before insert, redeem hashes before lookup) so the two sides can never drift.
+
+**Session mechanism (concrete).** A signed **stateless** cookie via Ktor's `Sessions` plugin — no `session` table. The payload is `UserSession(userId, issuedAt)`, signed (not encrypted) with `SessionTransportTransformerMessageAuthentication` keyed on `SESSION_SIGN_KEY`; the cookie is `HttpOnly`, `Secure` (gated on env so local http still works), `SameSite=Lax`, ~30 min. The guard is a Ktor `Authentication` provider named `"auth-session"` wrapping the protected `/api/**` routes. Add a server-side `session` table only if revocation is ever wanted. Expired/consumed nonces are swept by a periodic cleanup job.
 
 ---
 
@@ -133,7 +142,8 @@ React  /enter#<nonce>
   → render sortable/filterable data table
 
 Slack (phase-1 bot): "@ai open" / "@ai open budget"
-  → mint auth_nonce → post magic link
+  → OpenBudgetCommand (a SlackCommand in the phase-1 dispatcher, see phase 1 appendix)
+  → mint auth_nonce (store hash) → post magic link EPHEMERALLY to the issuer
 ```
 
 ### 1.2 Schema
@@ -148,14 +158,15 @@ Slack (phase-1 bot): "@ai open" / "@ai open budget"
 | Method | Path | Guard | Purpose |
 |--------|------|-------|---------|
 | POST | `/api/auth/redeem` | public | Exchange a nonce for a session cookie |
+| GET | `/api/auth/session` | session | Current member for the session cookie, or 401 — the frontend's bootstrap check on load |
 | GET | `/api/expenses` | session | Paginated expense list (filter by date range, category) |
 | POST | `/api/auth/logout` | session | Clear the session cookie |
 
-Plus a phase-1-side Slack command that mints the nonce and posts the link (the frontend's entry point).
+`/api/auth/session` is guarded, not public: the frontend calls it on load and treats a 401 as "not signed in" (no session yet), so `/api/auth/redeem` remains the *only* truly public route. Plus a phase-1-side `SlackCommand` (`OpenBudgetCommand`) that mints the nonce and posts the link ephemerally (the frontend's entry point).
 
 ### 1.4 Session Guard
 
-A Ktor route-scoped check applied to the `/api/**` group (except `/api/auth/redeem`): read the session cookie, validate it, resolve `user_id`, reject with 401 if absent/expired. This is the frontend's equivalent of phase 1's per-route Slack signature verification — the second door.
+A Ktor `Authentication` provider named `"auth-session"` wrapping the `/api/**` group (except `/api/auth/redeem`): it reads the signed session cookie, validates the signature, resolves `user_id` from `UserSession`, and returns 401 if absent/expired/tampered. Protected routes sit inside an `authenticate("auth-session") { … }` block; `configureSecurity()` installs both `Sessions` and `Authentication` before routing. This is the frontend's equivalent of phase 1's per-route Slack signature verification — the second door.
 
 ### 1.5 Frontend
 
@@ -166,10 +177,10 @@ A Ktor route-scoped check applied to the `/api/**` group (except `/api/auth/rede
 ### Definition of Done
 
 - [ ] `auth_nonce` table created (Flyway migration) and registered in the pgen `tableFilter`
-- [ ] A Slack command mints a nonce and posts a magic link to the requesting member
-- [ ] `/api/auth/redeem` validates + consumes the nonce in one transaction, sets `HttpOnly; Secure; SameSite` cookie
+- [ ] `OpenBudgetCommand` mints a nonce (hash stored) and posts a magic link **ephemerally** (`chat.postEphemeral`) to the requesting member; mint failure sends ephemeral feedback
+- [ ] `/api/auth/redeem` hashes + validates + consumes the nonce in one `updateReturning`, sets `HttpOnly; Secure; SameSite=Lax` signed cookie
 - [ ] Consumed or expired nonce is rejected (single-use proven by test)
-- [ ] `/api/**` rejects requests without a valid session; `/api/auth/redeem` is the only public route
+- [ ] `/api/**` rejects requests without a valid session; `/api/auth/redeem` is the only public route (`/api/auth/session` is guarded and returns 401 when unauthenticated)
 - [ ] Session carries the acting member's `user_id`
 - [ ] `GET /api/expenses` returns the phase-1 expenses, filterable by date/category
 - [ ] React app deployed on Render static site; CORS allows its origin with credentials
@@ -308,7 +319,7 @@ Editing `description` here directly tunes phase-1 categorization (it is the LLM 
 
 ### 3.4 Cross-door note
 
-Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are the **same mutation over the same data**, through the Slack door instead of the web door — they belong to phase 1's bot/intent surface (iteration 8), not here. Both doors resolve to the same authorized write; this iteration is the web door for it.
+Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are the **same mutation over the same data**, through the Slack door instead of the web door — they belong to phase 1's bot/intent surface (iteration 8) as a new `SlackCommand` in the dispatcher (see phase 1 appendix), not here. Both doors resolve to the same authorized write; this iteration is the web door for it.
 
 ### Definition of Done
 
@@ -389,7 +400,8 @@ Capture each as it becomes clear, then extend this document.
 - **Migrations + codegen:** each iteration adds a Flyway SQL migration (source of truth), registers any new table in the pgen `tableFilter` allowlist, then regenerates (`pgenGenerateSpec` → `pgenGenerateCode`) and commits `pgen-spec.json`. Forgetting the allowlist step means the table silently isn't generated.
 - **Persistence discipline:** all DB access through `dbQuery(db)`; one flat transaction per atomic write; no network calls inside a transaction. Generated tables are plain Exposed `Table`s (not `IdTable`), so ids are generated client-side (`UUID.randomUUID()`) and set explicitly — there is no `insertAndGetId`.
 - **Testing:** Testcontainers + real migrations, as in phase 1. `cleanDatabase()` truncates seed data, so tests needing FK targets (a `category` row for a routing row, an `account` row for a transfer) must re-seed in setup.
-- **CORS:** the backend permits the static-site origin with credentials on all `/api/**` routes.
+- **CORS:** the backend permits the static-site origin with credentials on all `/api/**` routes — `allowCredentials = true` forbids a wildcard origin, so the origin is named explicitly (config, not `*`).
+- **Config keys (added in iter 1):** `session.signKey` ← `SESSION_SIGN_KEY` (HMAC key for the session cookie), `web.baseUrl` ← `WEB_BASE_URL` (full origin, used to build the magic link), `cors.allowedOrigin` ← `CORS_ALLOWED_ORIGIN` (host[:port], no scheme — `allowHost` takes schemes separately). All three are read with `config.property(...)`, which throws on boot if missing; mirror them in `.env.example` and inject them in the test config (`configureWithTestDb`).
 - **Transfer ledger purity:** balances and variance are always derived by summing the append-only `transfer` ledger — never stored as a mutable column.
 
 ---

@@ -5,13 +5,19 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
+import io.ktor.server.application.install
 import io.ktor.server.application.log
+import io.ktor.server.auth.authenticate
+import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
-import me.gpipi.health.healthRoutes
-import me.gpipi.slack.slackRoutes
+import me.gpipi.auth.AuthNonceRepository
+import me.gpipi.auth.AuthService
+import me.gpipi.auth.authRoutes
 import me.gpipi.category.CategoryRepository
 import me.gpipi.config.DbKey
 import me.gpipi.dev.devRoutes
@@ -20,10 +26,12 @@ import me.gpipi.ai.OpenRouterClient
 import me.gpipi.categorization.CategorizationEventRepository
 import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.extraction.ExtractionService
+import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.slack.SlackClient
 import me.gpipi.slack.SlackEventHandler
 import me.gpipi.slack.SlackInteractionHandler
+import me.gpipi.slack.slackRoutes
 import me.gpipi.slack.slackInteractionRoutes
 
 /**
@@ -44,6 +52,10 @@ fun Application.configureRouting() {
     }
 
     val db = attributes[DbKey].database
+    val authService = AuthService(
+        db = db,
+        nonceRepo = AuthNonceRepository(),
+    )
     val cfg = environment.config
     val botToken = cfg.propertyOrNull("slack.botToken")?.getString().orEmpty()
     val openRouterKey = cfg.propertyOrNull("openrouter.apiKey")?.getString().orEmpty()
@@ -95,10 +107,19 @@ fun Application.configureRouting() {
 
     val isDev = cfg.propertyOrNull("app.env")?.getString().equals("DEV", ignoreCase = true)
 
+    install(CORS) {
+        allowHost(cfg.property("cors.allowedOrigin").getString(), schemes = listOf("https","http"))
+        allowCredentials = true
+        allowHeader(HttpHeaders.ContentType)
+        allowMethod(HttpMethod.Put); allowMethod(HttpMethod.Post)
+    }
+
     routing {
         healthRoutes(db)
+        authRoutes(authService)
         slackRoutes(signingSecret, eventHandler)
         slackInteractionRoutes(signingSecret, interactionHandler)
+        authenticate("auth-session") {  }
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")
             devRoutes(extractionService)

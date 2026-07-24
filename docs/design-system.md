@@ -8,6 +8,7 @@ Related references:
 
 - [Phase 2 product and API plan](phase2.md)
 - [Budget page, default state](mockups/budget-mobile-default.svg)
+- [Activity page, default state](mockups/activity-mobile-default.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
 - [Source color palette](https://coolors.co/palette/3fc1c0-20bac5-00b2ca-04a6c2-0899ba-0f80aa-16679a-1a5b92-1c558e-1d4e89)
 
@@ -209,6 +210,18 @@ On phones, render each budget line as a card rather than a compressed table row.
 - Amount as a prominent, right-aligned money value.
 
 The complete Iteration 3 editor also needs `active`, `slack_loggable`, funder, destination account, and spend-vs-cap information. Their editing pattern and information hierarchy are still to be designed. Do not squeeze every field into the read-state card by default.
+
+### Activity page
+
+Use `Activity` as the page heading with one short supporting sentence explaining that the ledger contains household expenses recorded through Slack.
+
+- Keep filters together in one bordered surface above the results. Category and sort span the available phone width; the From and To date fields may share a row.
+- Show the visible result count beside the filter heading when space permits and directly below it on narrow screens.
+- On phones, show one expense per card: merchant and amount form the primary row, category is a compact chip, and date is supporting metadata.
+- From medium widths upward, present the same information as an accessible four-column table ordered Date, Merchant, Category, Amount.
+- Amounts are right-aligned, use tabular numerals, and remain visually prominent without overpowering the merchant.
+- Filters and sorting are client-side for this initial read-only view. Date ranges are inclusive.
+- Loading, request failure, no recorded activity, and no filter matches are distinct states. A filtered empty state offers a direct Clear filters action.
 
 ### Buttons
 

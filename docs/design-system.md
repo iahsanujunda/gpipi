@@ -88,7 +88,8 @@ The dock is a full-width, fixed-position **content-occluding surface**. Its purp
 
 - Dim the page with the navigation scrim.
 - Change the launcher icon to an unambiguous close icon.
-- Stack two labelled navigation pills above the launcher.
+- Cross-fade and rotate the brand and close icons within the unchanged launcher circle over `180 ms`; do not replace the entire control.
+- Stack the labelled navigation pills above the launcher.
 - Each pill is at least `48 px` high, with at least `8 px` between touch targets.
 - Mark the active destination with a filled primary pill, white text, and `aria-current="page"`.
 - Set `aria-expanded="true"` on the launcher.
@@ -100,6 +101,18 @@ The current order from top to bottom is:
 
 Activity sits closest to the thumb because it is expected to be used most frequently. Slack magic links may deep-link directly to any destination.
 
+### Route-aware page actions
+
+The launcher keeps one stable identity, while its expanded contents may include an action contributed by the current page.
+
+- On Budgeting, show `Add budget line` above the navigation group. Do not show it on Activity.
+- Render the contextual action as a button and destinations as links.
+- Separate it semantically and visually with a `Page action` eyebrow, plus icon, two-line action surface, larger width, accent border, and spacing before the labelled `Navigation` group. Do not rely on color alone.
+- Keep the rare page action above the destinations, leaving frequent navigation closer to the thumb.
+- Selecting the action closes the launcher and opens the New budget line adaptive dialog.
+- Do not change the resting launcher icon or accessible name according to the page action.
+- Populated Budgeting views do not repeat a persistent Add button in page content. The empty state is the deliberate exception and exposes `Add first budget line` directly.
+
 ### Interaction rules
 
 - Open by tapping the launcher.
@@ -107,8 +120,6 @@ Activity sits closest to the thumb because it is expected to be used most freque
 - Return focus to the launcher when the menu closes without navigation.
 - If the current page has unsaved edits, navigation must enter the unsaved-changes confirmation flow.
 - Keep the pills in logical DOM and focus order; do not make visual animation order the keyboard order.
-
-The relationship between this launcher and a future contextual budget-edit action bar is not yet locked.
 
 ## Color system
 
@@ -224,7 +235,20 @@ On phones, render each budget line as a card rather than a compressed table row.
 - Period as a compact chip.
 - Amount as a prominent, right-aligned money value.
 
-The complete Iteration 3 editor also needs `active`, `slack_loggable`, funder, destination account, and spend-vs-cap information. Their editing pattern and information hierarchy are still to be designed. Do not squeeze every field into the read-state card by default.
+Show a compact outlined Edit icon button on each phone card. Show `slack_loggable` as either `SLACK ON` or `PLANNING ONLY`, independently of color. From medium widths upward, adapt the same rows to a table with Budget line, Period, Slack, Cap, and Edit columns.
+
+The create/edit flow is locked in:
+
+- On phones, use the shared animated bottom drawer. From medium widths upward, use a bounded centered dialog.
+- Create and edit use the same fields: name, description, integer JPY cap, weekly/monthly period, and Slack logging.
+- Keep `active` implicit for creation. Deactivation is a separate destructive action; there is no delete.
+- A valid form advances to a review surface before any request is sent. Creation reviews the complete record; editing reviews changed fields only.
+- API validation, conflicts, and request errors stay inside the editor without clearing entered values.
+- Closing a dirty editor shows `Discard changes?`; `Keep editing` restores the form, and `Discard changes` closes without writing.
+- Deactivation has its own confirmation surface and explains that historical expenses remain.
+- After a successful write, close the editor, refresh the budget query, announce concise feedback, and temporarily mark the affected row with an accent border.
+
+Funder, destination account, and spend-vs-cap information belong to the later payday-routing slice. Do not squeeze them into this editor or the read-state card yet.
 
 ### Activity page
 
@@ -319,7 +343,6 @@ The following decisions are deliberately still open:
 - Final brand icon artwork.
 - Exact Slack return deep link and fallback behavior.
 - Location of the secondary sign-out action.
-- Budget card editing interaction, confirmation surface, and contextual action bar.
 - Tablet and desktop navigation adaptation.
 - Full success, warning, and informational status palette.
 - Dark mode.

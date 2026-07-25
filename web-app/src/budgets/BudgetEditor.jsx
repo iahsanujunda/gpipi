@@ -354,10 +354,25 @@ function EditorSurface({
     : (mode === 'create' ? 'New budget line' : 'Edit budget line')
 
   return (
-    <Stack sx={{ maxHeight: 'inherit', minHeight: 0 }}>
+    <Stack
+      sx={{
+        flex: '1 1 auto',
+        width: '100%',
+        maxHeight: 'inherit',
+        minHeight: 0,
+        overflow: 'hidden',
+      }}
+    >
       <Stack
         direction="row"
-        sx={{ alignItems: 'center', justifyContent: 'space-between', px: { xs: 2.5, sm: 3 }, pt: 3, pb: 1.5 }}
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexShrink: 0,
+          px: { xs: 2.5, sm: 3 },
+          pt: 3,
+          pb: 1.5,
+        }}
       >
         {stage === 'deactivate' || stage === 'discard'
           ? <Box />
@@ -369,6 +384,7 @@ function EditorSurface({
 
       <Box
         sx={{
+          flex: '1 1 auto',
           minHeight: 0,
           overflowY: 'auto',
           overscrollBehavior: 'contain',
@@ -404,6 +420,7 @@ function EditorSurface({
           borderTop: 1,
           borderColor: 'divider',
           bgcolor: 'background.paper',
+          flexShrink: 0,
         }}
       >
         {stage === 'form' && (
@@ -586,15 +603,38 @@ export default function BudgetEditor({
       fullWidth
       maxWidth="sm"
       aria-labelledby="budget-editor-dialog-title"
+      sx={(dialogTheme) => ({
+        zIndex: dialogTheme.zIndex.modal + 4,
+        '& .MuiDialog-container': {
+          boxSizing: 'border-box',
+          pt: 'calc(59px + env(safe-area-inset-top) + 24px)',
+          pb: 'calc(72px + env(safe-area-inset-bottom) + 24px)',
+        },
+      })}
       slotProps={{
-        paper: { sx: { maxHeight: 'min(760px, calc(100dvh - 48px))' } },
+        paper: {
+          sx: {
+            m: 0,
+            overflow: 'hidden',
+            maxHeight: 'min(760px, calc(100dvh - 179px - env(safe-area-inset-top) - env(safe-area-inset-bottom)))',
+          },
+        },
+        backdrop: { sx: { bgcolor: 'scrim.main' } },
         transition: { onExited },
       }}
     >
       <DialogTitle id="budget-editor-dialog-title" sx={{ display: 'none' }}>
         {mode === 'create' ? 'New budget line' : `Edit ${budget.name}`}
       </DialogTitle>
-      <DialogContent sx={{ p: '0 !important', overflow: 'hidden' }}>
+      <DialogContent
+        sx={{
+          display: 'flex',
+          flex: '1 1 auto',
+          minHeight: 0,
+          p: '0 !important',
+          overflow: 'hidden',
+        }}
+      >
         {surface}
       </DialogContent>
     </Dialog>

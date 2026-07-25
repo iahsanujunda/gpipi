@@ -234,7 +234,7 @@ test('keeps unsaved edits after the discard confirmation', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Budget cap' })).toHaveValue('18000')
 })
 
-test('uses the budget table and a bounded centered dialog on wider screens', async ({ page }) => {
+test('keeps the desktop dialog inside the main view on a MacBook Air-sized viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.reload()
 
@@ -244,11 +244,44 @@ test('uses the budget table and a bounded centered dialog on wider screens', asy
 
   const dialog = page.getByRole('dialog', { name: 'Edit Eating Out' })
   await expect(dialog).toBeVisible()
+  await expect.poll(
+    () => dialog.evaluate((element) => (
+      getComputedStyle(element.closest('.MuiDialog-root')).opacity
+    )),
+  ).toBe('1')
   await expect(dialog).not.toHaveAttribute('data-motion')
-  const box = await dialog.boundingBox()
+  await expect(dialog.getByRole('button', { name: 'Review changes' })).toBeVisible()
+
+  const header = page.locator('header')
+  const actionBar = page.getByTestId('navigation-mask')
+  const reviewAction = dialog.getByRole('button', { name: 'Review changes' })
+  const [box, headerBox, actionBarBox, reviewActionBox] = await Promise.all([
+    dialog.boundingBox(),
+    header.boundingBox(),
+    actionBar.boundingBox(),
+    reviewAction.boundingBox(),
+  ])
   expect(box).not.toBeNull()
-  expect(box.y).toBeGreaterThan(24)
-  expect(box.y + box.height).toBeLessThan(776)
+  expect(headerBox).not.toBeNull()
+  expect(actionBarBox).not.toBeNull()
+  expect(reviewActionBox).not.toBeNull()
+  expect(box.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height + 23)
+  expect(box.y + box.height).toBeLessThanOrEqual(actionBarBox.y - 23)
+  expect(reviewActionBox.y + reviewActionBox.height).toBeLessThanOrEqual(box.y + box.height)
+
+  const actionBarColors = await actionBar.evaluate((element) => ({
+    actionBar: getComputedStyle(element).backgroundColor,
+    page: getComputedStyle(document.documentElement).backgroundColor,
+  }))
+  expect(actionBarColors.actionBar).toBe(actionBarColors.page)
+
+  const layerOrder = await Promise.all([
+    actionBar.evaluate((element) => Number(getComputedStyle(element).zIndex)),
+    dialog.evaluate((element) => Number(
+      getComputedStyle(element.closest('.MuiDialog-root')).zIndex,
+    )),
+  ])
+  expect(layerOrder[1]).toBeGreaterThan(layerOrder[0])
 
   await page.getByRole('button', { name: 'Deactivate budget line' }).click()
   await expect(page.getByRole('heading', { name: 'Deactivate Eating Out?' })).toBeVisible()

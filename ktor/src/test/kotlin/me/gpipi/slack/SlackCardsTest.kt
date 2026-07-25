@@ -76,6 +76,27 @@ class SlackCardsTest {
     }
 
     @Test
+    fun `open budget card contains a single private link button`() {
+        val actions = openBudgetCard("https://budget.test/enter#raw-nonce").single().jsonObject
+        val button = actions["elements"]!!.jsonArray.single().jsonObject
+
+        assertEquals("actions", actions["type"]!!.jsonPrimitive.content)
+        assertEquals(OPEN_BUDGET_BLOCK_ID, actions["block_id"]!!.jsonPrimitive.content)
+        assertEquals("button", button["type"]!!.jsonPrimitive.content)
+        assertEquals(OPEN_BUDGET_ACTION_ID, button["action_id"]!!.jsonPrimitive.content)
+        assertEquals("primary", button["style"]!!.jsonPrimitive.content)
+        assertEquals(
+            "https://budget.test/enter#raw-nonce",
+            button["url"]!!.jsonPrimitive.content,
+        )
+        assertEquals("Open budget", button["text"]!!.jsonObject["text"]!!.jsonPrimitive.content)
+        assertEquals(
+            "Open your household budget",
+            button["accessibility_label"]!!.jsonPrimitive.content,
+        )
+    }
+
+    @Test
     fun `the block_id and action_ids match the interaction route constants`() {
         // Guard against drift: the route hardcodes these strings when reading the payload.
         assertTrue(CARD_BLOCK_ID == "expense_confirm")

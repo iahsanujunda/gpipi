@@ -48,6 +48,16 @@ class SlackClient(
         postChat("chat.postEphemeral", body)
     }
 
+    suspend fun postEphemeralCard(channel: String, user: String, text: String, blocks: JsonArray) {
+        val body = buildJsonObject {
+            put("channel", channel)
+            put("user", user)
+            put("text", text)
+            put("blocks", blocks)
+        }
+        postChat("chat.postEphemeral", body)
+    }
+
     suspend fun postCard(channel: String, text: String, blocks: JsonArray) {
         val body = buildJsonObject { put("channel", channel); put("text", text); put("blocks", blocks) }
         postChat("chat.postMessage", body)

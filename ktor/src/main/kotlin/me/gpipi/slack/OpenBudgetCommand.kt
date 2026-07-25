@@ -30,10 +30,12 @@ class OpenBudgetCommand(
             return
         }
 
-        slack.postEphemeral(
+        val enterUrl = "$webBaseUrl/enter#$rawNonce"
+        slack.postEphemeralCard(
             channel = msg.channelId,
             user = msg.userId,
-            text = "Open your budget: $webBaseUrl/enter#$rawNonce",
+            text = "Open your household budget",
+            blocks = openBudgetCard(enterUrl),
         )
     }
 }

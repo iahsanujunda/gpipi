@@ -36,13 +36,23 @@ class OpenBudgetCommandTest {
     }
 
     @Test
-    fun `handle mints a nonce and sends the link only to the requester`() = runBlocking {
+    fun `handle mints a nonce and sends a private open button`() = runBlocking {
         coEvery { authService.mint("U1") } returns "raw-nonce"
 
         command.handle(message, UUID.randomUUID())
 
         coVerify(exactly = 1) { authService.mint("U1") }
         coVerify(exactly = 1) {
+            slack.postEphemeralCard(
+                channel = "C1",
+                user = "U1",
+                text = "Open your household budget",
+                blocks = match {
+                    it.toString().contains("https://budget.test/enter#raw-nonce")
+                },
+            )
+        }
+        coVerify(exactly = 0) {
             slack.postEphemeral(
                 channel = "C1",
                 user = "U1",
@@ -66,11 +76,7 @@ class OpenBudgetCommandTest {
             )
         }
         coVerify(exactly = 0) {
-            slack.postEphemeral(
-                channel = "C1",
-                user = "U1",
-                text = match { it.startsWith("Open your budget:") },
-            )
+            slack.postEphemeralCard(any(), any(), any(), any())
         }
         coVerify(exactly = 0) { slack.postMessage(any(), any()) }
     }

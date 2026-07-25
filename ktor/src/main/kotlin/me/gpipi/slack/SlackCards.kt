@@ -17,6 +17,8 @@ import me.gpipi.category.CategoryRow
 const val CARD_BLOCK_ID = "expense_confirm"
 const val CATEGORY_ACTION_ID = "category_select"
 const val CONFIRM_ACTION_ID = "confirm_expense"
+const val OPEN_BUDGET_BLOCK_ID = "open_budget"
+const val OPEN_BUDGET_ACTION_ID = "open_budget_link"
 
 /** One `{ text, value }` option for the category dropdown: name shown, id carried. */
 private fun categoryOption(category: CategoryRow): JsonObject = buildJsonObject {
@@ -25,6 +27,26 @@ private fun categoryOption(category: CategoryRow): JsonObject = buildJsonObject 
         put("text", category.name)
     }
     put("value", category.id.toString())
+}
+
+fun openBudgetCard(url: String): JsonArray = buildJsonArray {
+    addJsonObject {
+        put("type", "actions")
+        put("block_id", OPEN_BUDGET_BLOCK_ID)
+        putJsonArray("elements") {
+            addJsonObject {
+                put("type", "button")
+                put("action_id", OPEN_BUDGET_ACTION_ID)
+                put("style", "primary")
+                put("url", url)
+                put("accessibility_label", "Open your household budget")
+                putJsonObject("text") {
+                    put("type", "plain_text")
+                    put("text", "Open budget")
+                }
+            }
+        }
+    }
 }
 
 /**

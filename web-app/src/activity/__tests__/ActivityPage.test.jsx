@@ -55,6 +55,7 @@ describe('ActivityPage', () => {
     expect(rows[2]).toHaveTextContent('¥7,500')
     expect(table).not.toHaveTextContent('FamilyMart')
     expect(table).not.toHaveTextContent('Ito Yokado')
+    expect(screen.getByText('late-night snacks')).toHaveStyle({ fontWeight: '400' })
   })
 
   it('filters by category and clears the filter', async () => {

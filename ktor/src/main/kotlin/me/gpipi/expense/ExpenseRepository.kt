@@ -32,6 +32,11 @@ data class ExpenseRow(
 private val leadingSlackMention = Regex("""^\s*<@[^>]+>\s*""")
 private val leadingConnector = Regex("""^(?:for|from)\b[\s:,.—-]*""", RegexOption.IGNORE_CASE)
 
+private fun String.decodeSlackEntities(): String =
+    replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+
 internal fun expenseDescription(sourceText: String?, note: String?, amount: Long): String? {
     val amountPattern = amount
         .toString()
@@ -46,10 +51,15 @@ internal fun expenseDescription(sourceText: String?, note: String?, amount: Long
         ?.replaceFirst(leadingSlackMention, "")
         ?.replaceFirst(leadingAmount, "")
         ?.replaceFirst(leadingConnector, "")
+        ?.decodeSlackEntities()
         ?.trim()
         ?.takeIf(String::isNotEmpty)
 
-    return description ?: note?.trim()?.takeIf(String::isNotEmpty)
+    return description
+        ?: note
+            ?.decodeSlackEntities()
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
 }
 
 class ExpenseRepository {

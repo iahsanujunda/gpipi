@@ -216,10 +216,11 @@ function ExpenseLedger({ expenses }) {
               sx={{ gridArea: 'description', minWidth: 0 }}
             >
               <Typography
+                variant="body1"
                 sx={{
-                  color: 'text.heading',
+                  color: expense.description?.trim() ? 'text.primary' : 'text.secondary',
                   display: '-webkit-box',
-                  fontWeight: 700,
+                  fontWeight: 400,
                   overflow: 'hidden',
                   WebkitBoxOrient: 'vertical',
                   WebkitLineClamp: 2,

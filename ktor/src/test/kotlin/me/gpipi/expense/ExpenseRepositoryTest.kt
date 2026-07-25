@@ -112,8 +112,8 @@ class ExpenseRepositoryTest : PersistenceTest() {
     }
 
     @Test
-    fun `list exposes the description supplied in the Slack message`() {
-        val msgId = givenInbound(text = "<@U123> ¥1,500 for ramen after work")
+    fun `list exposes a decoded description supplied in the Slack message`() {
+        val msgId = givenInbound(text = "<@U123> ¥1,500 for ramen &amp; gyoza &lt;late&gt;")
         val catId = givenCategory("Eating Out")
         query {
             expenseRepository.insert(
@@ -126,7 +126,7 @@ class ExpenseRepositoryTest : PersistenceTest() {
 
         val expense = query { expenseRepository.list(from = null, to = null, categoryId = null).single() }
 
-        assertEquals("ramen after work", expense.description)
+        assertEquals("ramen & gyoza <late>", expense.description)
     }
 
     @Test
@@ -135,7 +135,7 @@ class ExpenseRepositoryTest : PersistenceTest() {
         val catId = givenCategory("Eating Out")
         query {
             expenseRepository.insert(
-                extraction().copy(merchant = null, note = "ramen after work"),
+                extraction().copy(merchant = null, note = "ramen &amp; gyoza"),
                 msgId,
                 "U1",
                 catId,
@@ -144,7 +144,7 @@ class ExpenseRepositoryTest : PersistenceTest() {
 
         val expense = query { expenseRepository.list(from = null, to = null, categoryId = null).single() }
 
-        assertEquals("ramen after work", expense.description)
+        assertEquals("ramen & gyoza", expense.description)
     }
 
     @Test

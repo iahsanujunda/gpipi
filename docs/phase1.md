@@ -51,6 +51,8 @@ Every `@ai` message is captured to `inbound_message` (see 2.1) — including the
 |--------|---------|-------------------|
 | `RECEIVED` | Landed, not yet processed | no |
 | `RECORDED` | Extracted and written (auto or confirmed) | yes |
+| `COMMAND` | A deterministic command completed successfully | no |
+| `FAILED_COMMAND` | A deterministic command failed — reason retained for diagnosis | no |
 | `FAILED_PARSE` | LLM returned invalid/unusable output — raw text kept for debugging | no |
 | `NON_EXPENSE` | Parsed as a query or chatter (once iter 8 intent split exists) | no |
 | `SKIPPED` | Duplicate retry — row already existed, never reprocessed | — |
@@ -865,9 +867,9 @@ class SlackEventHandler(
 Four disciplines make this hold up:
 - **Parse is a pure function.** `SlackMessage.from(payload)` does the `app_mention`/null/blank guarding and strips the bot mention (`body` = text after `>`, trimmed). No DB, no mocks — trivially unit-tested, and the dispatcher stays about routing.
 - **Capture/dedup lives in the dispatcher, not the commands.** `inbound_message` is the single record of *every* `@ai` message, so capturing (and its `event_id` unique-constraint dedup) is a cross-cutting concern that runs once, before routing. Consequence: **every command inherits idempotency for free** — a Slack retry can't double-fire a command (e.g. mint two magic-link nonces). Commands receive the resulting `inboundMessageId` and never open their own capture.
-  - Corollary: non-expense commands (`@ai open`, later queries) also land in `inbound_message`, sitting at `RECEIVED`. That's consistent with "capture everything"; a command may mark its row `NON_EXPENSE` (the status already reserved for chatter/queries) once iteration 8 formalizes intent.
+  - Corollary: every deterministically matched command returns a typed outcome. The dispatcher moves it from `RECEIVED` to `COMMAND` or `FAILED_COMMAND`; an accidental pending result is itself terminalized as a command failure. The expense default bypasses this finalizer because it legitimately remains `RECEIVED` while awaiting confirmation.
 - **Explicit `default`, not a catch-all `matches`.** The expense flow is passed as a named `default` argument (its `matches` returns `false`), rather than being a last list element that matches everything. This states intent and removes the "forgot to put it last, it ate every command" footgun.
-- **Each command owns its deps and is tested in isolation.** A command is a plain class taking its collaborators in the constructor (same hand-wiring as everything else); its test constructs it with mocks and calls `handle(msg, id)` directly — no envelope, no dispatcher, no sibling commands. The dispatcher is tested separately with *fake* commands asserting first-match-wins, fallback, and dedup. N commands → N small tests + one stable dispatcher test.
+- **Each command owns its deps and is tested in isolation.** A command is a plain class taking its collaborators in the constructor (same hand-wiring as everything else); its test constructs it with mocks and calls `handle(msg, id)` directly — no envelope, no dispatcher, no sibling commands. The dispatcher is tested separately with *fake* commands asserting first-match-wins, fallback, dedup, and terminal status transitions. N commands → N small tests + one stable dispatcher test.
 
 Don't build a framework around this (priorities, annotations, auto-discovery, a context object wrapping the client) — a `List<SlackCommand>` + explicit `default`, wired in `module()`, is the whole thing, and matches the "plain classes, hand-wired" philosophy above. When you eventually want an LLM to disambiguate log-vs-query, that logic lives in the dispatcher's *matching* step, never inside a command — so commands never learn about intent classification.
 

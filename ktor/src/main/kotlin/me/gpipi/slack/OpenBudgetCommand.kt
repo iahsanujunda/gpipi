@@ -15,27 +15,39 @@ class OpenBudgetCommand(
         body.equals("open", ignoreCase = true) ||
             body.startsWith("open ", ignoreCase = true)
 
-    override suspend fun handle(msg: SlackMessage, inboundMessageId: UUID) {
-        // The dispatcher has already captured this inbound id, helps with deduplication.
-        val rawNonce = try {
-            authService.mint(msg.userId)
+    override suspend fun handle(
+        msg: SlackMessage,
+        inboundMessageId: UUID,
+    ): SlackCommandOutcome {
+        return try {
+            val rawNonce = authService.mint(msg.userId)
+            val enterUrl = "$webBaseUrl/enter#$rawNonce"
+            slack.postEphemeralCard(
+                channel = msg.channelId,
+                user = msg.userId,
+                text = "Open your household budget",
+                blocks = openBudgetCard(enterUrl),
+            )
+            SlackCommandOutcome.Completed
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: Exception) {
+            postFailureFeedback(msg)
+            SlackCommandOutcome.Failed(ex.commandFailureReason())
+        }
+    }
+
+    private suspend fun postFailureFeedback(msg: SlackMessage) {
+        try {
             slack.postEphemeral(
                 channel = msg.channelId,
                 user = msg.userId,
                 text = "Couldn't open your budget right now — try again shortly.",
             )
-            return
+        } catch (ex: CancellationException) {
+            throw ex
+        } catch (_: Exception) {
+            // Preserve the original command failure even when feedback cannot be delivered.
         }
-
-        val enterUrl = "$webBaseUrl/enter#$rawNonce"
-        slack.postEphemeralCard(
-            channel = msg.channelId,
-            user = msg.userId,
-            text = "Open your household budget",
-            blocks = openBudgetCard(enterUrl),
-        )
     }
 }

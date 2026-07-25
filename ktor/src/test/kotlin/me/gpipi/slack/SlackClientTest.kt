@@ -10,6 +10,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -100,5 +101,39 @@ class SlackClientTest {
             receivedBody.getValue("text").jsonPrimitive.content,
         )
         assertEquals("actions", receivedBody.getValue("blocks").jsonArray.single().jsonObject["type"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `Slack API rejection is surfaced to command handling`() = testApplication {
+        application {
+            configureSerialization()
+            routing {
+                post("/api/chat.postEphemeral") {
+                    call.respond(
+                        buildJsonObject {
+                            put("ok", false)
+                            put("error", "channel_not_found")
+                        },
+                    )
+                }
+            }
+        }
+
+        val slack = SlackClient(
+            http = createClient {
+                install(ContentNegotiation) { json() }
+            },
+            botToken = "xoxb-test",
+            apiBaseUrl = "/api",
+        )
+
+        val error = assertFailsWith<SlackApiException> {
+            slack.postEphemeral("C1", "U1", "Open your budget")
+        }
+
+        assertEquals(
+            "chat.postEphemeral failed: channel_not_found",
+            error.message,
+        )
     }
 }

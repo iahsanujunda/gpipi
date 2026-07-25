@@ -50,4 +50,39 @@ class InboundRepositoryTest : PersistenceTest() {
         query { repo.markRecorded(id) }
         assertEquals("RECORDED", query { InboundMessage.selectAll().single() }[InboundMessage.status])
     }
+
+    @Test
+    fun `markCommand sets a successful terminal status`() {
+        val id = capture()!!
+
+        query { repo.markCommand(id) }
+
+        val row = query { InboundMessage.selectAll().single() }
+        assertEquals("COMMAND", row[InboundMessage.status])
+        assertNull(row[InboundMessage.failReason])
+    }
+
+    @Test
+    fun `markCommandFailed records a terminal failure reason`() {
+        val id = capture()!!
+
+        query { repo.markCommandFailed(id, "chat.postEphemeral failed: channel_not_found") }
+
+        val row = query { InboundMessage.selectAll().single() }
+        assertEquals("FAILED_COMMAND", row[InboundMessage.status])
+        assertEquals("chat.postEphemeral failed: channel_not_found", row[InboundMessage.failReason])
+    }
+
+    @Test
+    fun `command transitions do not overwrite an existing terminal status`() {
+        val id = capture()!!
+        query {
+            repo.markRecorded(id)
+            repo.markCommandFailed(id, "late failure")
+        }
+
+        val row = query { InboundMessage.selectAll().single() }
+        assertEquals("RECORDED", row[InboundMessage.status])
+        assertNull(row[InboundMessage.failReason])
+    }
 }

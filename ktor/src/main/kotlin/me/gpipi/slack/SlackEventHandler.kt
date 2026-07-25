@@ -1,5 +1,6 @@
 package me.gpipi.slack
 
+import kotlinx.coroutines.CancellationException
 import me.gpipi.config.dbQuery
 import me.gpipi.inbound.InboundRepository
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -23,7 +24,29 @@ class SlackEventHandler(
             )
         } ?: return
 
-        val command = commands.firstOrNull { it.matches(msg.body) } ?: default
-        command.handle(msg, msgId)
+        val command = commands.firstOrNull { it.matches(msg.body) }
+        if (command == null) {
+            default.handle(msg, msgId)
+            return
+        }
+
+        val outcome = try {
+            command.handle(msg, msgId)
+        } catch (ex: CancellationException) {
+            throw ex
+        } catch (ex: Exception) {
+            SlackCommandOutcome.Failed(ex.commandFailureReason())
+        }
+
+        dbQuery(db) {
+            when (outcome) {
+                SlackCommandOutcome.Completed -> inboundRepo.markCommand(msgId)
+                is SlackCommandOutcome.Failed -> inboundRepo.markCommandFailed(msgId, outcome.reason)
+                SlackCommandOutcome.Pending -> inboundRepo.markCommandFailed(
+                    msgId,
+                    "Deterministic command returned a pending outcome.",
+                )
+            }
+        }
     }
 }

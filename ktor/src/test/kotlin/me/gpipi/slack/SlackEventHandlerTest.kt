@@ -12,14 +12,21 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 
 private class FakeCommand(
     val name: String,
+    var outcome: SlackCommandOutcome = SlackCommandOutcome.Completed,
     private val match: (String) -> Boolean,
 ) : SlackCommand {
     var calls = 0
+    var failure: Exception? = null
 
     override fun matches(body: String): Boolean = match(body)
 
-    override suspend fun handle(msg: SlackMessage, inboundMessageId: UUID) {
+    override suspend fun handle(
+        msg: SlackMessage,
+        inboundMessageId: UUID,
+    ): SlackCommandOutcome {
         calls++
+        failure?.let { throw it }
+        return outcome
     }
 }
 
@@ -57,20 +64,61 @@ class SlackEventHandlerTest : PersistenceTest() {
         dbQuery(db) { InboundMessage.selectAll().count() }
     }
 
+    private fun inboundStatus(): Pair<String, String?> = runBlocking {
+        dbQuery(db) {
+            val inbound = InboundMessage.selectAll().single()
+            inbound[InboundMessage.status] to inbound[InboundMessage.failReason]
+        }
+    }
+
     @Test
-    fun `open body routes to the matching command`() {
+    fun `open body routes to the matching command and reaches COMMAND`() {
         handle(envelope(text = "<@BOT> open"))
 
         assertEquals(1, openCommand.calls)
         assertEquals(0, defaultCommand.calls)
+        assertEquals("COMMAND" to null, inboundStatus())
     }
 
     @Test
-    fun `expense body routes to the default command`() {
+    fun `expense body routes to the default command and remains pending`() {
+        defaultCommand.outcome = SlackCommandOutcome.Pending
+
         handle(envelope(text = "<@BOT> 1500 ramen"))
 
         assertEquals(0, openCommand.calls)
         assertEquals(1, defaultCommand.calls)
+        assertEquals("RECEIVED" to null, inboundStatus())
+    }
+
+    @Test
+    fun `failed deterministic command reaches FAILED_COMMAND`() {
+        openCommand.outcome = SlackCommandOutcome.Failed("nonce mint failed")
+
+        handle(envelope(text = "<@BOT> open"))
+
+        assertEquals("FAILED_COMMAND" to "nonce mint failed", inboundStatus())
+    }
+
+    @Test
+    fun `unexpected deterministic command exception reaches FAILED_COMMAND`() {
+        openCommand.failure = IllegalStateException("unexpected failure")
+
+        handle(envelope(text = "<@BOT> open"))
+
+        assertEquals("FAILED_COMMAND" to "unexpected failure", inboundStatus())
+    }
+
+    @Test
+    fun `pending outcome from deterministic command is terminalized as a failure`() {
+        openCommand.outcome = SlackCommandOutcome.Pending
+
+        handle(envelope(text = "<@BOT> open"))
+
+        assertEquals(
+            "FAILED_COMMAND" to "Deterministic command returned a pending outcome.",
+            inboundStatus(),
+        )
     }
 
     @Test
@@ -86,6 +134,7 @@ class SlackEventHandlerTest : PersistenceTest() {
         assertEquals(1, openCommand.calls)
         assertEquals(0, defaultCommand.calls)
         assertEquals(1L, inboundCount())
+        assertEquals("COMMAND" to null, inboundStatus())
     }
 
     @Test

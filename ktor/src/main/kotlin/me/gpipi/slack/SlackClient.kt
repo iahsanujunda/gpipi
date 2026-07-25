@@ -17,6 +17,12 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.slf4j.LoggerFactory
 
+class SlackApiException(
+    method: String,
+    error: String,
+    cause: Throwable? = null,
+) : RuntimeException("$method failed: $error", cause)
+
 class SlackClient(
     private val http: HttpClient,
     private val botToken: String,
@@ -30,8 +36,18 @@ class SlackClient(
             bearerAuth(botToken); contentType(Application.Json); setBody(body)
         }
         val text = res.bodyAsText()
-        val ok = Json.parseToJsonElement(text).jsonObject["ok"]?.jsonPrimitive?.booleanOrNull == true
-        if (!ok) log.warn("$method failed: ${text.take(200)}")
+        val payload = try {
+            Json.parseToJsonElement(text).jsonObject
+        } catch (ex: Exception) {
+            log.warn("{} returned an invalid response", method)
+            throw SlackApiException(method, "invalid_response", ex)
+        }
+        val ok = payload["ok"]?.jsonPrimitive?.booleanOrNull == true
+        if (!ok) {
+            val error = payload["error"]?.jsonPrimitive?.content ?: "unknown_error"
+            log.warn("{} failed: {}", method, error)
+            throw SlackApiException(method, error)
+        }
     }
 
     suspend fun postMessage(channel: String, text: String) {

@@ -18,7 +18,10 @@ class LogExpenseCommand(
     // This is the explicit dispatcher default, so it is never selected by matching.
     override fun matches(body: String): Boolean = false
 
-    override suspend fun handle(msg: SlackMessage, inboundMessageId: UUID) {
+    override suspend fun handle(
+        msg: SlackMessage,
+        inboundMessageId: UUID,
+    ): SlackCommandOutcome {
         val result = try {
             extractionService.extract(msg.text)
         } catch (ex: ExtractionException) {
@@ -29,7 +32,7 @@ class LogExpenseCommand(
                 msg.channelId,
                 "Couldn't read that one, mind rephrasing?",
             )
-            return
+            return SlackCommandOutcome.Completed
         }
 
         val extraction = result.extraction
@@ -62,5 +65,6 @@ class LogExpenseCommand(
                 categories = categories,
             ),
         )
+        return SlackCommandOutcome.Pending
     }
 }

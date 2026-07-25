@@ -50,7 +50,7 @@ The practical consequence for this phase: the shopping list ships in tier 1 firs
 
 ## Reference: `COMMAND` Status
 
-Deterministic commands that complete successfully mark their `inbound_message` row `COMMAND`.
+Deterministic commands that complete successfully mark their `inbound_message` row `COMMAND`; handled failures become `FAILED_COMMAND` with a diagnostic reason.
 
 Before this, a handled `open` sat at `RECEIVED` forever — but `RECEIVED` means *not yet processed*, and these messages were processed successfully. Without a terminal state, any query for stuck or in-flight messages is polluted by every command ever run, and phase 4's outcome-based label heuristic cannot distinguish "handled a command" from "died mid-processing."
 
@@ -63,6 +63,7 @@ Updated status vocabulary:
 | `RECEIVED` | Landed, not yet processed (genuinely in-flight) |
 | `RECORDED` | Extracted and written as an expense |
 | `COMMAND` | Handled by a deterministic command (`open`, list operations) |
+| `FAILED_COMMAND` | Deterministic command failed — reason retained for diagnosis |
 | `FAILED_PARSE` | LLM returned unusable output — raw text kept |
 | `NON_EXPENSE` | Classified as neither expense nor a known command |
 | `SKIPPED` | Duplicate retry |
@@ -222,7 +223,8 @@ Extends the existing `/slack/interactions` route and `SlackInteractionHandler` �
 
 ### Definition of Done
 
-- [ ] `COMMAND` status added to the vocabulary; `OpenBudgetCommand` and both list commands set it
+- [x] `COMMAND` / `FAILED_COMMAND` added; the dispatcher terminalizes `OpenBudgetCommand`
+- [ ] Both list commands return terminal outcomes through the same dispatcher path
 - [ ] `shopping_item` created, registered in the pgen allowlist, tables regenerated
 - [ ] Add command extracts one or many items in ID/EN/JP/mixed
 - [ ] Item, quantity, and note separated correctly ("diapers size L for night" → item `diapers`)
@@ -322,7 +324,7 @@ Do not build any of these speculatively.
 
 - **Persistence discipline** unchanged: all access through `dbQuery(db)`, one flat transaction per atomic write, no network calls inside a transaction, client-side UUIDs.
 - **Capture-everything still holds.** Every mention lands in `inbound_message` before dispatch, including commands. `shopping_item.inbound_message_id` preserves the same provenance chain expenses have.
-- **Every command sets a terminal status.** A command whose `handle()` leaves the row at `RECEIVED` is a bug — that is what `COMMAND` exists to prevent.
+- **Every deterministic command returns a terminal outcome.** Shared dispatcher orchestration writes `COMMAND` or `FAILED_COMMAND`; an accidental pending outcome is a failure rather than a row left at `RECEIVED`.
 - **Migrations + codegen:** Flyway is the source of truth; register each new table in the pgen allowlist before regenerating.
 - **Testing:** Testcontainers with real migrations. `cleanDatabase()` truncates seed data, so tests needing FK targets must create them in setup.
 - **Slack side-effects stay outside transactions** — write, commit, then post or re-render.

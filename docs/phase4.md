@@ -129,7 +129,7 @@ The riskiest hypotheses in the plan. Test first.
 
 **Why it might be false.** A misrouted message can still produce a row — an extractor told to find an expense in "we need milk" may invent one. The row would then confirm the routing decision was *acted on*, not that it was *correct*.
 
-**The `COMMAND` status helps here.** Messages handled by deterministic commands now carry a terminal status distinguishable from both success and failure, so outcome-based labelling can exclude them cleanly rather than confusing "handled a command" with "died mid-processing."
+**The command terminal statuses help here.** Deterministic commands now end as `COMMAND` or `FAILED_COMMAND`, so outcome-based labelling can exclude both cleanly rather than confusing "handled a command" with "died mid-processing."
 
 **Experiment.** On the gold set, cross-tabulate gold label against downstream row presence. Compute precision and recall of each heuristic.
 

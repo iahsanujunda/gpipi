@@ -5,6 +5,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import java.util.UUID
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
@@ -39,8 +40,9 @@ class OpenBudgetCommandTest {
     fun `handle mints a nonce and sends a private open button`() = runBlocking {
         coEvery { authService.mint("U1") } returns "raw-nonce"
 
-        command.handle(message, UUID.randomUUID())
+        val outcome = command.handle(message, UUID.randomUUID())
 
+        assertEquals(SlackCommandOutcome.Completed, outcome)
         coVerify(exactly = 1) { authService.mint("U1") }
         coVerify(exactly = 1) {
             slack.postEphemeralCard(
@@ -64,10 +66,11 @@ class OpenBudgetCommandTest {
 
     @Test
     fun `handle sends private failure feedback when minting fails`() = runBlocking {
-        coEvery { authService.mint(any()) } throws RuntimeException()
+        coEvery { authService.mint(any()) } throws RuntimeException("boom")
 
-        command.handle(message, UUID.randomUUID())
+        val outcome = command.handle(message, UUID.randomUUID())
 
+        assertEquals(SlackCommandOutcome.Failed("boom"), outcome)
         coVerify(exactly = 1) {
             slack.postEphemeral(
                 channel = "C1",
@@ -79,5 +82,27 @@ class OpenBudgetCommandTest {
             slack.postEphemeralCard(any(), any(), any(), any())
         }
         coVerify(exactly = 0) { slack.postMessage(any(), any()) }
+    }
+
+    @Test
+    fun `handle reports Slack delivery rejection as a command failure`() = runBlocking {
+        coEvery { authService.mint("U1") } returns "raw-nonce"
+        coEvery {
+            slack.postEphemeralCard(any(), any(), any(), any())
+        } throws SlackApiException("chat.postEphemeral", "channel_not_found")
+
+        val outcome = command.handle(message, UUID.randomUUID())
+
+        assertEquals(
+            SlackCommandOutcome.Failed("chat.postEphemeral failed: channel_not_found"),
+            outcome,
+        )
+        coVerify(exactly = 1) {
+            slack.postEphemeral(
+                channel = "C1",
+                user = "U1",
+                text = "Couldn't open your budget right now — try again shortly.",
+            )
+        }
     }
 }

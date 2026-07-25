@@ -12,6 +12,7 @@ const expenses = [
     id: 'expense-newer',
     amount: 510,
     merchant: 'FamilyMart',
+    description: 'late-night snacks',
     spentAt: '2026-07-24T12:00:00Z',
     categoryName: 'Convenience Store',
   },
@@ -19,6 +20,7 @@ const expenses = [
     id: 'expense-older',
     amount: 7500,
     merchant: 'Ito Yokado',
+    description: 'weekly pantry restock',
     spentAt: '2026-07-23T12:00:00Z',
     categoryName: 'Monthly Groceries',
   },
@@ -45,12 +47,14 @@ describe('ActivityPage', () => {
     const table = screen.getByRole('table', { name: 'Household expenses' })
     const rows = within(table).getAllByRole('row')
 
-    expect(rows[1]).toHaveTextContent('FamilyMart')
+    expect(rows[1]).toHaveTextContent('late-night snacks')
     expect(rows[1]).toHaveTextContent('¥510')
     expect(rows[1]).toHaveTextContent('Convenience Store')
     expect(rows[1]).toHaveTextContent('24 Jul 2026')
-    expect(rows[2]).toHaveTextContent('Ito Yokado')
+    expect(rows[2]).toHaveTextContent('weekly pantry restock')
     expect(rows[2]).toHaveTextContent('¥7,500')
+    expect(table).not.toHaveTextContent('FamilyMart')
+    expect(table).not.toHaveTextContent('Ito Yokado')
   })
 
   it('filters by category and clears the filter', async () => {
@@ -60,13 +64,13 @@ describe('ActivityPage', () => {
     await user.click(screen.getByRole('combobox', { name: 'Category' }))
     await user.click(screen.getByRole('option', { name: 'Monthly Groceries' }))
 
-    expect(screen.queryByText('FamilyMart')).not.toBeInTheDocument()
-    expect(screen.getByText('Ito Yokado')).toBeInTheDocument()
+    expect(screen.queryByText('late-night snacks')).not.toBeInTheDocument()
+    expect(screen.getByText('weekly pantry restock')).toBeInTheDocument()
     expect(screen.getByText('1 expense')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Clear filters' }))
 
-    expect(screen.getByText('FamilyMart')).toBeInTheDocument()
+    expect(screen.getByText('late-night snacks')).toBeInTheDocument()
     expect(screen.getByText('2 expenses')).toBeInTheDocument()
   })
 
@@ -78,8 +82,8 @@ describe('ActivityPage', () => {
     await user.click(screen.getByRole('option', { name: 'Highest amount' }))
 
     const rows = within(screen.getByRole('table', { name: 'Household expenses' })).getAllByRole('row')
-    expect(rows[1]).toHaveTextContent('Ito Yokado')
-    expect(rows[2]).toHaveTextContent('FamilyMart')
+    expect(rows[1]).toHaveTextContent('weekly pantry restock')
+    expect(rows[2]).toHaveTextContent('late-night snacks')
   })
 
   it('filters expenses by an inclusive date range', () => {
@@ -87,8 +91,8 @@ describe('ActivityPage', () => {
 
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-07-24' } })
 
-    expect(screen.getByText('FamilyMart')).toBeInTheDocument()
-    expect(screen.queryByText('Ito Yokado')).not.toBeInTheDocument()
+    expect(screen.getByText('late-night snacks')).toBeInTheDocument()
+    expect(screen.queryByText('weekly pantry restock')).not.toBeInTheDocument()
     expect(screen.getByText('1 expense')).toBeInTheDocument()
   })
 

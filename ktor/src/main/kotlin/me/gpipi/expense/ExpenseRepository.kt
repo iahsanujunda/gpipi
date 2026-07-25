@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import me.gpipi.extraction.Extraction
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
+import me.gpipi.generated.db.base.public1.InboundMessage
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -23,9 +24,33 @@ data class ExpenseRow(
     val id: String,
     val amount: Long,
     val merchant: String?,
+    val description: String?,
     val spentAt: String,
     val categoryName: String,
 )
+
+private val leadingSlackMention = Regex("""^\s*<@[^>]+>\s*""")
+private val leadingConnector = Regex("""^(?:for|from)\b[\s:,.—-]*""", RegexOption.IGNORE_CASE)
+
+internal fun expenseDescription(sourceText: String?, note: String?, amount: Long): String? {
+    val amountPattern = amount
+        .toString()
+        .map(Char::toString)
+        .joinToString("""[,\s_]?""")
+    val leadingAmount = Regex(
+        """^\s*(?:[¥￥]\s*)?$amountPattern(?:\s*(?:円|jpy|yen))?(?=\s|[:,.—-]|$)[\s:,.—-]*""",
+        RegexOption.IGNORE_CASE,
+    )
+
+    val description = sourceText
+        ?.replaceFirst(leadingSlackMention, "")
+        ?.replaceFirst(leadingAmount, "")
+        ?.replaceFirst(leadingConnector, "")
+        ?.trim()
+        ?.takeIf(String::isNotEmpty)
+
+    return description ?: note?.trim()?.takeIf(String::isNotEmpty)
+}
 
 class ExpenseRepository {
     fun insert(x: Extraction, inboundMessageId: UUID, userId: String, categoryId: UUID): UUID {
@@ -68,13 +93,15 @@ class ExpenseRepository {
         to: OffsetDateTime?,
         categoryId: UUID?,
     ): List<ExpenseRow> {
-        val query = (Expense innerJoin Category)
+        val query = ((Expense innerJoin Category) innerJoin InboundMessage)
             .select(
                 Expense.id,
                 Expense.amount,
                 Expense.merchant,
+                Expense.note,
                 Expense.spentAt,
                 Category.name,
+                InboundMessage.text,
             )
             .where { Op.TRUE }
 
@@ -89,6 +116,11 @@ class ExpenseRepository {
                     id = it[Expense.id].toString(),
                     amount = it[Expense.amount],
                     merchant = it[Expense.merchant],
+                    description = expenseDescription(
+                        sourceText = it[InboundMessage.text],
+                        note = it[Expense.note],
+                        amount = it[Expense.amount],
+                    ),
                     spentAt = it[Expense.spentAt].toString(),
                     categoryName = it[Category.name],
                 )

@@ -27,6 +27,7 @@ describe('Activity mobile drawers', () => {
           id: 'expense-1',
           amount: 7500,
           merchant: 'Ito Yokado',
+          description: 'weekly pantry restock',
           spentAt: '2026-07-24T12:00:00Z',
           categoryName: 'Monthly Groceries',
         },

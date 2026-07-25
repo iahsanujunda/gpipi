@@ -137,7 +137,7 @@ function ExpenseLedger({ expenses }) {
           role="row"
           sx={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(130px, .8fr) minmax(200px, 1.5fr) minmax(180px, 1.1fr) minmax(120px, .7fr)',
+            gridTemplateColumns: 'minmax(130px, .8fr) minmax(240px, 1.7fr) minmax(180px, 1.1fr) minmax(120px, .7fr)',
             gap: 3,
             px: 3,
             py: 1.5,
@@ -146,7 +146,7 @@ function ExpenseLedger({ expenses }) {
             borderColor: 'divider',
           }}
         >
-          {['Date', 'Merchant', 'Category', 'Amount'].map((label) => (
+          {['Date', 'Description', 'Category', 'Amount'].map((label) => (
             <Typography
               key={label}
               role="columnheader"
@@ -182,11 +182,11 @@ function ExpenseLedger({ expenses }) {
               display: 'grid',
               gridTemplateColumns: {
                 xs: 'minmax(0, 1fr) auto',
-                md: 'minmax(130px, .8fr) minmax(200px, 1.5fr) minmax(180px, 1.1fr) minmax(120px, .7fr)',
+                md: 'minmax(130px, .8fr) minmax(240px, 1.7fr) minmax(180px, 1.1fr) minmax(120px, .7fr)',
               },
               gridTemplateAreas: {
-                xs: '"merchant amount" "category amount" "date date"',
-                md: '"date merchant category amount"',
+                xs: '"description amount" "category amount" "date date"',
+                md: '"date description category amount"',
               },
               columnGap: { xs: 2, md: 3 },
               rowGap: { xs: 1, md: 0 },
@@ -212,11 +212,20 @@ function ExpenseLedger({ expenses }) {
             </Box>
             <Box
               role="cell"
-              aria-label={`Merchant: ${expense.merchant?.trim() || 'Unspecified merchant'}`}
-              sx={{ gridArea: 'merchant', minWidth: 0 }}
+              aria-label={`Description: ${expense.description?.trim() || 'No description provided'}`}
+              sx={{ gridArea: 'description', minWidth: 0 }}
             >
-              <Typography sx={{ color: 'text.heading', fontWeight: 700 }} noWrap>
-                {expense.merchant?.trim() || 'Unspecified merchant'}
+              <Typography
+                sx={{
+                  color: 'text.heading',
+                  display: '-webkit-box',
+                  fontWeight: 700,
+                  overflow: 'hidden',
+                  WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: 2,
+                }}
+              >
+                {expense.description?.trim() || 'No description provided'}
               </Typography>
             </Box>
             <Box

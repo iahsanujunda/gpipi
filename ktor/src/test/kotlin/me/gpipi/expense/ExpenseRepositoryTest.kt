@@ -22,8 +22,11 @@ class ExpenseRepositoryTest : PersistenceTest() {
     private val expenseRepository = ExpenseRepository()
     private val inboundRepository = InboundRepository()
 
-    private fun givenInbound(eventId: String = "Ev001"): UUID = runBlocking {
-        dbQuery(db) { inboundRepository.captureOrSkip(eventId, "U1", "C1", "1500 ramen", "1751700000.000100") }!!
+    private fun givenInbound(
+        eventId: String = "Ev001",
+        text: String? = "1500 ramen",
+    ): UUID = runBlocking {
+        dbQuery(db) { inboundRepository.captureOrSkip(eventId, "U1", "C1", text, "1751700000.000100") }!!
     }
 
     private fun givenCategory(name: String = "Monthly Groceries"): UUID = runBlocking {
@@ -106,6 +109,42 @@ class ExpenseRepositoryTest : PersistenceTest() {
 
         assertNull(row[Expense.merchant])
         assertNull(row[Expense.note])
+    }
+
+    @Test
+    fun `list exposes the description supplied in the Slack message`() {
+        val msgId = givenInbound(text = "<@U123> ¥1,500 for ramen after work")
+        val catId = givenCategory("Eating Out")
+        query {
+            expenseRepository.insert(
+                extraction().copy(amount = 1_500, merchant = null),
+                msgId,
+                "U1",
+                catId,
+            )
+        }
+
+        val expense = query { expenseRepository.list(from = null, to = null, categoryId = null).single() }
+
+        assertEquals("ramen after work", expense.description)
+    }
+
+    @Test
+    fun `list falls back to the extracted note when Slack text has expired`() {
+        val msgId = givenInbound(text = null)
+        val catId = givenCategory("Eating Out")
+        query {
+            expenseRepository.insert(
+                extraction().copy(merchant = null, note = "ramen after work"),
+                msgId,
+                "U1",
+                catId,
+            )
+        }
+
+        val expense = query { expenseRepository.list(from = null, to = null, categoryId = null).single() }
+
+        assertEquals("ramen after work", expense.description)
     }
 
     @Test

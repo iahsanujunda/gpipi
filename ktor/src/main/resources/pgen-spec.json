@@ -485,7 +485,7 @@
           ],
           "uniqueConstraints": [
             {
-              "name": "shopping_add_draft_inbound_message_id_key"
+              "name": "shopping_add_draft_inbound_message_unique"
             }
           ],
           "checkConstraints": [

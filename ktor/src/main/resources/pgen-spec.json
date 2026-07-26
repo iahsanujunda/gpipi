@@ -429,6 +429,360 @@
               "name": "inbound_message_event_id_key"
             }
           ]
+        },
+        {
+          "name": "public.shopping_add_draft",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid"
+            },
+            {
+              "name": "inbound_message_id",
+              "type": "uuid"
+            },
+            {
+              "name": "channel_id",
+              "type": "text"
+            },
+            {
+              "name": "user_id",
+              "type": "text"
+            },
+            {
+              "name": "status",
+              "type": "text",
+              "defaultExpr": "'PENDING'::text"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "completed_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "shopping_add_draft_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "shopping_add_draft_inbound_message_id_fkey",
+              "targetTable": "public.inbound_message",
+              "references": [
+                {
+                  "sourceColumn": "inbound_message_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "shopping_add_draft_inbound_message_id_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "shopping_add_draft_check"
+            },
+            {
+              "name": "shopping_add_draft_status_check"
+            }
+          ]
+        },
+        {
+          "name": "public.shopping_add_draft_item",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid"
+            },
+            {
+              "name": "draft_id",
+              "type": "uuid"
+            },
+            {
+              "name": "position",
+              "type": "int4"
+            },
+            {
+              "name": "item",
+              "type": "text"
+            },
+            {
+              "name": "quantity",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "shopping_add_draft_item_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "shopping_add_draft_item_draft_id_fkey",
+              "targetTable": "public.shopping_add_draft",
+              "references": [
+                {
+                  "sourceColumn": "draft_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "shopping_add_draft_item_draft_id_position_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "shopping_add_draft_item_item_not_blank"
+            },
+            {
+              "name": "shopping_add_draft_item_position_nonnegative"
+            }
+          ]
+        },
+        {
+          "name": "public.shopping_item",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid"
+            },
+            {
+              "name": "inbound_message_id",
+              "type": "uuid"
+            },
+            {
+              "name": "item",
+              "type": "text"
+            },
+            {
+              "name": "quantity",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "status",
+              "type": "text",
+              "defaultExpr": "'PENDING'::text"
+            },
+            {
+              "name": "added_by",
+              "type": "text"
+            },
+            {
+              "name": "added_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "bought_by",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "bought_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            },
+            {
+              "name": "removed_by",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "removed_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            },
+            {
+              "name": "current_mutation_id",
+              "type": "uuid"
+            }
+          ],
+          "primaryKey": {
+            "name": "shopping_item_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "shopping_item_current_mutation_id_fkey",
+              "targetTable": "public.shopping_mutation",
+              "references": [
+                {
+                  "sourceColumn": "current_mutation_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "shopping_item_inbound_message_id_fkey",
+              "targetTable": "public.inbound_message",
+              "references": [
+                {
+                  "sourceColumn": "inbound_message_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "shopping_item_added_by_not_blank"
+            },
+            {
+              "name": "shopping_item_bought_by_not_blank"
+            },
+            {
+              "name": "shopping_item_bought_metadata_valid"
+            },
+            {
+              "name": "shopping_item_item_not_blank"
+            },
+            {
+              "name": "shopping_item_pending_metadata_valid"
+            },
+            {
+              "name": "shopping_item_removed_by_not_blank"
+            },
+            {
+              "name": "shopping_item_removed_metadata_valid"
+            },
+            {
+              "name": "shopping_item_status_valid"
+            }
+          ]
+        },
+        {
+          "name": "public.shopping_mutation",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid"
+            },
+            {
+              "name": "kind",
+              "type": "text"
+            },
+            {
+              "name": "actor_id",
+              "type": "text"
+            },
+            {
+              "name": "reverses_mutation_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "shopping_mutation_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "shopping_mutation_reverses_mutation_id_fkey",
+              "targetTable": "public.shopping_mutation",
+              "references": [
+                {
+                  "sourceColumn": "reverses_mutation_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "shopping_mutation_reverses_mutation_id_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "shopping_mutation_actor_not_blank"
+            },
+            {
+              "name": "shopping_mutation_kind_valid"
+            },
+            {
+              "name": "shopping_mutation_not_self_reversing"
+            },
+            {
+              "name": "shopping_mutation_reversal_shape"
+            }
+          ]
+        },
+        {
+          "name": "public.shopping_mutation_item",
+          "columns": [
+            {
+              "name": "mutation_id",
+              "type": "uuid"
+            },
+            {
+              "name": "item_id",
+              "type": "uuid"
+            }
+          ],
+          "primaryKey": {
+            "name": "shopping_mutation_item_pkey",
+            "columns": [
+              "mutation_id",
+              "item_id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "shopping_mutation_item_item_id_fkey",
+              "targetTable": "public.shopping_item",
+              "references": [
+                {
+                  "sourceColumn": "item_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "shopping_mutation_item_mutation_id_fkey",
+              "targetTable": "public.shopping_mutation",
+              "references": [
+                {
+                  "sourceColumn": "mutation_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ]
         }
       ]
     }

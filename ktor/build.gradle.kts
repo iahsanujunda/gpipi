@@ -104,6 +104,11 @@ pgen {
             addTable("public", "categorization_event")
             addTable("public", "expense_draft")
             addTable("public", "auth_nonce")
+            addTable("public", "shopping_add_draft")
+            addTable("public", "shopping_add_draft_item")
+            addTable("public", "shopping_mutation")
+            addTable("public", "shopping_item")
+            addTable("public", "shopping_mutation_item")
         }
         columnTypeMappings {
             add(

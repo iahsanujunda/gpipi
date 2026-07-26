@@ -110,7 +110,7 @@ class ExtractionServiceTest : PersistenceTest() {
     @Test
     fun `extract parses the content and resolves the category_id`() {
         val eatingOutId = seedCategory("Eating Out")
-        coEvery { orClient.chat(any(), any(), any()) } returns okResult("Eating Out")
+        coEvery { orClient.chat(any(), any(), any(), any()) } returns okResult("Eating Out")
 
         val result = runBlocking { service().extract("1500 for ramen") }
 
@@ -145,7 +145,7 @@ class ExtractionServiceTest : PersistenceTest() {
                 ),
             ),
         )
-        coEvery { orClient.chat(any(), any(), any()) } returnsMany listOf(
+        coEvery { orClient.chat(any(), any(), any(), any()) } returnsMany listOf(
             okResult("Monthly Groceries"),
             okResult("Monthly Groceries"),
             okResult("Transport"),
@@ -183,6 +183,7 @@ class ExtractionServiceTest : PersistenceTest() {
                 match {
                     categoryNames(it) == setOf("Monthly Groceries", "Transport")
                 },
+                any(),
             )
             orClient.chat(
                 any(),
@@ -193,6 +194,7 @@ class ExtractionServiceTest : PersistenceTest() {
                 match {
                     categoryNames(it) == setOf("Monthly Groceries", "Transport")
                 },
+                any(),
             )
             orClient.chat(
                 any(),
@@ -203,6 +205,7 @@ class ExtractionServiceTest : PersistenceTest() {
                 match {
                     categoryNames(it) == setOf("Transport")
                 },
+                any(),
             )
         }
     }
@@ -210,7 +213,7 @@ class ExtractionServiceTest : PersistenceTest() {
     @Test
     fun `extract wraps an AiException as ExtractionException`() {
         seedCategory("Eating Out")
-        coEvery { orClient.chat(any(), any(), any()) } throws AiException("network down")
+        coEvery { orClient.chat(any(), any(), any(), any()) } throws AiException("network down")
 
         assertFailsWith<ExtractionException> {
             runBlocking { service().extract("1500 for ramen") }
@@ -220,7 +223,7 @@ class ExtractionServiceTest : PersistenceTest() {
     @Test
     fun `extract wraps malformed JSON as ExtractionException`() {
         seedCategory("Eating Out")
-        coEvery { orClient.chat(any(), any(), any()) } returns ChatResult(
+        coEvery { orClient.chat(any(), any(), any(), any()) } returns ChatResult(
             content = "not json at all {",
             model = testModel,
         )

@@ -43,7 +43,15 @@ class OpenRouterClient(
 ) {
     private val apiBaseUrl = apiBaseUrl.trimEnd('/')
 
-    suspend fun chat(userMessage: String, systemPrompt: String, schema: JsonObject): ChatResult {
+    suspend fun chat(
+        userMessage: String,
+        systemPrompt: String,
+        schema: JsonObject,
+        schemaName: String,
+    ): ChatResult {
+        require(schemaName.matches(Regex("[a-zA-Z0-9_-]{1,64}"))) {
+            "schemaName must be 1-64 chars of [a-zA-Z0-9_-]; got '$schemaName'"
+        }
         val body = buildJsonObject {
             put("model", model)
             putJsonArray("messages") {
@@ -53,7 +61,7 @@ class OpenRouterClient(
             putJsonObject("response_format") {
                 put("type", "json_schema")
                 putJsonObject("json_schema") {
-                    put("name", "expense_extraction")   // required by the OpenAI json_schema spec; DashScope/Qwen enforces it
+                    put("name", schemaName)   // required by the OpenAI json_schema spec; DashScope/Qwen enforces it
                     put("strict", true); put("schema", schema)
                 }
             }

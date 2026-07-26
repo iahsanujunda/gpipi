@@ -39,12 +39,17 @@ class OpenRouterClientTest {
             userMessage = "1500 ramen",
             systemPrompt = "extract an expense",
             schema = schema(),
+            schemaName = "expense_extraction",
         )
 
         assertEquals("requested/model-alias", requestBody["model"]!!.jsonPrimitive.content)
         assertEquals(
             true,
             requestBody["provider"]!!.jsonObject["require_parameters"]!!.jsonPrimitive.content.toBoolean(),
+        )
+        assertEquals(
+            "expense_extraction",
+            requestBody["response_format"]!!.jsonObject["json_schema"]!!.jsonObject["name"]!!.jsonPrimitive.content,
         )
         assertEquals("{\"amount\":1500}", result.content)
         assertEquals("resolved/model-version", result.model)
@@ -62,7 +67,7 @@ class OpenRouterClientTest {
         }
 
         val error = assertFailsWith<AiException> {
-            client().chat("1500 ramen", "extract an expense", schema())
+            client().chat("1500 ramen", "extract an expense", schema(), "expense_extraction")
         }
 
         assertEquals("OpenRouter response had no model", error.message)
@@ -79,7 +84,7 @@ class OpenRouterClientTest {
         }
 
         val error = assertFailsWith<AiException> {
-            client().chat("1500 ramen", "extract an expense", schema())
+            client().chat("1500 ramen", "extract an expense", schema(), "expense_extraction")
         }
 
         assertEquals("OpenRouter response was malformed", error.message)

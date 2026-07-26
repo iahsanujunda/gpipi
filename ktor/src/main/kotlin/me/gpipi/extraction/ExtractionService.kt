@@ -1,20 +1,17 @@
 package me.gpipi.extraction
 
 import java.util.UUID
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
-import me.gpipi.ai.AiException
+import me.gpipi.ai.ExtractionSpec
 import me.gpipi.ai.OpenRouterClient
+import me.gpipi.ai.extractStructured
 import me.gpipi.category.ActiveCategoryReader
 import me.gpipi.category.CategoryRow
-
-private val json = Json { ignoreUnknownKeys = true }
 
 private const val SYSTEM_PROMPT_TEMPLATE = """
 You extract one household expense from a short casual message written in English, Japanese, or a mixture of both.
@@ -69,38 +66,21 @@ class ExtractionService(
     suspend fun extract(text: String): ExtractionResult {
         val categories = activeCategories.current()
 
-        val completion = try {
-            orClient.chat(
-                userMessage = text,
+        val outcome = orClient.extractStructured(
+            spec = ExtractionSpec(
+                name = "expense_extraction",
                 systemPrompt = buildSystemPrompt(categories),
                 schema = buildExtractionSchema(categories),
-            )
-        } catch (ex: AiException) {
-            throw ExtractionException("AI call failed: ${ex.message}", ex)
-        }
-
-        val extraction = try {
-            json.decodeFromString<Extraction>(completion.content)
-        } catch (ex: SerializationException) {
-            throw ExtractionException(
-                "Extraction didn't match schema: ${completion.content.take(200)}",
-                ex,
-            )
-        }
-
-        val categoryId = categories
-            .firstOrNull { it.name == extraction.category }
-            ?.id
-            ?: throw ExtractionException(
-                "Model returned unknown category '${extraction.category}'",
-            )
-
-        return ExtractionResult(
-            extraction = extraction,
-            categoryId = categoryId,
-            categories = categories,
-            model = completion.model,
+                deserializer = Extraction.serializer(),
+            ),
+            userMessage = text,
+            wrap = ::ExtractionException,
         )
+
+        val categoryId = categories.firstOrNull { it.name == outcome.value.category }?.id
+            ?: throw ExtractionException("Model returned unknown category '${outcome.value.category}'")
+
+        return ExtractionResult(outcome.value, categoryId, categories, outcome.model)
     }
 }
 

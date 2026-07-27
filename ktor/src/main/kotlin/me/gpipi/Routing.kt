@@ -32,6 +32,7 @@ import me.gpipi.expense.expenseApiRoutes
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
+import me.gpipi.slack.HelpCommand
 import me.gpipi.slack.LogExpenseCommand
 import me.gpipi.slack.OpenBudgetCommand
 import me.gpipi.slack.ShoppingAddCommand
@@ -119,6 +120,7 @@ fun Application.configureRouting() {
         db = db,
         inboundRepo = inboundRepo,
         commands = listOf(
+            HelpCommand(slack),
             OpenBudgetCommand(authService, slack, webBaseUrl),
             ShoppingAddCommand(
                 db = db,

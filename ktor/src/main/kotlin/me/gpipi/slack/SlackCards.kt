@@ -193,6 +193,27 @@ private fun categoryOption(category: CategoryRow): JsonObject = buildJsonObject 
     put("value", category.id.toString())
 }
 
+/**
+ * The bot's command cheat sheet, posted privately when someone asks for `help`. Keep the
+ * bullets in sync with the real command matchers wired into SlackEventHandler — this is the
+ * only place a household member can discover what the bot understands.
+ */
+fun helpCard(): JsonArray = buildJsonArray {
+    addJsonObject {
+        mrkdwnSection(
+            buildString {
+                append("*Here's what I can do:*\n")
+                append("• `open` — open your household budget\n")
+                append("• `list add <items>` — add to the shopping list ")
+                append("(e.g. `list add milk, 2 eggs`)\n")
+                append("• `list` — show the current shopping list\n")
+                append("• *log an expense* — just type the amount and where ")
+                append("(e.g. `510 conbini`); tap *Not an expense* on the card to undo")
+            },
+        )
+    }
+}
+
 fun openBudgetCard(url: String): JsonArray = buildJsonArray {
     addJsonObject {
         put("type", "actions")

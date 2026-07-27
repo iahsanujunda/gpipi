@@ -12,6 +12,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import me.gpipi.category.CategoryRow
+import me.gpipi.shopping.ShoppingItemText
 
 // Block Kit identifiers — MUST match what slackInteractionRoutes reads out of the payload,
 // or every Confirm is silently ignored.
@@ -24,6 +25,8 @@ const val SLACK_CHECKBOX_GROUP_MAX = 10   // Slack hard limit per checkboxes ele
 const val SLACK_OPTION_TEXT_MAX = 75      // Slack option-text limit
 const val SHOPPING_MARK_BOUGHT_ACTION_ID = "shopping_mark_bought"
 const val UNDO_SHOPPING_ACTION_ID = "undo_shopping_mutation"
+const val CONFIRM_SHOPPING_ADD_ACTION_ID = "confirm_shopping_add"
+const val CANCEL_SHOPPING_ADD_ACTION_ID = "cancel_shopping_add"
 
 data class ShoppingListItem(
     val id: UUID,
@@ -34,15 +37,21 @@ data class ShoppingListItem(
 
 /** "milk" or "ground beef · 1kg · lean", truncated to Slack's 75-char option limit. */
 private fun ShoppingListItem.label(): String {
-    val full = listOfNotNull(
+    val full = shoppingLabel(item, quantity, note)
+
+    return if (full.length <= SLACK_OPTION_TEXT_MAX) full
+    else full.take(SLACK_OPTION_TEXT_MAX - 1).trimEnd() + "…"
+}
+
+private fun shoppingLabel(item: String, quantity: String?, note: String?): String =
+    listOfNotNull(
         item,
         quantity?.takeIf(String::isNotBlank),
         note?.takeIf(String::isNotBlank),
     ).joinToString(" · ")
 
-    return if (full.length <= SLACK_OPTION_TEXT_MAX) full
-    else full.take(SLACK_OPTION_TEXT_MAX - 1).trimEnd() + "…"
-}
+private fun mrkdwnEscape(text: String): String =
+    text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 private fun JsonObjectBuilder.mrkdwnSection(text: String) {
     put("type", "section")
@@ -63,6 +72,10 @@ fun shoppingListCard(
     undoMutationId: UUID? = null,
 ): JsonArray = buildJsonArray {
     addJsonObject { mrkdwnSection("*Shopping list*") }
+
+    if (items.isEmpty()) {
+        addJsonObject { mrkdwnSection("Nothing on the list yet.") }
+    }
 
     items.chunked(SLACK_CHECKBOX_GROUP_MAX).forEachIndexed { groupIndex, group ->
         addJsonObject {
@@ -88,8 +101,69 @@ fun shoppingListCard(
         }
     }
 
-    feedback?.let { addJsonObject { mrkdwnSection(it) } }
+    feedback?.let { addJsonObject { mrkdwnSection(mrkdwnEscape(it)) } }
 
+    undoMutationId?.let { mutationId ->
+        addJsonObject {
+            put("type", "actions")
+            put("block_id", "shopping_undo")
+            putJsonArray("elements") {
+                addJsonObject {
+                    put("type", "button")
+                    put("action_id", UNDO_SHOPPING_ACTION_ID)
+                    put("value", mutationId.toString())
+                    putJsonObject("text") {
+                        put("type", "plain_text")
+                        put("text", "Undo")
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun shoppingAddConfirmationCard(
+    draftId: UUID,
+    items: List<ShoppingItemText>,
+): JsonArray = buildJsonArray {
+    val lines = items.joinToString("\n") {
+        "• ${mrkdwnEscape(shoppingLabel(it.item, it.quantity, it.note))}"
+    }
+    addJsonObject {
+        mrkdwnSection("*Add to shopping list?*\n$lines")
+    }
+    addJsonObject {
+        put("type", "actions")
+        put("block_id", "shopping_add_confirm")
+        putJsonArray("elements") {
+            addJsonObject {
+                put("type", "button")
+                put("action_id", CONFIRM_SHOPPING_ADD_ACTION_ID)
+                put("style", "primary")
+                put("value", draftId.toString())
+                putJsonObject("text") {
+                    put("type", "plain_text")
+                    put("text", "Add items")
+                }
+            }
+            addJsonObject {
+                put("type", "button")
+                put("action_id", CANCEL_SHOPPING_ADD_ACTION_ID)
+                put("value", draftId.toString())
+                putJsonObject("text") {
+                    put("type", "plain_text")
+                    put("text", "Cancel")
+                }
+            }
+        }
+    }
+}
+
+fun shoppingActionResultCard(
+    feedback: String,
+    undoMutationId: UUID? = null,
+): JsonArray = buildJsonArray {
+    addJsonObject { mrkdwnSection(mrkdwnEscape(feedback)) }
     undoMutationId?.let { mutationId ->
         addJsonObject {
             put("type", "actions")

@@ -12,9 +12,6 @@ import java.util.UUID
 import kotlin.text.Charsets.UTF_8
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.jsonObject
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -74,26 +71,64 @@ fun Route.slackInteractionRoutes(signingSecret: String, handler: SlackInteractio
         call.application.launch {
             try {
                 val payloadJson = URLDecoder.decode(raw.removePrefix("payload="), UTF_8)
-                // THROWAWAY: capture a genuine checkbox payload for the fixture, then remove.
-                // response_url is an authenticated callback and must never be copied into logs.
-                val capture = json.parseToJsonElement(payloadJson).jsonObject
-                val safeCapture = JsonObject(
-                    capture + ("response_url" to JsonPrimitive("[redacted]")),
-                )
-                call.application.log.info("INTERACTION SPIKE (response_url redacted): $safeCapture")
                 val interaction = json.decodeFromString<Interaction>(payloadJson)
                 if (interaction.type != "block_actions") return@launch
 
-                // Only the Confirm button acts; a bare dropdown change fires block_actions too — ignore it.
-                val confirm = interaction.actions.firstOrNull { it.actionId == "confirm_expense" } ?: return@launch
-                val draftId = confirm.value?.let(UUID::fromString) ?: return@launch
-                // One selected_option carries both the category id (value) and its display name (text).
-                val selected = interaction.state?.values?.values
-                    ?.firstNotNullOfOrNull { block -> block["category_select"]?.selectedOption } ?: return@launch
-                val categoryId = selected.value?.let(UUID::fromString) ?: return@launch
-                val categoryName = selected.text?.text ?: return@launch
+                val action = interaction.actions.firstOrNull() ?: return@launch
+                when (action.actionId) {
+                    CONFIRM_ACTION_ID -> {
+                        val draftId = action.value?.let(UUID::fromString) ?: return@launch
+                        val selected = interaction.state?.values?.values
+                            ?.firstNotNullOfOrNull {
+                                block -> block[CATEGORY_ACTION_ID]?.selectedOption
+                            } ?: return@launch
+                        val categoryId = selected.value?.let(UUID::fromString) ?: return@launch
+                        val categoryName = selected.text?.text ?: return@launch
+                        handler.handleConfirm(
+                            draftId,
+                            categoryId,
+                            categoryName,
+                            interaction.responseUrl,
+                        )
+                    }
 
-                handler.handleConfirm(draftId, categoryId, categoryName, interaction.responseUrl)
+                    CONFIRM_SHOPPING_ADD_ACTION_ID -> {
+                        val draftId = action.value?.let(UUID::fromString) ?: return@launch
+                        val actorId = interaction.user?.id ?: return@launch
+                        handler.handleShoppingAddConfirm(
+                            draftId,
+                            actorId,
+                            interaction.responseUrl,
+                        )
+                    }
+
+                    CANCEL_SHOPPING_ADD_ACTION_ID -> {
+                        val draftId = action.value?.let(UUID::fromString) ?: return@launch
+                        handler.handleShoppingAddCancel(draftId, interaction.responseUrl)
+                    }
+
+                    SHOPPING_MARK_BOUGHT_ACTION_ID -> {
+                        val actorId = interaction.user?.id ?: return@launch
+                        val itemIds = action.selectedOptions.mapNotNull {
+                            it.value?.let(UUID::fromString)
+                        }
+                        handler.handleShoppingMarkBought(
+                            itemIds,
+                            actorId,
+                            interaction.responseUrl,
+                        )
+                    }
+
+                    UNDO_SHOPPING_ACTION_ID -> {
+                        val mutationId = action.value?.let(UUID::fromString) ?: return@launch
+                        val actorId = interaction.user?.id ?: return@launch
+                        handler.handleShoppingUndo(
+                            mutationId,
+                            actorId,
+                            interaction.responseUrl,
+                        )
+                    }
+                }
             } catch (ex: Exception) {
                 call.application.log.warn("Dropping malformed Slack interaction: ${ex.message}")
             }

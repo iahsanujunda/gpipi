@@ -32,14 +32,18 @@ import me.gpipi.expense.expenseApiRoutes
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
-import me.gpipi.slack.ListPrototypeCommand
 import me.gpipi.slack.LogExpenseCommand
 import me.gpipi.slack.OpenBudgetCommand
+import me.gpipi.slack.ShoppingAddCommand
+import me.gpipi.slack.ShoppingShowCommand
 import me.gpipi.slack.SlackClient
 import me.gpipi.slack.SlackEventHandler
 import me.gpipi.slack.SlackInteractionHandler
 import me.gpipi.slack.slackInteractionRoutes
 import me.gpipi.slack.slackRoutes
+import me.gpipi.shopping.ShoppingExtractionService
+import me.gpipi.shopping.ShoppingRepository
+import me.gpipi.shopping.ShoppingService
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -105,6 +109,9 @@ fun Application.configureRouting() {
         activeCategories = activeCategoryCatalog,
         orClient = orClient,
     )
+    val shoppingRepository = ShoppingRepository()
+    val shoppingService = ShoppingService(db, shoppingRepository)
+    val shoppingExtractionService = ShoppingExtractionService(orClient)
 
     val webBaseUrl = cfg.property("web.baseUrl").getString()
     val eventHandler = SlackEventHandler(
@@ -112,7 +119,13 @@ fun Application.configureRouting() {
         inboundRepo = inboundRepo,
         commands = listOf(
             OpenBudgetCommand(authService, slack, webBaseUrl),
-            ListPrototypeCommand(slack),   // THROWAWAY: remove after the checkbox spike (phase3.md step 1)
+            ShoppingAddCommand(
+                db = db,
+                extractionService = shoppingExtractionService,
+                repository = shoppingRepository,
+                slack = slack,
+            ),
+            ShoppingShowCommand(shoppingService, slack),
         ),
         default = LogExpenseCommand(
             db = db,
@@ -129,6 +142,7 @@ fun Application.configureRouting() {
         expenseRepo = expenseRepo,
         inboundRepo = InboundRepository(),
         eventRepo = CategorizationEventRepository(),
+        shoppingService = shoppingService,
         slack = slack
     )
 

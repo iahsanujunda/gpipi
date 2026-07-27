@@ -19,6 +19,8 @@ import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.generated.db.base.public1.ExpenseDraft
 import me.gpipi.generated.db.base.public1.InboundMessage
 import me.gpipi.inbound.InboundRepository
+import me.gpipi.shopping.ShoppingRepository
+import me.gpipi.shopping.ShoppingService
 import me.gpipi.support.PersistenceTest
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -36,7 +38,13 @@ class SlackInteractionHandlerTest : PersistenceTest() {
     private val slack = mockk<SlackClient>(relaxUnitFun = true)
     private val draftRepo = ExpenseDraftRepository()
     private val handler = SlackInteractionHandler(
-        db, draftRepo, ExpenseRepository(), InboundRepository(), CategorizationEventRepository(), slack,
+        db = db,
+        draftRepo = draftRepo,
+        expenseRepo = ExpenseRepository(),
+        inboundRepo = InboundRepository(),
+        eventRepo = CategorizationEventRepository(),
+        shoppingService = ShoppingService(db, ShoppingRepository()),
+        slack = slack,
     )
 
     private fun <T> query(block: () -> T): T = runBlocking { dbQuery(db) { block() } }

@@ -397,30 +397,30 @@ Every successful inverse is itself recorded as `UNDO_ADD` or `UNDO_BOUGHT`, link
 ### Definition of Done
 
 - [x] `COMMAND` / `FAILED_COMMAND` added; the dispatcher terminalizes `OpenBudgetCommand`
-- [ ] Exact `list` and `list add <items>` matchers do not capture expense-like messages
-- [ ] Both list commands return terminal outcomes through the same dispatcher path
-- [ ] All shopping tables and the pending-identity unique index are migrated
-- [ ] All shopping tables are registered in the pgen allowlist and generated specs are committed
+- [x] Exact `list` and `list add <items>` matchers do not capture expense-like messages
+- [x] Both list commands return terminal outcomes through the same dispatcher path
+- [x] All shopping tables and the pending-identity unique index are migrated
+- [x] All shopping tables are registered in the pgen allowlist and generated specs are committed
 - [ ] Add command extracts one or many items in ID/EN/JP/mixed
 - [ ] Item, quantity, and note separated correctly ("diapers size L for night" → item `diapers`)
-- [ ] Add command persists a draft and renders an Add/Cancel confirmation card before creating items
-- [ ] Confirm and Cancel consume the draft exactly once
-- [ ] Database enforcement prevents concurrent exact duplicates and the result card says what was skipped
-- [ ] Different quantity or note qualifiers remain distinct pending items
-- [ ] Confirmed additions render an Undo action; Undo Add removes only unchanged pending rows
-- [ ] Show command renders pending items only; empty list gets a friendly empty state
-- [ ] More than 10 pending items render in checkbox groups of at most 10
-- [ ] Ticking marks exactly those rows `BOUGHT` with `bought_by`/`bought_at`
-- [ ] Marking is idempotent — a re-sent bought id changes nothing and does not error
-- [ ] Card re-renders in place from canonical state; bought history is absent from Slack
-- [ ] Mark Bought renders feedback and a guarded Undo action
-- [ ] Undo Bought restores only rows for which that Mark Bought mutation is still current
-- [ ] Mutation and inverse-mutation history is durable and attributable to the acting member
-- [ ] A stale second card cannot un-buy an item
-- [ ] Stale and repeated Undo actions cannot reverse newer state
-- [ ] `BOUGHT` and `REMOVED` rows are never deleted
+- [x] Add command persists a draft and renders an Add/Cancel confirmation card before creating items
+- [x] Confirm and Cancel consume the draft exactly once
+- [x] Database enforcement prevents concurrent exact duplicates and the result card says what was skipped
+- [x] Different quantity or note qualifiers remain distinct pending items
+- [x] Confirmed additions render an Undo action; Undo Add removes only unchanged pending rows
+- [x] Show command renders pending items only; empty list gets a friendly empty state
+- [x] More than 10 pending items render in checkbox groups of at most 10
+- [x] Ticking marks exactly those rows `BOUGHT` with `bought_by`/`bought_at`
+- [x] Marking is idempotent — a re-sent bought id changes nothing and does not error
+- [x] Card re-renders in place from canonical state; bought history is absent from Slack
+- [x] Mark Bought renders feedback and a guarded Undo action
+- [x] Undo Bought restores only rows for which that Mark Bought mutation is still current
+- [x] Mutation and inverse-mutation history is durable and attributable to the acting member
+- [x] A stale second card cannot un-buy an item
+- [x] Stale and repeated Undo actions cannot reverse newer state
+- [x] `BOUGHT` and `REMOVED` rows are never deleted
 - [ ] A genuine checkbox payload is retained as an interaction-route fixture
-- [ ] Expense capture is bit-for-bit unchanged — no new command matches an expense message
+- [x] Expense capture is bit-for-bit unchanged — no new command matches an expense message
 - [ ] **Prototype validated:** 3-item and 12-item cards, rapid taps, weak connectivity, two members, and Undo feel acceptable
 
 ---

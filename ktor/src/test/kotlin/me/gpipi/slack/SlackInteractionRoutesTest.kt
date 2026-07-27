@@ -14,6 +14,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import me.gpipi.categorization.CategorizationEventRepository
 import me.gpipi.config.dbQuery
@@ -21,7 +22,13 @@ import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
+import me.gpipi.generated.db.base.public1.ShoppingAddDraft
+import me.gpipi.generated.db.base.public1.ShoppingItem
+import me.gpipi.generated.db.base.public1.ShoppingMutation
 import me.gpipi.inbound.InboundRepository
+import me.gpipi.shopping.ShoppingDraftItemInput
+import me.gpipi.shopping.ShoppingRepository
+import me.gpipi.shopping.ShoppingService
 import me.gpipi.support.PersistenceTest
 import me.gpipi.support.configureWithTestDb
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -93,6 +100,40 @@ class SlackInteractionRoutesTest : PersistenceTest() {
         )
     }
 
+    private fun givenShoppingDraft(
+        eventId: String,
+        vararg items: ShoppingDraftItemInput,
+    ): UUID {
+        val inboundId = query {
+            InboundRepository().captureOrSkip(
+                eventId,
+                "U-sender",
+                "C1",
+                "list add ${items.joinToString(" and ") { it.item }}",
+                "1751700000.000100",
+            )
+        }!!
+        return query {
+            ShoppingRepository().insertAddDraft(
+                inboundId,
+                "U-sender",
+                "C1",
+                items.toList(),
+            )
+        }
+    }
+
+    private fun shoppingHandler(slack: SlackClient): SlackInteractionHandler =
+        SlackInteractionHandler(
+            db = db,
+            draftRepo = ExpenseDraftRepository(),
+            expenseRepo = ExpenseRepository(),
+            inboundRepo = InboundRepository(),
+            eventRepo = CategorizationEventRepository(),
+            shoppingService = ShoppingService(db, ShoppingRepository()),
+            slack = slack,
+        )
+
     private suspend fun ApplicationTestBuilder.postSigned(body: String): HttpStatusCode {
         val ts = Instant.now().epochSecond
         return client.post("/slack/interactions") {
@@ -128,6 +169,7 @@ class SlackInteractionRoutesTest : PersistenceTest() {
             expenseRepo = ExpenseRepository(),
             inboundRepo = InboundRepository(),
             eventRepo = CategorizationEventRepository(),
+            shoppingService = ShoppingService(db, ShoppingRepository()),
             slack = slack,
         )
 
@@ -163,6 +205,150 @@ class SlackInteractionRoutesTest : PersistenceTest() {
              "state":{"values":{"expense_confirm":{"category_select":{"selected_option":{"value":"${UUID.randomUUID()}"}}}}}}
         """.trimIndent()
         assertEquals(HttpStatusCode.OK, postSigned(formBody(payload)))
+    }
+
+    @Test
+    fun `signed shopping Add interaction consumes the draft through the real handler`() = testApplication {
+        val draftId = givenShoppingDraft(
+            "EvRouteShoppingAdd",
+            ShoppingDraftItemInput("milk"),
+        )
+        val slack = mockk<SlackClient>(relaxUnitFun = true)
+        application {
+            routing { slackInteractionRoutes(secret, shoppingHandler(slack)) }
+        }
+        val payload = """
+            {"type":"block_actions",
+             "user":{"id":"U-clicker"},
+             "response_url":"https://hooks.slack.test/shopping",
+             "actions":[{"type":"button","action_id":"confirm_shopping_add","value":"$draftId"}]}
+        """.trimIndent()
+
+        assertEquals(HttpStatusCode.OK, postSigned(formBody(payload)))
+        coVerify(timeout = 2_000, exactly = 1) {
+            slack.replaceCard(
+                "https://hooks.slack.test/shopping",
+                match { "Added" in it },
+                any(),
+            )
+        }
+        assertEquals(1L, query { ShoppingItem.selectAll().count() })
+    }
+
+    @Test
+    fun `signed shopping Cancel interaction consumes the draft through the real handler`() = testApplication {
+        val draftId = givenShoppingDraft(
+            "EvRouteShoppingCancel",
+            ShoppingDraftItemInput("bread"),
+        )
+        val slack = mockk<SlackClient>(relaxUnitFun = true)
+        application {
+            routing { slackInteractionRoutes(secret, shoppingHandler(slack)) }
+        }
+        val payload = """
+            {"type":"block_actions",
+             "user":{"id":"U-clicker"},
+             "response_url":"https://hooks.slack.test/shopping",
+             "actions":[{"type":"button","action_id":"cancel_shopping_add","value":"$draftId"}]}
+        """.trimIndent()
+
+        assertEquals(HttpStatusCode.OK, postSigned(formBody(payload)))
+        coVerify(timeout = 2_000, exactly = 1) {
+            slack.replaceCard(
+                "https://hooks.slack.test/shopping",
+                "Nothing added",
+                any(),
+            )
+        }
+        assertEquals(
+            "CANCELLED",
+            query { ShoppingAddDraft.selectAll().single()[ShoppingAddDraft.status] },
+        )
+    }
+
+    @Test
+    fun `signed checkbox interaction marks selected UUIDs bought`() = testApplication {
+        val repository = ShoppingRepository()
+        val shoppingService = ShoppingService(db, repository)
+        val draftId = givenShoppingDraft(
+            "EvRouteShoppingBought",
+            ShoppingDraftItemInput("milk"),
+            ShoppingDraftItemInput("eggs"),
+        )
+        checkNotNull(runBlocking { shoppingService.confirmAdd(draftId, "U-add") })
+        val milkId = runBlocking {
+            shoppingService.listPending().first { it.item == "milk" }.id
+        }
+        val slack = mockk<SlackClient>(relaxUnitFun = true)
+        application {
+            routing { slackInteractionRoutes(secret, shoppingHandler(slack)) }
+        }
+        val payload = """
+            {"type":"block_actions",
+             "user":{"id":"U-buyer"},
+             "response_url":"https://hooks.slack.test/shopping",
+             "actions":[{"type":"checkboxes","action_id":"shopping_mark_bought",
+                 "selected_options":[{"value":"$milkId","text":{"type":"plain_text","text":"milk"}}]}]}
+        """.trimIndent()
+
+        assertEquals(HttpStatusCode.OK, postSigned(formBody(payload)))
+        coVerify(timeout = 2_000, exactly = 1) {
+            slack.replaceCard(
+                "https://hooks.slack.test/shopping",
+                match { "marked bought" in it },
+                any(),
+            )
+        }
+        assertEquals(
+            "BOUGHT",
+            query {
+                ShoppingItem.selectAll()
+                    .single { it[ShoppingItem.id] == milkId }[ShoppingItem.status]
+            },
+        )
+    }
+
+    @Test
+    fun `signed Undo interaction restores a bought item through the real handler`() = testApplication {
+        val repository = ShoppingRepository()
+        val shoppingService = ShoppingService(db, repository)
+        val draftId = givenShoppingDraft(
+            "EvRouteShoppingUndo",
+            ShoppingDraftItemInput("milk"),
+        )
+        checkNotNull(runBlocking { shoppingService.confirmAdd(draftId, "U-add") })
+        val milkId = runBlocking { shoppingService.listPending().single().id }
+        val mark = runBlocking { shoppingService.markBought(listOf(milkId), "U-buyer") }
+        val mutationId = checkNotNull(mark.mutationId)
+        val slack = mockk<SlackClient>(relaxUnitFun = true)
+        application {
+            routing { slackInteractionRoutes(secret, shoppingHandler(slack)) }
+        }
+        val payload = """
+            {"type":"block_actions",
+             "user":{"id":"U-undo"},
+             "response_url":"https://hooks.slack.test/shopping",
+             "actions":[{"type":"button","action_id":"undo_shopping_mutation","value":"$mutationId"}]}
+        """.trimIndent()
+
+        assertEquals(HttpStatusCode.OK, postSigned(formBody(payload)))
+        coVerify(timeout = 2_000, exactly = 1) {
+            slack.replaceCard(
+                "https://hooks.slack.test/shopping",
+                match { "Restored" in it },
+                any(),
+            )
+        }
+        assertEquals(
+            "PENDING",
+            query { ShoppingItem.selectAll().single()[ShoppingItem.status] },
+        )
+        assertTrue(
+            query {
+                ShoppingMutation.selectAll()
+                    .any { it[ShoppingMutation.kind] == "UNDO_BOUGHT" }
+            },
+        )
     }
 
     @Test

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import me.gpipi.category.CategoryRow
+import me.gpipi.shopping.ShoppingItemText
 
 class SlackCardsTest {
 
@@ -165,6 +166,47 @@ class SlackCardsTest {
         }
 
         assertTrue(UNDO_SHOPPING_ACTION_ID !in actionIds)
+    }
+
+    @Test
+    fun `empty shopping card renders a friendly state`() {
+        val rendered = shoppingListCard(emptyList()).toString()
+
+        assertTrue("Nothing on the list yet." in rendered)
+        assertTrue(SHOPPING_MARK_BOUGHT_ACTION_ID !in rendered)
+    }
+
+    @Test
+    fun `shopping add confirmation renders items and stable Add Cancel actions`() {
+        val draftId = UUID.randomUUID()
+        val card = shoppingAddConfirmationCard(
+            draftId,
+            listOf(
+                ShoppingItemText("milk", "2 cartons", "low fat"),
+                ShoppingItemText("diapers", note = "size L, for night"),
+            ),
+        )
+        val buttons = card[1].jsonObject["elements"]!!.jsonArray
+            .map { it.jsonObject }
+
+        assertTrue("milk · 2 cartons · low fat" in card.toString())
+        assertTrue("diapers · size L, for night" in card.toString())
+        assertEquals(
+            listOf(CONFIRM_SHOPPING_ADD_ACTION_ID, CANCEL_SHOPPING_ADD_ACTION_ID),
+            buttons.map { it["action_id"]!!.jsonPrimitive.content },
+        )
+        assertTrue(buttons.all { it["value"]!!.jsonPrimitive.content == draftId.toString() })
+    }
+
+    @Test
+    fun `shopping add confirmation escapes Slack control characters`() {
+        val card = shoppingAddConfirmationCard(
+            UUID.randomUUID(),
+            listOf(ShoppingItemText("<milk & eggs>")),
+        )
+
+        assertTrue("&lt;milk &amp; eggs&gt;" in card.toString())
+        assertTrue("<milk & eggs>" !in card.toString())
     }
 
     @Test

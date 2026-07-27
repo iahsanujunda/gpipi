@@ -17,6 +17,37 @@ async function expectBottomSheetGeometry(page, sheet) {
   expect(Math.abs((box.y + box.height) - page.viewportSize().height)).toBeLessThanOrEqual(2)
 }
 
+async function samplePeriodHeaderWhileChanging(section, buttonName) {
+  return section.getByRole('button', { name: buttonName }).evaluate(async (button) => {
+    const owner = button.closest('section')
+    const heading = owner.querySelector('h2')
+    const navigator = owner.querySelector('[aria-live="polite"]').parentElement
+    const sample = () => {
+      const headingBox = heading.getBoundingClientRect()
+      const navigatorBox = navigator.getBoundingClientRect()
+      return {
+        headingCenterY: headingBox.top + (headingBox.height / 2),
+        navigatorCenterY: navigatorBox.top + (navigatorBox.height / 2),
+      }
+    }
+
+    const before = sample()
+    button.click()
+    await new Promise(requestAnimationFrame)
+    const afterTap = sample()
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    const settled = sample()
+    return { before, afterTap, settled }
+  })
+}
+
+function expectPeriodHeaderToStayAligned(samples) {
+  for (const sample of Object.values(samples)) {
+    expect(Math.abs(sample.headingCenterY - sample.navigatorCenterY))
+      .toBeLessThanOrEqual(2)
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/budgets')
   await expect(page.getByRole('heading', { name: 'Budgeting', exact: true })).toBeVisible()
@@ -114,6 +145,17 @@ test('weekly and monthly history controls move independently', async ({ page }) 
   await weekly.getByRole('button', { name: 'This week' }).click()
   await expect(weeklyPeriod).toHaveText(initialWeek)
   await expect(monthlyPeriod).not.toHaveText(initialMonth)
+})
+
+test('period selectors stay aligned with their headings while mobile dates change', async ({ page }) => {
+  const weekly = page.locator('section[aria-labelledby="weekly-budget-heading"]')
+  const monthly = page.locator('section[aria-labelledby="monthly-budget-heading"]')
+
+  const weeklySamples = await samplePeriodHeaderWhileChanging(weekly, 'Previous week')
+  expectPeriodHeaderToStayAligned(weeklySamples)
+
+  const monthlySamples = await samplePeriodHeaderWhileChanging(monthly, 'Previous month')
+  expectPeriodHeaderToStayAligned(monthlySamples)
 })
 
 test('launcher animates its main icon and staggered page action, then removes the action on Activity', async ({ page }) => {

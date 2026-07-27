@@ -610,8 +610,9 @@ function PeriodNavigator({
       spacing={0.75}
       sx={{
         alignItems: 'center',
-        justifyContent: { xs: 'flex-end', md: 'initial' },
-        flexWrap: 'wrap',
+        flexShrink: 0,
+        flexWrap: 'nowrap',
+        justifyContent: 'flex-end',
       }}
     >
       <IconButton
@@ -626,7 +627,7 @@ function PeriodNavigator({
         spacing={0.1}
         sx={{
           justifyContent: 'center',
-          minWidth: { xs: 96, sm: 116 },
+          width: { xs: 104, sm: 116 },
           minHeight: 44,
           px: 1.25,
           border: 1,
@@ -651,16 +652,6 @@ function PeriodNavigator({
       >
         <ChevronRightIcon />
       </IconButton>
-      {historical && (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => onChange(weekly ? currentDate : monthStart(currentDate))}
-          sx={{ minHeight: 44 }}
-        >
-          This {periodName}
-        </Button>
-      )}
     </Stack>
   )
 }
@@ -714,20 +705,27 @@ function BudgetPeriodSection({
       aria-labelledby={`${period.toLowerCase()}-budget-heading`}
       spacing={1.5}
     >
-      <Stack
-        direction="row"
-        spacing={1.5}
+      <Box
         sx={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) auto',
+          columnGap: 1.5,
           alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
         }}
       >
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
-          <Typography id={`${period.toLowerCase()}-budget-heading`} variant="h6" component="h2">
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', minWidth: 0 }}>
+          <Typography
+            id={`${period.toLowerCase()}-budget-heading`}
+            variant="h6"
+            component="h2"
+            sx={{ whiteSpace: 'nowrap' }}
+          >
             {title}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+          <Typography
+            color="text.secondary"
+            sx={{ display: { xs: 'none', sm: 'block' }, fontSize: '0.75rem' }}
+          >
             {summary}
           </Typography>
         </Stack>
@@ -738,12 +736,31 @@ function BudgetPeriodSection({
           period={period}
           spend={periodSpend}
         />
-      </Stack>
+      </Box>
 
       {historical && (
-        <Typography color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: { md: 'right' } }}>
-          Past spending is compared with each line&apos;s current cap.
-        </Typography>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) auto',
+            gap: 1.5,
+            alignItems: 'center',
+          }}
+        >
+          <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+            Past spending is compared with each line&apos;s current cap.
+          </Typography>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => onBudgetDateChange(
+              period === 'WEEKLY' ? currentDate : monthStart(currentDate),
+            )}
+            sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+          >
+            This {period === 'WEEKLY' ? 'week' : 'month'}
+          </Button>
+        </Box>
       )}
 
       <BudgetCards

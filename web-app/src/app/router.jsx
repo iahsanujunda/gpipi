@@ -6,6 +6,7 @@ import EnterPage from '@/auth/EnterPage'
 import ProtectedRoute from '@/auth/ProtectedRoute'
 import ActivityPage from '@/activity/ActivityPage'
 import BudgetsPage from '@/budgets/BudgetsPage'
+import ShoppingPage from '@/shopping/ShoppingPage'
 
 export const routes = [
   { path: '/enter', element: <EnterPage /> },
@@ -21,6 +22,7 @@ export const routes = [
           { index: true, element: <Navigate to="/budgets" replace /> },
           { path: 'budgets', element: <BudgetsPage /> },
           { path: 'activity', element: <ActivityPage /> },
+          { path: 'shopping', element: <ShoppingPage /> },
         ],
       },
     ],

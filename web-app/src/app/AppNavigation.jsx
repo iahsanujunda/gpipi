@@ -7,6 +7,7 @@ import {
   BrandIcon,
   BudgetsIcon,
   CloseIcon,
+  ShoppingListIcon,
 } from './AppIcons'
 import { usePageActions } from './pageActions'
 
@@ -20,6 +21,7 @@ const CLOSE_EASING = 'cubic-bezier(0.4, 0, 1, 1)'
 const navigationItems = [
   { label: 'Budgets', to: '/budgets', icon: BudgetsIcon },
   { label: 'Activity', to: '/activity', icon: ActivityIcon },
+  { label: 'Shopping list', to: '/shopping', icon: ShoppingListIcon },
 ]
 
 function isCurrentPath(pathname, target) {

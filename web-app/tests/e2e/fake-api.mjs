@@ -79,6 +79,72 @@ const budgetSpend = new Map([
 ])
 
 let nextBudgetId = 10
+let nextShoppingMutation = 10
+
+const shoppingItems = [
+  {
+    id: '20000000-0000-0000-0000-000000000001',
+    item: 'Milk',
+    quantity: '2 cartons',
+    note: 'Full-fat',
+    status: 'PENDING',
+    addedBy: 'U-LOCAL',
+    addedAt: '2026-07-24T09:00:00+09:00',
+    boughtBy: null,
+    boughtAt: null,
+    removedBy: null,
+    removedAt: null,
+    currentMutationId: '30000000-0000-0000-0000-000000000001',
+  },
+  {
+    id: '20000000-0000-0000-0000-000000000002',
+    item: 'Bananas',
+    quantity: null,
+    note: 'A little green',
+    status: 'PENDING',
+    addedBy: 'U-LOCAL',
+    addedAt: '2026-07-25T09:00:00+09:00',
+    boughtBy: null,
+    boughtAt: null,
+    removedBy: null,
+    removedAt: null,
+    currentMutationId: '30000000-0000-0000-0000-000000000002',
+  },
+  {
+    id: '20000000-0000-0000-0000-000000000003',
+    item: 'Dishwasher tablets',
+    quantity: '1 box',
+    note: 'Unscented',
+    status: 'REMOVED',
+    addedBy: 'U-LOCAL',
+    addedAt: '2026-07-20T09:00:00+09:00',
+    boughtBy: null,
+    boughtAt: null,
+    removedBy: 'U-LOCAL',
+    removedAt: '2026-07-26T11:00:00+09:00',
+    currentMutationId: '30000000-0000-0000-0000-000000000003',
+  },
+  {
+    id: '20000000-0000-0000-0000-000000000004',
+    item: 'Eggs',
+    quantity: '12',
+    note: null,
+    status: 'BOUGHT',
+    addedBy: 'U-LOCAL',
+    addedAt: '2026-07-18T09:00:00+09:00',
+    boughtBy: 'U-LOCAL',
+    boughtAt: '2026-07-25T19:00:00+09:00',
+    removedBy: null,
+    removedAt: null,
+    currentMutationId: '30000000-0000-0000-0000-000000000004',
+  },
+]
+
+function nextMutationId() {
+  const id = `30000000-0000-0000-0000-${String(nextShoppingMutation).padStart(12, '0')}`
+  nextShoppingMutation += 1
+  return id
+}
 
 function budgetWindow(period, dateValue) {
   const start = new Date(`${dateValue}T00:00:00Z`)
@@ -137,6 +203,62 @@ createServer(async (request, response) => {
   }
   if (request.url?.startsWith('/api/expenses')) {
     sendJson(response, 200, expenses)
+    return
+  }
+  if (request.url === '/api/shopping/items' && request.method === 'GET') {
+    sendJson(response, 200, shoppingItems)
+    return
+  }
+
+  const shoppingMutationMatch = request.url?.match(
+    /^\/api\/shopping\/items\/([^/]+)(?:\/(remove|restore))?$/,
+  )
+  if (shoppingMutationMatch && request.method === 'PUT') {
+    const item = shoppingItems.find((candidate) => candidate.id === shoppingMutationMatch[1])
+    if (!item) {
+      sendJson(response, 404, { message: 'Shopping item not found.' })
+      return
+    }
+
+    const body = await readJson(request)
+    if (body.currentMutationId !== item.currentMutationId) {
+      sendJson(response, 409, { message: 'This shopping item changed. Refresh and try again.' })
+      return
+    }
+
+    const action = shoppingMutationMatch[2] ?? 'edit'
+    if (action === 'edit' && item.status === 'PENDING') {
+      Object.assign(item, {
+        item: body.item,
+        quantity: body.quantity,
+        note: body.note,
+        currentMutationId: nextMutationId(),
+      })
+      sendJson(response, 200, item)
+      return
+    }
+    if (action === 'remove' && item.status === 'PENDING') {
+      Object.assign(item, {
+        status: 'REMOVED',
+        removedBy: 'U-LOCAL',
+        removedAt: new Date().toISOString(),
+        currentMutationId: nextMutationId(),
+      })
+      sendJson(response, 200, item)
+      return
+    }
+    if (action === 'restore' && item.status === 'REMOVED') {
+      Object.assign(item, {
+        status: 'PENDING',
+        removedBy: null,
+        removedAt: null,
+        currentMutationId: nextMutationId(),
+      })
+      sendJson(response, 200, item)
+      return
+    }
+
+    sendJson(response, 409, { message: 'This shopping item can no longer be changed.' })
     return
   }
   if (request.url?.startsWith('/api/budgets/spend') && request.method === 'GET') {

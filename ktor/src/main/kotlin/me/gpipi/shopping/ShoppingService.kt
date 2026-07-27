@@ -6,6 +6,7 @@ import java.time.ZoneOffset
 import java.util.Locale
 import java.util.UUID
 import me.gpipi.config.dbQuery
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.Database
 
 data class ShoppingItemText(
@@ -27,6 +28,18 @@ data class ShoppingUndoResult(
     val mutationId: UUID?,
 )
 
+sealed interface ShoppingItemMutationResult {
+    data class Updated(val item: ShoppingItemRow) : ShoppingItemMutationResult
+
+    data object NotFound : ShoppingItemMutationResult
+
+    data object Conflict : ShoppingItemMutationResult
+
+    data object DuplicatePendingItem : ShoppingItemMutationResult
+
+    data class Invalid(val message: String) : ShoppingItemMutationResult
+}
+
 class ShoppingService(
     private val db: Database,
     private val repository: ShoppingRepository,
@@ -34,6 +47,110 @@ class ShoppingService(
 ) {
     suspend fun listPending(): List<ShoppingItemRow> =
         dbQuery(db) { repository.listPendingItems() }
+
+    suspend fun listAll(): List<ShoppingItemRow> =
+        dbQuery(db) { repository.listAllItems() }
+
+    suspend fun editItem(
+        id: UUID,
+        expectedMutationId: UUID,
+        actorId: String,
+        input: ShoppingDraftItemInput,
+    ): ShoppingItemMutationResult {
+        val normalized = normalize(input)
+        validateItem(normalized)?.let { return it }
+
+        return duplicateAwareMutation {
+            val current = repository.findItem(id)
+                ?: return@duplicateAwareMutation ShoppingItemMutationResult.NotFound
+            if (
+                current.status != "PENDING" ||
+                current.currentMutationId != expectedMutationId
+            ) {
+                return@duplicateAwareMutation ShoppingItemMutationResult.Conflict
+            }
+
+            repository.lockIdentityKeys(
+                listOf(identityKey(current), identityKey(normalized)),
+            )
+            val mutationId = repository.createMutation("EDIT", actorId)
+            val updated = repository.editPendingItem(
+                id = id,
+                expectedMutationId = expectedMutationId,
+                mutationId = mutationId,
+                input = normalized,
+            )
+            if (updated == null) {
+                repository.discardEmptyMutation(mutationId)
+                ShoppingItemMutationResult.Conflict
+            } else {
+                repository.linkMutationItems(mutationId, listOf(id))
+                ShoppingItemMutationResult.Updated(updated)
+            }
+        }
+    }
+
+    suspend fun removeItem(
+        id: UUID,
+        expectedMutationId: UUID,
+        actorId: String,
+    ): ShoppingItemMutationResult = dbQuery(db) {
+        val current = repository.findItem(id)
+            ?: return@dbQuery ShoppingItemMutationResult.NotFound
+        if (
+            current.status != "PENDING" ||
+            current.currentMutationId != expectedMutationId
+        ) {
+            return@dbQuery ShoppingItemMutationResult.Conflict
+        }
+
+        repository.lockIdentityKeys(listOf(identityKey(current)))
+        val mutationId = repository.createMutation("REMOVE", actorId)
+        val removed = repository.removePendingItem(
+            id = id,
+            expectedMutationId = expectedMutationId,
+            mutationId = mutationId,
+            actorId = actorId,
+            occurredAt = now(),
+        )
+        if (removed == null) {
+            repository.discardEmptyMutation(mutationId)
+            ShoppingItemMutationResult.Conflict
+        } else {
+            repository.linkMutationItems(mutationId, listOf(id))
+            ShoppingItemMutationResult.Updated(removed)
+        }
+    }
+
+    suspend fun restoreItem(
+        id: UUID,
+        expectedMutationId: UUID,
+        actorId: String,
+    ): ShoppingItemMutationResult = duplicateAwareMutation {
+        val current = repository.findItem(id)
+            ?: return@duplicateAwareMutation ShoppingItemMutationResult.NotFound
+        if (
+            current.status != "REMOVED" ||
+            current.currentMutationId != expectedMutationId
+        ) {
+            return@duplicateAwareMutation ShoppingItemMutationResult.Conflict
+        }
+
+        repository.lockIdentityKeys(listOf(identityKey(current)))
+        val mutationId = repository.createMutation("RESTORE", actorId)
+        val restored = repository.restoreRemovedItem(
+            id = id,
+            expectedMutationId = expectedMutationId,
+            mutationId = mutationId,
+        )
+        if (restored == null) {
+            repository.discardEmptyMutation(mutationId)
+            ShoppingItemMutationResult.Conflict
+        } else {
+            repository.linkMutationItems(mutationId, listOf(id))
+            ShoppingItemMutationResult.Updated(restored)
+        }
+    }
 
     suspend fun confirmAdd(
         draftId: UUID,
@@ -201,6 +318,38 @@ class ShoppingService(
 
     private fun now(): OffsetDateTime =
         OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
+
+    private suspend fun duplicateAwareMutation(
+        block: () -> ShoppingItemMutationResult,
+    ): ShoppingItemMutationResult =
+        try {
+            dbQuery(db, block)
+        } catch (ex: ExposedSQLException) {
+            if (ex.sqlState == "23505") {
+                ShoppingItemMutationResult.DuplicatePendingItem
+            } else {
+                throw ex
+            }
+        }
+
+    private fun validateItem(
+        input: ShoppingDraftItemInput,
+    ): ShoppingItemMutationResult.Invalid? =
+        when {
+            input.item.isBlank() ->
+                ShoppingItemMutationResult.Invalid("'item' must not be blank.")
+
+            input.item.length > 200 ->
+                ShoppingItemMutationResult.Invalid("'item' must be 200 characters or fewer.")
+
+            (input.quantity?.length ?: 0) > 200 ->
+                ShoppingItemMutationResult.Invalid("'quantity' must be 200 characters or fewer.")
+
+            (input.note?.length ?: 0) > 500 ->
+                ShoppingItemMutationResult.Invalid("'note' must be 500 characters or fewer.")
+
+            else -> null
+        }
 }
 
 private fun normalize(input: ShoppingDraftItemInput) =

@@ -267,6 +267,71 @@ class ShoppingRepository {
             )
             .map(::toItemRow)
 
+    fun listAllItems(): List<ShoppingItemRow> =
+        ShoppingItem.selectAll()
+            .orderBy(
+                ShoppingItem.addedAt to SortOrder.DESC,
+                ShoppingItem.id to SortOrder.DESC,
+            )
+            .map(::toItemRow)
+
+    fun editPendingItem(
+        id: UUID,
+        expectedMutationId: UUID,
+        mutationId: UUID,
+        input: ShoppingDraftItemInput,
+    ): ShoppingItemRow? =
+        ShoppingItem.updateReturning(
+            where = {
+                (ShoppingItem.id eq id) and
+                    (ShoppingItem.status eq "PENDING") and
+                    (ShoppingItem.currentMutationId eq expectedMutationId)
+            },
+        ) {
+            it[ShoppingItem.item] = input.item
+            it[ShoppingItem.quantity] = input.quantity
+            it[ShoppingItem.note] = input.note
+            it[ShoppingItem.currentMutationId] = mutationId
+        }.singleOrNull()?.let(::toItemRow)
+
+    fun removePendingItem(
+        id: UUID,
+        expectedMutationId: UUID,
+        mutationId: UUID,
+        actorId: String,
+        occurredAt: OffsetDateTime,
+    ): ShoppingItemRow? =
+        ShoppingItem.updateReturning(
+            where = {
+                (ShoppingItem.id eq id) and
+                    (ShoppingItem.status eq "PENDING") and
+                    (ShoppingItem.currentMutationId eq expectedMutationId)
+            },
+        ) {
+            it[ShoppingItem.status] = "REMOVED"
+            it[ShoppingItem.removedBy] = actorId
+            it[ShoppingItem.removedAt] = occurredAt
+            it[ShoppingItem.currentMutationId] = mutationId
+        }.singleOrNull()?.let(::toItemRow)
+
+    fun restoreRemovedItem(
+        id: UUID,
+        expectedMutationId: UUID,
+        mutationId: UUID,
+    ): ShoppingItemRow? =
+        ShoppingItem.updateReturning(
+            where = {
+                (ShoppingItem.id eq id) and
+                    (ShoppingItem.status eq "REMOVED") and
+                    (ShoppingItem.currentMutationId eq expectedMutationId)
+            },
+        ) {
+            it[ShoppingItem.status] = "PENDING"
+            it[ShoppingItem.removedBy] = null
+            it[ShoppingItem.removedAt] = null
+            it[ShoppingItem.currentMutationId] = mutationId
+        }.singleOrNull()?.let(::toItemRow)
+
     fun markBought(
         ids: Collection<UUID>,
         actorId: String,

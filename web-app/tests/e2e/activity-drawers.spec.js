@@ -20,7 +20,7 @@ async function expectBottomSheetGeometry(page, sheet) {
 test.beforeEach(async ({ page }) => {
   await page.goto('/activity')
   await expect(page.getByRole('heading', { name: 'Activity', exact: true })).toBeVisible()
-  await expect(page.getByText('Life Supermarket')).toBeVisible()
+  await expect(page.getByText('vegetables and pantry restock')).toBeVisible()
 })
 
 test('mobile select drawer animates, stays below the viewport top, and dismisses through the revealed backdrop', async ({ page }) => {
@@ -120,7 +120,7 @@ test('mobile select and date drawers complete their interactions and restore foc
   await expect(optionSheet).toBeHidden()
   await expect(category).toHaveValue('Monthly Groceries')
   await expect(category).toBeFocused()
-  await expect(page.getByText('Ramen Station')).toBeHidden()
+  await expect(page.getByText('ramen after work')).toBeHidden()
 
   const from = page.getByRole('combobox', { name: 'From' })
   await from.click()

@@ -70,6 +70,35 @@ export function ActivityIcon(props) {
   )
 }
 
+export function ShoppingListIcon(props) {
+  return (
+    <SvgIcon viewBox="0 0 24 24" {...props}>
+      <path
+        d="M5 5.5h14v15H5zM8 3v5m8-5v5M8.5 12h7m-7 4h5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </SvgIcon>
+  )
+}
+
+export function RemoveIcon(props) {
+  return (
+    <SvgIcon viewBox="0 0 24 24" {...props}>
+      <path
+        d="M5 12h14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </SvgIcon>
+  )
+}
+
 export function ChevronDownIcon(props) {
   return (
     <SvgIcon viewBox="0 0 24 24" {...props}>

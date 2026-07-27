@@ -44,6 +44,7 @@ import me.gpipi.slack.slackRoutes
 import me.gpipi.shopping.ShoppingExtractionService
 import me.gpipi.shopping.ShoppingRepository
 import me.gpipi.shopping.ShoppingService
+import me.gpipi.shopping.shoppingApiRoutes
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -163,6 +164,7 @@ fun Application.configureRouting() {
         authenticate("auth-session") {
             expenseApiRoutes(db, expenseRepo)
             budgetApiRoutes(budgetService)
+            shoppingApiRoutes(shoppingService)
         }
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")

@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="430" height="940" viewBox="0 0 430 940" role="img" aria-labelledby="title description">
+  <title id="title">Gpipi shopping list management page on mobile</title>
+  <desc id="description">The authenticated Shopping list page shows active household items added through Slack. Each item can be edited or reversibly removed from the active list. There is deliberately no add control.</desc>
+
+  <defs>
+    <clipPath id="screen-clip">
+      <rect x="28" y="18" width="374" height="904" rx="40" />
+    </clipPath>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity="0.18" />
+    </filter>
+    <filter id="control-shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1D4E89" flood-opacity="0.22" />
+    </filter>
+    <style>
+      text { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .heading { fill: #1D4E89; font-weight: 700; }
+      .body { fill: #17312E; }
+      .secondary { fill: #526966; }
+      .eyebrow { fill: #526966; font-size: 9px; font-weight: 750; letter-spacing: .8px; }
+    </style>
+  </defs>
+
+  <rect width="430" height="940" fill="#E7F5F7" />
+  <rect x="20" y="8" width="390" height="924" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+  <rect x="28" y="18" width="374" height="904" rx="40" fill="#F4FAFB" />
+
+  <g clip-path="url(#screen-clip)">
+    <rect x="28" y="18" width="374" height="904" fill="#F4FAFB" />
+
+    <!-- Mobile status bar -->
+    <rect x="28" y="18" width="374" height="38" fill="#FFFFFF" />
+    <text x="48" y="42" fill="#1D4E89" font-size="13" font-weight="700">9:41</text>
+    <g fill="none" stroke="#1D4E89" stroke-width="1.8" stroke-linecap="round">
+      <path d="M348 38c4-5 9-5 13 0" />
+      <path d="M351 41c2-3 5-3 7 0" />
+      <rect x="370" y="33" width="18" height="10" rx="2" />
+    </g>
+    <rect x="372.5" y="35.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+
+    <!-- Shared application bar -->
+    <rect x="28" y="56" width="374" height="58" fill="#FFFFFF" />
+    <rect x="36" y="63" width="44" height="44" rx="10" fill="#FFFFFF" />
+    <path d="M59 75 49 85l10 10M50 85h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="88" y="91" fill="#1D4E89" font-size="17" font-weight="700" letter-spacing="-0.2">gpipi</text>
+    <line x1="28" y1="113.5" x2="402" y2="113.5" stroke="#C9E2E5" />
+
+    <!-- Page heading -->
+    <text x="44" y="158" class="heading" font-size="30" letter-spacing="-0.8">Shopping list</text>
+    <text x="44" y="184" class="secondary" font-size="14">Manage items already added through Slack.</text>
+
+    <!-- Source notice: information, not an add affordance -->
+    <rect x="44" y="207" width="342" height="54" rx="11" fill="#DFF4F4" />
+    <circle cx="67" cy="234" r="12" fill="#FFFFFF" />
+    <path d="M67 229v1M67 234v6" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" />
+    <text x="88" y="231" class="body" font-size="12.5" font-weight="700">New items start in Slack</text>
+    <text x="88" y="247" class="secondary" font-size="11">Use “list add” in your household channel.</text>
+
+    <!-- Active / history scope -->
+    <rect x="44" y="281" width="342" height="44" rx="10" fill="#E5EFF1" />
+    <rect x="47" y="284" width="168" height="38" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="131" y="308" fill="#1D4E89" font-size="13" font-weight="700" text-anchor="middle">Active 4</text>
+    <text x="300" y="308" fill="#526966" font-size="13" font-weight="650" text-anchor="middle">History 3</text>
+
+    <text x="44" y="353" class="heading" font-size="15">Active items</text>
+    <text x="386" y="353" class="secondary" font-size="11" text-anchor="end">Updated just now</text>
+
+    <!-- Item 1 -->
+    <g transform="translate(44 370)">
+      <rect width="342" height="102" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="22" cy="26" r="8" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="42" y="30" class="heading" font-size="16">Milk</text>
+      <rect x="273" y="12" width="48" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m289 41 2-8 12-12 6 6-12 12-8 2Zm13-17 4 4" fill="none" stroke="#16679A" stroke-width="1.7" stroke-linejoin="round" />
+      <text x="42" y="53" class="body" font-size="12">1 carton · low fat</text>
+      <line x1="42" y1="67" x2="321" y2="67" stroke="#E2EEF0" />
+      <text x="42" y="87" class="secondary" font-size="10.5">Added by Junda · Today, 08:24</text>
+    </g>
+
+    <!-- Item 2 -->
+    <g transform="translate(44 484)">
+      <rect width="342" height="102" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="22" cy="26" r="8" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="42" y="30" class="heading" font-size="16">Ground beef</text>
+      <rect x="273" y="12" width="48" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m289 41 2-8 12-12 6 6-12 12-8 2Zm13-17 4 4" fill="none" stroke="#16679A" stroke-width="1.7" stroke-linejoin="round" />
+      <text x="42" y="53" class="body" font-size="12">1 kg · for hamburgers</text>
+      <line x1="42" y1="67" x2="321" y2="67" stroke="#E2EEF0" />
+      <text x="42" y="87" class="secondary" font-size="10.5">Added by Wulan · Yesterday, 18:06</text>
+    </g>
+
+    <!-- Item 3 -->
+    <g transform="translate(44 598)">
+      <rect width="342" height="102" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="22" cy="26" r="8" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="42" y="30" class="heading" font-size="16">Diapers</text>
+      <rect x="273" y="12" width="48" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m289 41 2-8 12-12 6 6-12 12-8 2Zm13-17 4 4" fill="none" stroke="#16679A" stroke-width="1.7" stroke-linejoin="round" />
+      <text x="42" y="53" class="body" font-size="12">Size L · for night</text>
+      <line x1="42" y1="67" x2="321" y2="67" stroke="#E2EEF0" />
+      <text x="42" y="87" class="secondary" font-size="10.5">Added by Wulan · 25 Jul, 21:40</text>
+    </g>
+
+    <!-- Item 4, partially visible to imply scroll -->
+    <g transform="translate(44 712)">
+      <rect width="342" height="102" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="22" cy="26" r="8" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="42" y="30" class="heading" font-size="16">Cat litter</text>
+      <rect x="273" y="12" width="48" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m289 41 2-8 12-12 6 6-12 12-8 2Zm13-17 4 4" fill="none" stroke="#16679A" stroke-width="1.7" stroke-linejoin="round" />
+      <text x="42" y="53" class="body" font-size="12">2 bags · unscented</text>
+      <line x1="42" y1="67" x2="321" y2="67" stroke="#E2EEF0" />
+      <text x="42" y="87" class="secondary" font-size="10.5">Added by Junda · 24 Jul, 11:15</text>
+    </g>
+
+    <!-- Fixed bottom navigation dock: deliberately no page-level add action -->
+    <rect x="28" y="850" width="374" height="72" fill="#F4FAFB" fill-opacity="0.98" />
+    <line x1="28" y1="850" x2="402" y2="850" stroke="#D9E9EB" />
+    <circle cx="215" cy="886" r="28" fill="#16679A" filter="url(#control-shadow)" />
+    <rect x="202" y="873" width="10" height="10" rx="2.5" fill="#3FC1C0" />
+    <rect x="218" y="873" width="10" height="10" rx="2.5" fill="#FFFFFF" />
+    <rect x="202" y="889" width="10" height="10" rx="2.5" fill="#FFFFFF" />
+    <rect x="218" y="889" width="10" height="10" rx="2.5" fill="#3FC1C0" />
+  </g>
+
+  <rect x="166" y="27" width="98" height="24" rx="12" fill="#1D4E89" />
+</svg>

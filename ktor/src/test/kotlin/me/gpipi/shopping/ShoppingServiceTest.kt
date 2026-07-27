@@ -7,6 +7,7 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -302,6 +303,223 @@ class ShoppingServiceTest : PersistenceTest() {
         assertEquals(
             "BOUGHT",
             query { ShoppingItem.selectAll().single()[ShoppingItem.status] },
+        )
+    }
+
+    @Test
+    fun `web edit normalizes fields and makes an old Slack Undo stale`() = runBlocking {
+        val draftId = givenDraft(
+            "EvWebEdit",
+            listOf(ShoppingDraftItemInput("milk", "1 carton", "low fat")),
+        )
+        val add = assertNotNull(service.confirmAdd(draftId, "U-add"))
+        val before = service.listPending().single()
+
+        val result = assertIs<ShoppingItemMutationResult.Updated>(
+            service.editItem(
+                id = before.id,
+                expectedMutationId = before.currentMutationId,
+                actorId = "U-editor",
+                input = ShoppingDraftItemInput(
+                    item = " Whole milk ",
+                    quantity = " 2 cartons ",
+                    note = " for breakfast ",
+                ),
+            ),
+        )
+
+        assertEquals("Whole milk", result.item.item)
+        assertEquals("2 cartons", result.item.quantity)
+        assertEquals("for breakfast", result.item.note)
+        assertEquals("PENDING", result.item.status)
+        assertTrue(result.item.currentMutationId != before.currentMutationId)
+
+        val staleUndo = assertNotNull(
+            service.undo(assertNotNull(add.mutationId), "U-stale"),
+        )
+        assertTrue(staleUndo.changed.isEmpty())
+        assertEquals("PENDING", service.listPending().single().status)
+
+        val editMutation = query {
+            ShoppingMutation.selectAll()
+                .single { it[ShoppingMutation.kind] == "EDIT" }
+        }
+        assertEquals("U-editor", editMutation[ShoppingMutation.actorId])
+        assertEquals(
+            result.item.currentMutationId,
+            editMutation[ShoppingMutation.id],
+        )
+    }
+
+    @Test
+    fun `web edit rejects an identical active identity and leaves both rows unchanged`() = runBlocking {
+        val firstDraft = givenDraft(
+            "EvWebEditDuplicateFirst",
+            listOf(ShoppingDraftItemInput("milk")),
+        )
+        assertNotNull(service.confirmAdd(firstDraft, "U-add"))
+        val secondDraft = givenDraft(
+            "EvWebEditDuplicateSecond",
+            listOf(ShoppingDraftItemInput("eggs")),
+        )
+        assertNotNull(service.confirmAdd(secondDraft, "U-add"))
+        val eggs = service.listPending().single { it.item == "eggs" }
+
+        val result = service.editItem(
+            id = eggs.id,
+            expectedMutationId = eggs.currentMutationId,
+            actorId = "U-editor",
+            input = ShoppingDraftItemInput(" MILK "),
+        )
+
+        assertEquals(ShoppingItemMutationResult.DuplicatePendingItem, result)
+        assertEquals(
+            setOf("milk", "eggs"),
+            service.listPending().map { it.item }.toSet(),
+        )
+        assertEquals(
+            2L,
+            query { ShoppingMutation.selectAll().count() },
+        )
+    }
+
+    @Test
+    fun `web remove retains the row and records attributable removal metadata`() = runBlocking {
+        val draftId = givenDraft(
+            "EvWebRemove",
+            listOf(ShoppingDraftItemInput("milk")),
+        )
+        assertNotNull(service.confirmAdd(draftId, "U-add"))
+        val before = service.listPending().single()
+
+        val result = assertIs<ShoppingItemMutationResult.Updated>(
+            service.removeItem(
+                id = before.id,
+                expectedMutationId = before.currentMutationId,
+                actorId = "U-remover",
+            ),
+        )
+
+        assertEquals("REMOVED", result.item.status)
+        assertEquals("U-remover", result.item.removedBy)
+        assertEquals(occurredAt, result.item.removedAt)
+        assertTrue(service.listPending().isEmpty())
+        assertEquals(1L, query { ShoppingItem.selectAll().count() })
+
+        val removeMutation = query {
+            ShoppingMutation.selectAll()
+                .single { it[ShoppingMutation.kind] == "REMOVE" }
+        }
+        assertEquals("U-remover", removeMutation[ShoppingMutation.actorId])
+        assertEquals(
+            result.item.currentMutationId,
+            removeMutation[ShoppingMutation.id],
+        )
+    }
+
+    @Test
+    fun `web restore clears removal metadata and advances the item version`() = runBlocking {
+        val draftId = givenDraft(
+            "EvWebRestore",
+            listOf(ShoppingDraftItemInput("milk")),
+        )
+        assertNotNull(service.confirmAdd(draftId, "U-add"))
+        val pending = service.listPending().single()
+        val removed = assertIs<ShoppingItemMutationResult.Updated>(
+            service.removeItem(
+                pending.id,
+                pending.currentMutationId,
+                "U-remover",
+            ),
+        ).item
+
+        val result = assertIs<ShoppingItemMutationResult.Updated>(
+            service.restoreItem(
+                id = removed.id,
+                expectedMutationId = removed.currentMutationId,
+                actorId = "U-restorer",
+            ),
+        )
+
+        assertEquals("PENDING", result.item.status)
+        assertNull(result.item.removedBy)
+        assertNull(result.item.removedAt)
+        assertTrue(result.item.currentMutationId != removed.currentMutationId)
+        val restoreMutation = query {
+            ShoppingMutation.selectAll()
+                .single { it[ShoppingMutation.kind] == "RESTORE" }
+        }
+        assertEquals("U-restorer", restoreMutation[ShoppingMutation.actorId])
+    }
+
+    @Test
+    fun `web restore reports duplicate when an identical active item now exists`() = runBlocking {
+        val originalDraft = givenDraft(
+            "EvWebRestoreOriginal",
+            listOf(ShoppingDraftItemInput("milk")),
+        )
+        assertNotNull(service.confirmAdd(originalDraft, "U-add"))
+        val original = service.listPending().single()
+        val removed = assertIs<ShoppingItemMutationResult.Updated>(
+            service.removeItem(
+                original.id,
+                original.currentMutationId,
+                "U-remover",
+            ),
+        ).item
+        val replacementDraft = givenDraft(
+            "EvWebRestoreReplacement",
+            listOf(ShoppingDraftItemInput("milk")),
+        )
+        assertNotNull(service.confirmAdd(replacementDraft, "U-add"))
+
+        val result = service.restoreItem(
+            id = removed.id,
+            expectedMutationId = removed.currentMutationId,
+            actorId = "U-restorer",
+        )
+
+        assertEquals(ShoppingItemMutationResult.DuplicatePendingItem, result)
+        assertEquals(1, service.listPending().size)
+        assertEquals(
+            "REMOVED",
+            query {
+                ShoppingItem.selectAll()
+                    .single { it[ShoppingItem.id] == removed.id }
+                    .get(ShoppingItem.status)
+            },
+        )
+    }
+
+    @Test
+    fun `web mutations reject stale item versions`() = runBlocking {
+        val draftId = givenDraft(
+            "EvWebStale",
+            listOf(ShoppingDraftItemInput("milk")),
+        )
+        assertNotNull(service.confirmAdd(draftId, "U-add"))
+        val before = service.listPending().single()
+        val edited = assertIs<ShoppingItemMutationResult.Updated>(
+            service.editItem(
+                before.id,
+                before.currentMutationId,
+                "U-editor",
+                ShoppingDraftItemInput("whole milk"),
+            ),
+        ).item
+
+        assertEquals(
+            ShoppingItemMutationResult.Conflict,
+            service.removeItem(
+                before.id,
+                before.currentMutationId,
+                "U-stale",
+            ),
+        )
+        assertEquals("PENDING", edited.status)
+        assertEquals(
+            edited.currentMutationId,
+            service.listPending().single().currentMutationId,
         )
     }
 }

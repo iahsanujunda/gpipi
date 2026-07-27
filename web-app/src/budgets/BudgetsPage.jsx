@@ -13,6 +13,8 @@ import {
 import {
   AddIcon,
   CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   EditIcon,
   WarningIcon,
 } from '@/app/AppIcons'
@@ -47,12 +49,36 @@ function dateFromIso(value) {
   return new Date(`${value}T00:00:00Z`)
 }
 
-function formatAsOf(value, includeYear = false) {
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    ...(includeYear ? { year: 'numeric' } : {}),
-  }).format(dateFromIso(value))
+function dateKey(date) {
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, '0'),
+    String(date.getUTCDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function shiftWeek(value, amount) {
+  const date = dateFromIso(value)
+  date.setUTCDate(date.getUTCDate() + (amount * 7))
+  return dateKey(date)
+}
+
+function monthStart(value) {
+  const date = dateFromIso(value)
+  date.setUTCDate(1)
+  return dateKey(date)
+}
+
+function shiftMonth(value, amount) {
+  const date = dateFromIso(monthStart(value))
+  date.setUTCMonth(date.getUTCMonth() + amount)
+  return dateKey(date)
+}
+
+function weekStart(value) {
+  const date = dateFromIso(value)
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7))
+  return dateKey(date)
 }
 
 function dateParts(date) {
@@ -92,6 +118,10 @@ function formatPeriodWindow(period, budgetDate, spend) {
     ? `${startParts.day}–${endParts.day} ${endParts.month}`
     : `${startParts.day} ${startParts.month}–${endParts.day} ${endParts.month}`
   return `WEEKLY · ${range}`
+}
+
+function formatPeriodLabel(period, budgetDate, spend) {
+  return formatPeriodWindow(period, budgetDate, spend).replace(`${period} · `, '')
 }
 
 function utilizationFor(spend) {
@@ -194,7 +224,7 @@ function SpendingUnavailable({ onRetry, compact = false }) {
   )
 }
 
-function MobileSpending({ budget, isError, isPending, onRetry, spend }) {
+function MobileSpending({ budget, historical, isError, isPending, onRetry, spend }) {
   if (isPending) return <SpendingLoading name={budget.name} />
   if (isError || !spend) return <SpendingUnavailable onRetry={onRetry} />
 
@@ -229,17 +259,18 @@ function MobileSpending({ budget, isError, isPending, onRetry, spend }) {
         </Stack>
         <Stack spacing={0.25} sx={{ alignItems: 'flex-end' }}>
           <Typography sx={{ ...metricLabelSx, color: overCap ? 'error.main' : 'text.secondary' }}>
-            {overCap ? 'Over cap' : 'Remaining'}
+            {historical ? 'Vs current cap' : overCap ? 'Over cap' : 'Remaining'}
           </Typography>
           <Typography sx={{ ...metricValueSx, color: overCap ? 'error.main' : 'text.heading' }}>
-            {formatMoney(Math.abs(spend.remaining))} {overCap ? 'over' : 'left'}
+            {formatMoney(Math.abs(spend.remaining))}{' '}
+            {historical ? (overCap ? 'over' : 'under') : (overCap ? 'over' : 'left')}
           </Typography>
         </Stack>
       </Stack>
       <UtilizationBar name={budget.name} spend={spend} />
       <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
         <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-          Cap {formatMoney(spend.cap)}
+          {historical ? 'Current cap' : 'Cap'} {formatMoney(spend.cap)}
         </Typography>
         <Typography
           sx={{
@@ -308,8 +339,8 @@ function EditButton({ budget, onEdit }) {
 }
 
 function BudgetCards({
-  budgetDate,
   budgets,
+  historical,
   highlightedId,
   onEdit,
   onRetrySpend,
@@ -346,7 +377,9 @@ function BudgetCards({
                 <EditButton budget={budget} onEdit={onEdit} />
               </Stack>
               <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                <Chip label={formatPeriodWindow(budget.period, budgetDate, spend)} size="small" />
+                {historical && (
+                  <Chip label="CURRENT CAP BASIS" size="small" />
+                )}
                 <Chip
                   label={budget.slackLoggable ? 'SLACK ON' : 'PLANNING ONLY'}
                   size="small"
@@ -356,6 +389,7 @@ function BudgetCards({
               </Stack>
               <MobileSpending
                 budget={budget}
+                historical={historical}
                 isError={spendError}
                 isPending={spendPending}
                 onRetry={onRetrySpend}
@@ -409,10 +443,13 @@ function DesktopSpending({ budget, isError, isPending, onRetry, spend }) {
   )
 }
 
-function Difference({ spend }) {
+function Difference({ historical, spend }) {
   if (!spend) return <Typography color="text.secondary">—</Typography>
   if (spend.cap === 0) return <Typography color="text.secondary">No cap set</Typography>
   const overCap = spend.remaining < 0
+  const qualifier = historical
+    ? `${overCap ? 'over' : 'under'} current cap`
+    : overCap ? 'over' : 'left'
   return (
     <Typography
       sx={{
@@ -421,16 +458,17 @@ function Difference({ spend }) {
         whiteSpace: 'nowrap',
       }}
     >
-      {formatMoney(Math.abs(spend.remaining))} {overCap ? 'over' : 'left'}
+      {formatMoney(Math.abs(spend.remaining))} {qualifier}
     </Typography>
   )
 }
 
-const tableGrid = 'minmax(165px, 1.25fr) 100px minmax(190px, 1.4fr) 120px 48px 44px'
+const tableGrid = 'minmax(180px, 1.25fr) minmax(210px, 1.4fr) minmax(150px, .85fr) 60px 52px'
 
 function BudgetTable({
-  budgetDate,
+  ariaLabel,
   budgets,
+  historical,
   highlightedId,
   onEdit,
   onRetrySpend,
@@ -441,7 +479,7 @@ function BudgetTable({
   return (
     <Box
       role="table"
-      aria-label="Active budget lines"
+      aria-label={ariaLabel}
       sx={{
         display: { xs: 'none', md: 'block' },
         overflow: 'hidden',
@@ -466,7 +504,13 @@ function BudgetTable({
             borderColor: 'divider',
           }}
         >
-          {['Budget line', 'Window', 'Spent / cap', 'Difference', 'Slack', ''].map((label, index) => (
+          {[
+            'Budget line',
+            historical ? 'Spent / current cap' : 'Spent / cap',
+            'Difference',
+            'Slack',
+            '',
+          ].map((label, index) => (
             <Typography
               key={`${label}-${index}`}
               role="columnheader"
@@ -509,9 +553,6 @@ function BudgetTable({
                 <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>{budget.name}</Typography>
                 <Typography color="text.secondary" variant="body2" noWrap>{budget.description}</Typography>
               </Box>
-              <Typography role="cell" color="text.secondary" variant="body2">
-                {formatPeriodWindow(budget.period, budgetDate, spend).replace(`${budget.period} · `, '')}
-              </Typography>
               <Box role="cell" sx={{ minWidth: 0 }}>
                 <DesktopSpending
                   budget={budget}
@@ -522,7 +563,9 @@ function BudgetTable({
                 />
               </Box>
               <Box role="cell">
-                {!spendPending && !spendError && <Difference spend={spend} />}
+                {!spendPending && !spendError && (
+                  <Difference historical={historical} spend={spend} />
+                )}
               </Box>
               <Typography role="cell" color="text.secondary" variant="body2">
                 {budget.slackLoggable ? 'On' : 'Off'}
@@ -538,10 +581,203 @@ function BudgetTable({
   )
 }
 
+function PeriodNavigator({
+  budgetDate,
+  currentDate,
+  onChange,
+  period,
+  spend,
+}) {
+  const weekly = period === 'WEEKLY'
+  const historical = weekly
+    ? weekStart(budgetDate) !== weekStart(currentDate)
+    : monthStart(budgetDate) !== monthStart(currentDate)
+  const periodName = weekly ? 'week' : 'month'
+  const periodLabel = formatPeriodLabel(period, budgetDate, spend)
+
+  function move(amount) {
+    const next = weekly
+      ? shiftWeek(budgetDate, amount)
+      : shiftMonth(budgetDate, amount)
+    const currentBucket = weekly ? weekStart(currentDate) : monthStart(currentDate)
+    const nextBucket = weekly ? weekStart(next) : monthStart(next)
+    onChange(nextBucket > currentBucket ? currentBucket : next)
+  }
+
+  return (
+    <Stack
+      direction="row"
+      spacing={0.75}
+      sx={{
+        alignItems: 'center',
+        justifyContent: { xs: 'flex-end', md: 'initial' },
+        flexWrap: 'wrap',
+      }}
+    >
+      <IconButton
+        aria-label={`Previous ${periodName}`}
+        onClick={() => move(-1)}
+        sx={periodButtonSx}
+      >
+        <ChevronLeftIcon />
+      </IconButton>
+      <Stack
+        aria-live="polite"
+        spacing={0.1}
+        sx={{
+          justifyContent: 'center',
+          minWidth: { xs: 96, sm: 116 },
+          minHeight: 44,
+          px: 1.25,
+          border: 1,
+          borderColor: historical ? 'brandAccent.main' : 'divider',
+          borderRadius: 2.5,
+          bgcolor: historical ? 'highlight.main' : 'background.paper',
+          textAlign: 'center',
+        }}
+      >
+        <Typography sx={periodEyebrowSx}>
+          {historical ? `Past ${periodName}` : `This ${periodName}`}
+        </Typography>
+        <Typography sx={{ color: 'text.heading', fontSize: '0.75rem', fontWeight: 700 }}>
+          {periodLabel}
+        </Typography>
+      </Stack>
+      <IconButton
+        aria-label={`Next ${periodName}`}
+        disabled={!historical}
+        onClick={() => move(1)}
+        sx={periodButtonSx}
+      >
+        <ChevronRightIcon />
+      </IconButton>
+      {historical && (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => onChange(weekly ? currentDate : monthStart(currentDate))}
+          sx={{ minHeight: 44 }}
+        >
+          This {periodName}
+        </Button>
+      )}
+    </Stack>
+  )
+}
+
+const periodButtonSx = {
+  minWidth: 44,
+  minHeight: 44,
+  color: 'primary.main',
+  border: 1,
+  borderColor: 'divider',
+  borderRadius: 2.5,
+  bgcolor: 'background.paper',
+}
+
+const periodEyebrowSx = {
+  color: 'text.secondary',
+  fontSize: '0.625rem',
+  fontWeight: 700,
+  letterSpacing: '0.07em',
+  textTransform: 'uppercase',
+}
+
+function BudgetPeriodSection({
+  budgetDate,
+  budgets,
+  currentDate,
+  highlightedId,
+  onBudgetDateChange,
+  onEdit,
+  period,
+  spendQuery,
+}) {
+  const historical = period === 'WEEKLY'
+    ? weekStart(budgetDate) !== weekStart(currentDate)
+    : monthStart(budgetDate) !== monthStart(currentDate)
+  const spendRows = spendQuery.data ?? []
+  const spendByCategory = new Map(spendRows.map((row) => [row.categoryId, row]))
+  const periodSpend = spendRows.find((row) => row.period === period)
+  const overCapCount = budgets.filter((budget) => {
+    const spend = spendByCategory.get(budget.id)
+    return spend?.cap > 0 && spend.remaining < 0
+  }).length
+  const summary = `${budgets.length} ${budgets.length === 1 ? 'line' : 'lines'}${
+    !spendQuery.isPending && !spendQuery.isError ? ` · ${overCapCount} over cap` : ''
+  }`
+  const title = period === 'WEEKLY' ? 'Weekly' : 'Monthly'
+
+  return (
+    <Stack
+      component="section"
+      aria-labelledby={`${period.toLowerCase()}-budget-heading`}
+      spacing={1.5}
+    >
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+        }}
+      >
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline' }}>
+          <Typography id={`${period.toLowerCase()}-budget-heading`} variant="h6" component="h2">
+            {title}
+          </Typography>
+          <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+            {summary}
+          </Typography>
+        </Stack>
+        <PeriodNavigator
+          budgetDate={budgetDate}
+          currentDate={currentDate}
+          onChange={onBudgetDateChange}
+          period={period}
+          spend={periodSpend}
+        />
+      </Stack>
+
+      {historical && (
+        <Typography color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: { md: 'right' } }}>
+          Past spending is compared with each line&apos;s current cap.
+        </Typography>
+      )}
+
+      <BudgetCards
+        budgets={budgets}
+        historical={historical}
+        highlightedId={highlightedId}
+        onEdit={onEdit}
+        onRetrySpend={() => spendQuery.refetch()}
+        spendByCategory={spendByCategory}
+        spendError={spendQuery.isError}
+        spendPending={spendQuery.isPending}
+      />
+      <BudgetTable
+        ariaLabel={`${title} budget lines`}
+        budgets={budgets}
+        historical={historical}
+        highlightedId={highlightedId}
+        onEdit={onEdit}
+        onRetrySpend={() => spendQuery.refetch()}
+        spendByCategory={spendByCategory}
+        spendError={spendQuery.isError}
+        spendPending={spendQuery.isPending}
+      />
+    </Stack>
+  )
+}
+
 export default function BudgetsPage() {
-  const budgetDate = currentBudgetDate()
+  const currentDate = useMemo(() => currentBudgetDate(), [])
+  const [weeklyDate, setWeeklyDate] = useState(currentDate)
+  const [monthlyDate, setMonthlyDate] = useState(() => monthStart(currentDate))
   const budgets = useBudgets()
-  const budgetSpend = useBudgetSpend(budgetDate)
+  const weeklySpend = useBudgetSpend(weeklyDate)
+  const monthlySpend = useBudgetSpend(monthlyDate)
   const createMutation = useCreateBudget()
   const updateMutation = useUpdateBudget()
   const deactivateMutation = useDeactivateBudget()
@@ -616,19 +852,8 @@ export default function BudgetsPage() {
   }
 
   const rows = budgets.data ?? []
-  const spendByCategory = new Map(
-    (budgetSpend.data ?? []).map((row) => [row.categoryId, row]),
-  )
-  const spendComplete = !budgetSpend.isPending
-    && !budgetSpend.isError
-    && rows.every((row) => spendByCategory.has(row.id))
-  const overCapCount = [...spendByCategory.values()]
-    .filter((spend) => spend.cap > 0 && spend.remaining < 0)
-    .length
-  const lineSummary = `${rows.length} ${rows.length === 1 ? 'line' : 'lines'}`
-  const utilizationSummary = spendComplete
-    ? `${lineSummary} · ${overCapCount} over cap`
-    : lineSummary
+  const weeklyBudgets = rows.filter((budget) => budget.period === 'WEEKLY')
+  const monthlyBudgets = rows.filter((budget) => budget.period === 'MONTHLY')
 
   return (
     <Stack spacing={3}>
@@ -690,46 +915,31 @@ export default function BudgetsPage() {
       )}
 
       {!budgets.isPending && !budgets.isError && rows.length > 0 && (
-        <Stack spacing={1.5}>
-          <Stack direction="row" sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <Typography variant="h6" component="h2">Active budget lines</Typography>
-            <Stack spacing={0.1} sx={{ alignItems: 'flex-end' }}>
-              <Typography color="text.secondary" variant="body2">
-                <Box component="span" sx={{ display: { xs: 'inline', md: 'none' } }}>
-                  As of {formatAsOf(budgetDate)}
-                </Box>
-                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
-                  As of {formatAsOf(budgetDate, true)}
-                </Box>
-              </Typography>
-              <Typography
-                color="text.secondary"
-                sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.75rem' }}
-              >
-                {utilizationSummary}
-              </Typography>
-            </Stack>
-          </Stack>
-          <BudgetCards
-            budgetDate={budgetDate}
-            budgets={rows}
-            highlightedId={success?.id}
-            onEdit={openEdit}
-            onRetrySpend={() => budgetSpend.refetch()}
-            spendByCategory={spendByCategory}
-            spendError={budgetSpend.isError}
-            spendPending={budgetSpend.isPending}
-          />
-          <BudgetTable
-            budgetDate={budgetDate}
-            budgets={rows}
-            highlightedId={success?.id}
-            onEdit={openEdit}
-            onRetrySpend={() => budgetSpend.refetch()}
-            spendByCategory={spendByCategory}
-            spendError={budgetSpend.isError}
-            spendPending={budgetSpend.isPending}
-          />
+        <Stack spacing={4}>
+          {weeklyBudgets.length > 0 && (
+            <BudgetPeriodSection
+              budgetDate={weeklyDate}
+              budgets={weeklyBudgets}
+              currentDate={currentDate}
+              highlightedId={success?.id}
+              onBudgetDateChange={setWeeklyDate}
+              onEdit={openEdit}
+              period="WEEKLY"
+              spendQuery={weeklySpend}
+            />
+          )}
+          {monthlyBudgets.length > 0 && (
+            <BudgetPeriodSection
+              budgetDate={monthlyDate}
+              budgets={monthlyBudgets}
+              currentDate={currentDate}
+              highlightedId={success?.id}
+              onBudgetDateChange={setMonthlyDate}
+              onEdit={openEdit}
+              period="MONTHLY"
+              spendQuery={monthlySpend}
+            />
+          )}
         </Stack>
       )}
 

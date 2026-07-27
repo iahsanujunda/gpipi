@@ -1,0 +1,354 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="1780" viewBox="0 0 1320 1780" role="img" aria-labelledby="title description">
+  <title id="title">Household Assistant budget period navigation mockups</title>
+  <desc id="description">A responsive decision board showing independent weekly and monthly history navigation. Mobile states demonstrate current periods, a previous week with the month unchanged, and a previous month with the week unchanged. A desktop view groups budget lines by cadence with separate navigators.</desc>
+
+  <defs>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="135%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#1D4E89" flood-opacity="0.18" />
+    </filter>
+    <filter id="panel-shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#1D4E89" flood-opacity="0.13" />
+    </filter>
+    <style>
+      text { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .board-label { fill: #1D4E89; font-size: 13px; font-weight: 750; letter-spacing: 1.3px; }
+      .heading { fill: #1D4E89; font-weight: 700; }
+      .body { fill: #17312E; }
+      .secondary { fill: #526966; }
+      .eyebrow { fill: #526966; font-size: 9px; font-weight: 750; letter-spacing: 0.8px; }
+      .money { fill: #1D4E89; font-weight: 700; }
+      .button { fill: #16679A; font-size: 10px; font-weight: 700; }
+    </style>
+
+    <g id="phone-shell">
+      <rect width="390" height="760" rx="48" fill="#1D4E89" filter="url(#phone-shadow)" />
+      <rect x="8" y="8" width="374" height="744" rx="40" fill="#F4FAFB" />
+      <rect x="8" y="8" width="374" height="32" rx="40" fill="#FFFFFF" />
+      <rect x="8" y="28" width="374" height="12" fill="#FFFFFF" />
+      <text x="27" y="29" fill="#1D4E89" font-size="11" font-weight="700">9:41</text>
+      <g fill="none" stroke="#1D4E89" stroke-width="1.5" stroke-linecap="round">
+        <path d="M329 25c4-5 9-5 13 0" />
+        <path d="M332 28c2-3 5-3 7 0" />
+        <rect x="350" y="20" width="18" height="10" rx="2" />
+      </g>
+      <rect x="352.5" y="22.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+      <rect x="8" y="40" width="374" height="56" fill="#FFFFFF" />
+      <path d="M35 58 26 68l9 10M27 68h17" fill="none" stroke="#1D4E89" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="54" y="74" fill="#1D4E89" font-size="16" font-weight="700">Household Assistant</text>
+      <line x1="8" y1="95.5" x2="382" y2="95.5" stroke="#C9E2E5" />
+      <rect x="146" y="14" width="98" height="20" rx="10" fill="#1D4E89" />
+    </g>
+
+    <g id="nav-dock">
+      <rect x="8" y="688" width="374" height="64" fill="#F4FAFB" fill-opacity="0.97" />
+      <circle cx="195" cy="718" r="25" fill="#16679A" />
+      <rect x="185" y="708" width="8" height="8" rx="2" fill="#3FC1C0" />
+      <rect x="197" y="708" width="8" height="8" rx="2" fill="#FFFFFF" />
+      <rect x="185" y="720" width="8" height="8" rx="2" fill="#FFFFFF" />
+      <rect x="197" y="720" width="8" height="8" rx="2" fill="#3FC1C0" />
+    </g>
+
+    <g id="edit-icon">
+      <rect width="32" height="32" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m10 22 2-7L22 5l5 5-10 10-7 2Z" fill="none" stroke="#16679A" stroke-width="1.5" stroke-linejoin="round" />
+    </g>
+
+    <g id="previous-button">
+      <rect width="44" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m25 14-8 8 8 8" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g id="next-button">
+      <rect width="44" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m19 14 8 8-8 8" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g id="next-button-disabled">
+      <rect width="44" height="44" rx="10" fill="#EDF3F4" stroke="#D9E5E7" />
+      <path d="m19 14 8 8-8 8" fill="none" stroke="#9CAFAF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+  </defs>
+
+  <rect width="1320" height="1780" fill="#E7F5F7" />
+  <text x="48" y="54" fill="#1D4E89" font-size="30" font-weight="750">Budget history · each cadence moves on its own</text>
+  <text x="48" y="84" fill="#526966" font-size="15">Weekly and monthly lines stay visible together, but their period cursors never drag each other through time.</text>
+
+  <g transform="translate(48 105)">
+    <rect width="220" height="28" rx="14" fill="#DFF4F4" />
+    <text x="110" y="19" fill="#16679A" font-size="11" font-weight="700" text-anchor="middle">INDEPENDENT PERIOD CURSORS</text>
+    <rect x="232" width="204" height="28" rx="14" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="334" y="19" fill="#526966" font-size="11" font-weight="700" text-anchor="middle">44PX MOBILE TARGETS</text>
+    <rect x="448" width="234" height="28" rx="14" fill="#FFFFFF" stroke="#3FC1C0" />
+    <text x="565" y="19" fill="#16679A" font-size="11" font-weight="700" text-anchor="middle">CURRENT CAP IS EXPLICIT</text>
+    <rect x="694" width="198" height="28" rx="14" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="793" y="19" fill="#526966" font-size="11" font-weight="700" text-anchor="middle">NO FUTURE PERIODS</text>
+  </g>
+
+  <text class="board-label" x="230" y="174" text-anchor="middle">01 · CURRENT PERIODS</text>
+  <text class="board-label" x="660" y="174" text-anchor="middle">02 · PREVIOUS WEEK ONLY</text>
+  <text class="board-label" x="1090" y="174" text-anchor="middle">03 · PREVIOUS MONTH ONLY</text>
+
+  <!-- Phone 1: both current -->
+  <g transform="translate(35 200)">
+    <use href="#phone-shell" />
+    <text x="24" y="137" class="heading" font-size="28">Budgeting</text>
+
+    <text x="24" y="172" class="heading" font-size="15">Weekly</text>
+    <use href="#previous-button" x="188" y="147" />
+    <rect x="236" y="147" width="82" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="277" y="165" class="eyebrow" text-anchor="middle">THIS WEEK</text>
+    <text x="277" y="181" class="heading" font-size="11" text-anchor="middle">20–26 JUL</text>
+    <use href="#next-button-disabled" x="322" y="147" />
+
+    <g transform="translate(24 203)">
+      <rect width="342" height="155" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="18" y="28" class="heading" font-size="16">Eating Out</text>
+      <use href="#edit-icon" x="292" y="12" />
+      <text x="18" y="50" class="secondary" font-size="10.5">Restaurants, cafes, and takeout</text>
+      <text x="18" y="83" class="eyebrow">SPENT</text>
+      <text x="324" y="83" class="eyebrow" text-anchor="end">REMAINING</text>
+      <text x="18" y="105" class="money" font-size="16">¥12,000</text>
+      <text x="324" y="105" class="money" font-size="16" text-anchor="end">¥3,000 left</text>
+      <rect x="18" y="119" width="306" height="8" rx="4" fill="#DFF4F4" />
+      <rect x="18" y="119" width="245" height="8" rx="4" fill="#16679A" />
+      <text x="18" y="145" class="secondary" font-size="9.5">Cap ¥15,000</text>
+      <text x="324" y="145" class="secondary" font-size="9.5" font-weight="700" text-anchor="end">80%</text>
+    </g>
+
+    <text x="24" y="391" class="heading" font-size="15">Monthly</text>
+    <use href="#previous-button" x="188" y="366" />
+    <rect x="236" y="366" width="82" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="277" y="384" class="eyebrow" text-anchor="middle">THIS MONTH</text>
+    <text x="277" y="400" class="heading" font-size="11" text-anchor="middle">JUL 2026</text>
+    <use href="#next-button-disabled" x="322" y="366" />
+
+    <g transform="translate(24 422)">
+      <rect width="342" height="172" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="18" y="28" class="heading" font-size="16">Monthly Groceries</text>
+      <use href="#edit-icon" x="292" y="12" />
+      <text x="18" y="50" class="secondary" font-size="10.5">Supermarket and pantry spending</text>
+      <text x="18" y="83" class="eyebrow">SPENT</text>
+      <text x="324" y="83" class="eyebrow" text-anchor="end">REMAINING</text>
+      <text x="18" y="105" class="money" font-size="16">¥46,200</text>
+      <text x="324" y="105" class="money" font-size="16" text-anchor="end">¥28,800 left</text>
+      <rect x="18" y="119" width="306" height="8" rx="4" fill="#DFF4F4" />
+      <rect x="18" y="119" width="190" height="8" rx="4" fill="#16679A" />
+      <text x="18" y="145" class="secondary" font-size="9.5">Cap ¥75,000</text>
+      <text x="324" y="145" class="secondary" font-size="9.5" font-weight="700" text-anchor="end">62%</text>
+      <text x="18" y="163" class="secondary" font-size="9.5">2 more monthly lines below</text>
+    </g>
+    <use href="#nav-dock" />
+  </g>
+
+  <!-- Phone 2: previous week, current month -->
+  <g transform="translate(465 200)">
+    <use href="#phone-shell" />
+    <text x="24" y="137" class="heading" font-size="28">Budgeting</text>
+
+    <text x="24" y="172" class="heading" font-size="15">Weekly</text>
+    <use href="#previous-button" x="188" y="147" />
+    <rect x="236" y="147" width="82" height="44" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+    <text x="277" y="165" class="eyebrow" text-anchor="middle">PAST WEEK</text>
+    <text x="277" y="181" class="heading" font-size="11" text-anchor="middle">13–19 JUL</text>
+    <use href="#next-button" x="322" y="147" />
+
+    <g transform="translate(24 203)">
+      <rect width="342" height="179" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
+      <text x="18" y="28" class="heading" font-size="16">Eating Out</text>
+      <rect x="225" y="12" width="99" height="22" rx="11" fill="#DFF4F4" />
+      <text x="274.5" y="27" fill="#16679A" font-size="8.5" font-weight="700" text-anchor="middle">CURRENT CAP BASIS</text>
+      <text x="18" y="50" class="secondary" font-size="10.5">Restaurants, cafes, and takeout</text>
+      <text x="18" y="83" class="eyebrow">SPENT</text>
+      <text x="324" y="83" class="eyebrow" text-anchor="end">VS CURRENT CAP</text>
+      <text x="18" y="105" class="money" font-size="16">¥9,400</text>
+      <text x="324" y="105" class="money" font-size="16" text-anchor="end">¥5,600 under</text>
+      <rect x="18" y="119" width="306" height="8" rx="4" fill="#DFF4F4" />
+      <rect x="18" y="119" width="192" height="8" rx="4" fill="#16679A" />
+      <text x="18" y="145" class="secondary" font-size="9.5">Current cap ¥15,000</text>
+      <text x="324" y="145" class="secondary" font-size="9.5" font-weight="700" text-anchor="end">63%</text>
+      <rect x="18" y="153" width="84" height="20" rx="10" fill="#FFFFFF" stroke="#16679A" />
+      <text x="60" y="167" class="button" text-anchor="middle">This week</text>
+    </g>
+
+    <text x="24" y="415" class="heading" font-size="15">Monthly</text>
+    <use href="#previous-button" x="188" y="390" />
+    <rect x="236" y="390" width="82" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="277" y="408" class="eyebrow" text-anchor="middle">THIS MONTH</text>
+    <text x="277" y="424" class="heading" font-size="11" text-anchor="middle">JUL 2026</text>
+    <use href="#next-button-disabled" x="322" y="390" />
+
+    <g transform="translate(24 446)">
+      <rect width="342" height="155" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="18" y="28" class="heading" font-size="16">Monthly Groceries</text>
+      <use href="#edit-icon" x="292" y="12" />
+      <text x="18" y="50" class="secondary" font-size="10.5">The month stays in July</text>
+      <text x="18" y="83" class="eyebrow">SPENT</text>
+      <text x="324" y="83" class="eyebrow" text-anchor="end">REMAINING</text>
+      <text x="18" y="105" class="money" font-size="16">¥46,200</text>
+      <text x="324" y="105" class="money" font-size="16" text-anchor="end">¥28,800 left</text>
+      <rect x="18" y="119" width="306" height="8" rx="4" fill="#DFF4F4" />
+      <rect x="18" y="119" width="190" height="8" rx="4" fill="#16679A" />
+      <text x="18" y="145" class="secondary" font-size="9.5">Cap ¥75,000</text>
+    </g>
+    <use href="#nav-dock" />
+  </g>
+
+  <!-- Phone 3: current week, previous month -->
+  <g transform="translate(895 200)">
+    <use href="#phone-shell" />
+    <text x="24" y="137" class="heading" font-size="28">Budgeting</text>
+
+    <text x="24" y="172" class="heading" font-size="15">Weekly</text>
+    <use href="#previous-button" x="188" y="147" />
+    <rect x="236" y="147" width="82" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="277" y="165" class="eyebrow" text-anchor="middle">THIS WEEK</text>
+    <text x="277" y="181" class="heading" font-size="11" text-anchor="middle">20–26 JUL</text>
+    <use href="#next-button-disabled" x="322" y="147" />
+
+    <g transform="translate(24 203)">
+      <rect width="342" height="145" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="18" y="28" class="heading" font-size="16">Eating Out</text>
+      <use href="#edit-icon" x="292" y="12" />
+      <text x="18" y="50" class="secondary" font-size="10.5">The week stays current</text>
+      <text x="18" y="83" class="eyebrow">SPENT</text>
+      <text x="324" y="83" class="eyebrow" text-anchor="end">REMAINING</text>
+      <text x="18" y="105" class="money" font-size="16">¥12,000</text>
+      <text x="324" y="105" class="money" font-size="16" text-anchor="end">¥3,000 left</text>
+      <rect x="18" y="119" width="306" height="8" rx="4" fill="#DFF4F4" />
+      <rect x="18" y="119" width="245" height="8" rx="4" fill="#16679A" />
+    </g>
+
+    <text x="24" y="381" class="heading" font-size="15">Monthly</text>
+    <use href="#previous-button" x="188" y="356" />
+    <rect x="236" y="356" width="82" height="44" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+    <text x="277" y="374" class="eyebrow" text-anchor="middle">PAST MONTH</text>
+    <text x="277" y="390" class="heading" font-size="11" text-anchor="middle">JUN 2026</text>
+    <use href="#next-button" x="322" y="356" />
+
+    <g transform="translate(24 412)">
+      <rect width="342" height="190" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
+      <text x="18" y="28" class="heading" font-size="16">Monthly Groceries</text>
+      <rect x="225" y="12" width="99" height="22" rx="11" fill="#DFF4F4" />
+      <text x="274.5" y="27" fill="#16679A" font-size="8.5" font-weight="700" text-anchor="middle">CURRENT CAP BASIS</text>
+      <text x="18" y="50" class="secondary" font-size="10.5">Supermarket and pantry spending</text>
+      <text x="18" y="83" class="eyebrow">SPENT</text>
+      <text x="324" y="83" class="eyebrow" text-anchor="end">VS CURRENT CAP</text>
+      <text x="18" y="105" class="money" font-size="16">¥68,400</text>
+      <text x="324" y="105" class="money" font-size="16" text-anchor="end">¥6,600 under</text>
+      <rect x="18" y="119" width="306" height="8" rx="4" fill="#DFF4F4" />
+      <rect x="18" y="119" width="279" height="8" rx="4" fill="#16679A" />
+      <text x="18" y="145" class="secondary" font-size="9.5">Current cap ¥75,000</text>
+      <text x="324" y="145" class="secondary" font-size="9.5" font-weight="700" text-anchor="end">91%</text>
+      <rect x="18" y="158" width="90" height="24" rx="12" fill="#FFFFFF" stroke="#16679A" />
+      <text x="63" y="174" class="button" text-anchor="middle">This month</text>
+    </g>
+    <use href="#nav-dock" />
+  </g>
+
+  <!-- Desktop grouped view -->
+  <text class="board-label" x="660" y="1044" text-anchor="middle">04 · DESKTOP · BOTH GROUPS STAY VISIBLE</text>
+  <g transform="translate(35 1070)">
+    <rect width="1250" height="570" rx="20" fill="#1D4E89" filter="url(#panel-shadow)" />
+    <rect x="5" y="5" width="1240" height="560" rx="16" fill="#F4FAFB" />
+    <rect x="5" y="5" width="1240" height="56" rx="16" fill="#FFFFFF" />
+    <rect x="5" y="47" width="1240" height="14" fill="#FFFFFF" />
+    <path d="M34 24 25 33l9 9M26 33h18" fill="none" stroke="#1D4E89" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="58" y="39" class="heading" font-size="16">Household Assistant</text>
+    <line x1="5" y1="60.5" x2="1245" y2="60.5" stroke="#C9E2E5" />
+
+    <text x="34" y="105" class="heading" font-size="26">Budgeting</text>
+    <text x="34" y="139" class="heading" font-size="16">Weekly</text>
+    <text x="102" y="139" class="secondary" font-size="11">1 line</text>
+
+    <g transform="translate(886 90)">
+      <use href="#previous-button" />
+      <rect x="52" width="142" height="44" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="123" y="18" class="eyebrow" text-anchor="middle">PAST WEEK</text>
+      <text x="123" y="34" class="heading" font-size="12" text-anchor="middle">13–19 JUL 2026</text>
+      <use href="#next-button" x="202" />
+      <rect x="254" width="90" height="44" rx="10" fill="#FFFFFF" stroke="#16679A" />
+      <text x="299" y="27" class="button" text-anchor="middle">This week</text>
+    </g>
+
+    <g transform="translate(34 155)">
+      <rect width="1182" height="105" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect width="1182" height="36" rx="12" fill="#DFF4F4" />
+      <rect y="26" width="1182" height="10" fill="#DFF4F4" />
+      <g class="eyebrow">
+        <text x="20" y="23">BUDGET LINE</text>
+        <text x="404" y="23">SPENT / CURRENT CAP</text>
+        <text x="785" y="23">DIFFERENCE</text>
+        <text x="1082" y="23">ACTION</text>
+      </g>
+      <text x="20" y="65" class="heading" font-size="14">Eating Out</text>
+      <text x="20" y="84" class="secondary" font-size="10">Restaurants, cafes, and takeout</text>
+      <text x="404" y="61" class="money" font-size="12">¥9,400 / ¥15,000</text>
+      <rect x="404" y="72" width="270" height="8" rx="4" fill="#DFF4F4" />
+      <rect x="404" y="72" width="169" height="8" rx="4" fill="#16679A" />
+      <text x="712" y="80" class="secondary" font-size="10" text-anchor="end">63%</text>
+      <text x="785" y="70" class="money" font-size="13">¥5,600 under current cap</text>
+      <text x="1082" y="70" fill="#16679A" font-size="12" font-weight="700">Edit</text>
+    </g>
+
+    <text x="34" y="304" class="heading" font-size="16">Monthly</text>
+    <text x="110" y="304" class="secondary" font-size="11">3 lines</text>
+    <g transform="translate(886 275)">
+      <use href="#previous-button" />
+      <rect x="52" width="142" height="44" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="123" y="18" class="eyebrow" text-anchor="middle">PAST MONTH</text>
+      <text x="123" y="34" class="heading" font-size="12" text-anchor="middle">JUN 2026</text>
+      <use href="#next-button" x="202" />
+      <rect x="254" width="90" height="44" rx="10" fill="#FFFFFF" stroke="#16679A" />
+      <text x="299" y="27" class="button" text-anchor="middle">This month</text>
+    </g>
+
+    <g transform="translate(34 320)">
+      <rect width="1182" height="172" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect width="1182" height="36" rx="12" fill="#DFF4F4" />
+      <rect y="26" width="1182" height="10" fill="#DFF4F4" />
+      <g class="eyebrow">
+        <text x="20" y="23">BUDGET LINE</text>
+        <text x="404" y="23">SPENT / CURRENT CAP</text>
+        <text x="785" y="23">DIFFERENCE</text>
+        <text x="1082" y="23">ACTION</text>
+      </g>
+      <g transform="translate(0 36)">
+        <text x="20" y="28" class="heading" font-size="14">Monthly Groceries</text>
+        <text x="20" y="47" class="secondary" font-size="10">Supermarket and pantry spending</text>
+        <text x="404" y="24" class="money" font-size="12">¥68,400 / ¥75,000</text>
+        <rect x="404" y="35" width="270" height="8" rx="4" fill="#DFF4F4" />
+        <rect x="404" y="35" width="246" height="8" rx="4" fill="#16679A" />
+        <text x="712" y="43" class="secondary" font-size="10" text-anchor="end">91%</text>
+        <text x="785" y="33" class="money" font-size="13">¥6,600 under current cap</text>
+        <text x="1082" y="33" fill="#16679A" font-size="12" font-weight="700">Edit</text>
+        <line x1="20" y1="67" x2="1162" y2="67" stroke="#C9E2E5" />
+      </g>
+      <g transform="translate(0 103)">
+        <text x="20" y="28" class="heading" font-size="14">Transport</text>
+        <text x="20" y="47" class="secondary" font-size="10">Trains, buses, taxis, and IC top-ups</text>
+        <text x="404" y="24" class="money" font-size="12">¥18,700 / ¥20,000</text>
+        <rect x="404" y="35" width="270" height="8" rx="4" fill="#DFF4F4" />
+        <rect x="404" y="35" width="252" height="8" rx="4" fill="#16679A" />
+        <text x="712" y="43" class="secondary" font-size="10" text-anchor="end">94%</text>
+        <text x="785" y="33" class="money" font-size="13">¥1,300 under current cap</text>
+        <text x="1082" y="33" fill="#16679A" font-size="12" font-weight="700">Edit</text>
+      </g>
+    </g>
+
+    <circle cx="625" cy="530" r="25" fill="#16679A" />
+    <rect x="615" y="520" width="8" height="8" rx="2" fill="#3FC1C0" />
+    <rect x="627" y="520" width="8" height="8" rx="2" fill="#FFFFFF" />
+    <rect x="615" y="532" width="8" height="8" rx="2" fill="#FFFFFF" />
+    <rect x="627" y="532" width="8" height="8" rx="2" fill="#3FC1C0" />
+  </g>
+
+  <g transform="translate(48 1680)">
+    <rect width="1224" height="1" fill="#C9E2E5" />
+    <circle cx="15" cy="40" r="8" fill="#3FC1C0" />
+    <text x="32" y="36" class="heading" font-size="12">Interaction rule</text>
+    <text x="32" y="55" class="secondary" font-size="12">A weekly arrow changes only the weekly query anchor; a monthly arrow changes only the monthly anchor.</text>
+    <circle cx="650" cy="40" r="8" fill="#16679A" />
+    <text x="667" y="36" class="heading" font-size="12">Historical truth</text>
+    <text x="667" y="55" class="secondary" font-size="12">Until cap revisions exist, historical differences are always labelled against the current cap.</text>
+  </g>
+</svg>

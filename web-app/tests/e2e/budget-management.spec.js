@@ -64,7 +64,7 @@ test('shows exact utilization states on mobile and in the wider budget table', a
   await page.setViewportSize({ width: 900, height: 800 })
   await page.reload()
 
-  const mediumTable = page.getByRole('table', { name: 'Active budget lines' })
+  const mediumTable = page.getByRole('table', { name: 'Monthly budget lines' })
   await expect(mediumTable).toBeVisible()
   const mediumTableBox = await mediumTable.boundingBox()
   const lastEditBox = await mediumTable.getByRole('button', { name: 'Edit' }).last().boundingBox()
@@ -76,14 +76,44 @@ test('shows exact utilization states on mobile and in the wider budget table', a
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.reload()
 
-  const table = page.getByRole('table', { name: 'Active budget lines' })
+  const table = page.getByRole('table', { name: 'Monthly budget lines' })
   await expect(table).toBeVisible()
   await expect(table.getByRole('columnheader', { name: 'Spent / cap' })).toBeVisible()
   await expect(table.getByRole('columnheader', { name: 'Difference' })).toBeVisible()
   await expect(table.getByRole('row', { name: /Transport/ })).toContainText('¥2,000 over')
   await expect(table.getByRole('row', { name: /Home repairs/ })).toContainText('No cap set')
   await expect(table.getByRole('row', { name: /Home repairs/ })).not.toContainText('over')
-  await expect(page.getByText('5 lines · 1 over cap')).toBeVisible()
+  await expect(page.getByText('4 lines · 1 over cap')).toBeVisible()
+})
+
+test('weekly and monthly history controls move independently', async ({ page }) => {
+  const weekly = page.locator('section[aria-labelledby="weekly-budget-heading"]')
+  const monthly = page.locator('section[aria-labelledby="monthly-budget-heading"]')
+  const weeklyPeriod = weekly.locator('[aria-live="polite"]')
+  const monthlyPeriod = monthly.locator('[aria-live="polite"]')
+  const initialWeek = await weeklyPeriod.textContent()
+  const initialMonth = await monthlyPeriod.textContent()
+
+  await weekly.getByRole('button', { name: 'Previous week' }).click()
+
+  await expect(weeklyPeriod).not.toHaveText(initialWeek)
+  await expect(monthlyPeriod).toHaveText(initialMonth)
+  await expect(weekly.getByRole('button', { name: 'This week' })).toBeVisible()
+  await expect(monthly.getByRole('button', { name: 'This month' })).toHaveCount(0)
+  await expect(weekly.getByText('CURRENT CAP BASIS').first()).toBeVisible()
+  await expect(weekly.getByText("Past spending is compared with each line's current cap."))
+    .toBeVisible()
+
+  await monthly.getByRole('button', { name: 'Previous month' }).click()
+
+  await expect(monthlyPeriod).not.toHaveText(initialMonth)
+  await expect(weeklyPeriod).not.toHaveText(initialWeek)
+  await expect(monthly.getByRole('button', { name: 'This month' })).toBeVisible()
+  await expect(monthly.getByRole('button', { name: 'Next month' })).toBeEnabled()
+
+  await weekly.getByRole('button', { name: 'This week' }).click()
+  await expect(weeklyPeriod).toHaveText(initialWeek)
+  await expect(monthlyPeriod).not.toHaveText(initialMonth)
 })
 
 test('launcher animates its main icon and staggered page action, then removes the action on Activity', async ({ page }) => {
@@ -238,7 +268,7 @@ test('keeps the desktop dialog inside the main view on a MacBook Air-sized viewp
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.reload()
 
-  const table = page.getByRole('table', { name: 'Active budget lines' })
+  const table = page.getByRole('table', { name: 'Weekly budget lines' })
   await expect(table).toBeVisible()
   await table.getByRole('button', { name: 'Edit' }).first().click()
 

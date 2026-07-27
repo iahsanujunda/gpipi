@@ -74,6 +74,18 @@ function spendRow(budget, spent) {
   }
 }
 
+function shiftDate(value, days) {
+  const date = new Date(`${value}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function shiftMonth(value, months) {
+  const date = new Date(`${value.slice(0, 7)}-01T00:00:00Z`)
+  date.setUTCMonth(date.getUTCMonth() + months)
+  return date.toISOString().slice(0, 10)
+}
+
 function mutation(overrides = {}) {
   return {
     isPending: false,
@@ -115,10 +127,54 @@ describe('BudgetsPage', () => {
     renderBudgetExperience()
 
     expect(screen.getByRole('heading', { name: 'Eating Out' })).toBeInTheDocument()
-    expect(screen.getAllByText('WEEKLY · 20–26 JUL')).not.toHaveLength(0)
+    expect(screen.getByRole('heading', { name: 'Weekly' })).toBeInTheDocument()
+    expect(screen.getByText('20–26 JUL')).toBeInTheDocument()
     expect(screen.getByText('SLACK ON')).toBeInTheDocument()
     expect(screen.getAllByText(/Cap ¥15,000/)).not.toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Add budget line' })).not.toBeInTheDocument()
+  })
+
+  it('moves weekly and monthly history independently and labels current-cap comparisons', async () => {
+    const user = userEvent.setup()
+    mockUseBudgets.mockReturnValue({
+      data: [eatingOut, groceries],
+      isPending: false,
+      isError: false,
+    })
+    mockUseBudgetSpend.mockReturnValue({
+      data: [
+        spendRow(eatingOut, 12000),
+        spendRow(groceries, 46200),
+      ],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+    const initialWeeklyDate = mockUseBudgetSpend.mock.calls[0][0]
+    const initialMonthlyDate = mockUseBudgetSpend.mock.calls[1][0]
+
+    expect(screen.getByRole('button', { name: 'Next week' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next month' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Previous week' }))
+
+    expect(mockUseBudgetSpend).toHaveBeenCalledWith(shiftDate(initialWeeklyDate, -7))
+    expect(screen.getByRole('button', { name: 'This week' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'This month' })).not.toBeInTheDocument()
+    expect(screen.getAllByText('CURRENT CAP BASIS')).not.toHaveLength(0)
+    expect(screen.getByText("Past spending is compared with each line's current cap."))
+      .toBeInTheDocument()
+    expect(screen.getByText('¥3,000 under')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next week' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next month' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Previous month' }))
+
+    expect(mockUseBudgetSpend).toHaveBeenCalledWith(shiftMonth(initialMonthlyDate, -1))
+    expect(screen.getByRole('button', { name: 'This week' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'This month' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next month' })).toBeEnabled()
   })
 
   it('shows exact spend and difference while progress remains a supporting signal', () => {

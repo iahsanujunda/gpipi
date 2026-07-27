@@ -92,6 +92,11 @@ fun Route.slackInteractionRoutes(signingSecret: String, handler: SlackInteractio
                         )
                     }
 
+                    CANCEL_EXPENSE_ACTION_ID -> {
+                        val draftId = action.value?.let(UUID::fromString) ?: return@launch
+                        handler.handleExpenseCancel(draftId, interaction.responseUrl)
+                    }
+
                     CONFIRM_SHOPPING_ADD_ACTION_ID -> {
                         val draftId = action.value?.let(UUID::fromString) ?: return@launch
                         val actorId = interaction.user?.id ?: return@launch

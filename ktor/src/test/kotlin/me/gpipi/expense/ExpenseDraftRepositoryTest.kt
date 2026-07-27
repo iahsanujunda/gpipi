@@ -3,6 +3,7 @@ package me.gpipi.expense
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertNotNull
 import kotlinx.coroutines.runBlocking
@@ -11,8 +12,10 @@ import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.ExpenseDraft
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 
 class ExpenseDraftRepositoryTest : PersistenceTest() {
     private val draftRepository = ExpenseDraftRepository()
@@ -125,6 +128,45 @@ class ExpenseDraftRepositoryTest : PersistenceTest() {
         // the row is still there, still CONFIRMED — only its status transition is single-shot
         assertEquals(1, query { ExpenseDraft.selectAll().count() })
         assertEquals("CONFIRMED", query { ExpenseDraft.selectAll().single()[ExpenseDraft.status] })
+    }
+
+    @Test
+    fun `cancelIfPending flips to CANCELLED and prevents later confirmation`() {
+        val msgId = givenInbound()
+        val catId = givenCategory()
+        val draftId = insertDraft(msgId, catId)
+
+        val cancelled = query { draftRepository.cancelIfPending(draftId) }
+
+        assertNotNull(cancelled)
+        assertEquals(draftId, cancelled.id)
+        assertEquals(msgId, cancelled.inboundMessageId)
+        assertNull(query { draftRepository.consumeIfPending(draftId) })
+        assertNull(query { draftRepository.cancelIfPending(draftId) })
+        assertEquals(
+            "CANCELLED",
+            query { ExpenseDraft.selectAll().single()[ExpenseDraft.status] },
+        )
+    }
+
+    @Test
+    fun `database rejects an unknown draft status`() {
+        val msgId = givenInbound()
+        val catId = givenCategory()
+        val draftId = insertDraft(msgId, catId)
+
+        assertFailsWith<Exception> {
+            query {
+                ExpenseDraft.update({ ExpenseDraft.id eq draftId }) {
+                    it[status] = "UNKNOWN"
+                }
+            }
+        }
+
+        assertEquals(
+            "PENDING",
+            query { ExpenseDraft.selectAll().single()[ExpenseDraft.status] },
+        )
     }
 
     @Test

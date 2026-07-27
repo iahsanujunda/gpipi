@@ -47,6 +47,19 @@ class SlackInteractionHandler(
         else slack.postMessage(draft.channelId, reply)
     }
 
+    suspend fun handleExpenseCancel(draftId: UUID, responseUrl: String?) {
+        val draft = dbQuery(this.db) {
+            val d = draftRepo.cancelIfPending(draftId) ?: return@dbQuery null
+            check(inboundRepo.markNonExpense(d.inboundMessageId) == 1) {
+                "Expense draft points to an inbound message that is no longer RECEIVED."
+            }
+            d
+        } ?: return
+        val reply = "Nothing recorded — marked as not an expense."
+        if (responseUrl != null) slack.replaceCard(responseUrl, reply)
+        else slack.postMessage(draft.channelId, reply)
+    }
+
     suspend fun handleShoppingAddConfirm(
         draftId: UUID,
         actorId: String,

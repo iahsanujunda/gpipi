@@ -53,6 +53,12 @@ class ExpenseDraftRepository {
     }
 
     fun consumeIfPending(id: UUID): ExpenseDraftRow? =
+        transitionIfPending(id, "CONFIRMED")
+
+    fun cancelIfPending(id: UUID): ExpenseDraftRow? =
+        transitionIfPending(id, "CANCELLED")
+
+    private fun transitionIfPending(id: UUID, status: String): ExpenseDraftRow? =
         ExpenseDraft.updateReturning(
             returning = listOf(
                 ExpenseDraft.id,
@@ -71,7 +77,7 @@ class ExpenseDraftRepository {
                 (ExpenseDraft.id eq id) and (ExpenseDraft.status eq "PENDING")
             },
         ) {
-            it[ExpenseDraft.status] = "CONFIRMED"
+            it[ExpenseDraft.status] = status
         }
             .singleOrNull()
             ?.let { r ->

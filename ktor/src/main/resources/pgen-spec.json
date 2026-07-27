@@ -371,6 +371,11 @@
                 }
               ]
             }
+          ],
+          "checkConstraints": [
+            {
+              "name": "expense_draft_status_valid"
+            }
           ]
         },
         {

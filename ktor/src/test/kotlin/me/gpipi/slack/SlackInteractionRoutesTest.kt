@@ -22,6 +22,8 @@ import me.gpipi.expense.ExpenseDraftRepository
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
+import me.gpipi.generated.db.base.public1.ExpenseDraft
+import me.gpipi.generated.db.base.public1.InboundMessage
 import me.gpipi.generated.db.base.public1.ShoppingAddDraft
 import me.gpipi.generated.db.base.public1.ShoppingItem
 import me.gpipi.generated.db.base.public1.ShoppingMutation
@@ -206,6 +208,40 @@ class SlackInteractionRoutesTest : PersistenceTest() {
         """.trimIndent()
         assertEquals(HttpStatusCode.OK, postSigned(formBody(payload)))
     }
+
+    @Test
+    fun `signed not-an-expense interaction cancels the draft through the real handler`() =
+        testApplication {
+            val inboundId = givenInbound()
+            val predicted = givenCategory("Convenience Store")
+            val draftId = givenDraft(inboundId, predicted)
+            val slack = mockk<SlackClient>(relaxUnitFun = true)
+            application {
+                routing { slackInteractionRoutes(secret, shoppingHandler(slack)) }
+            }
+            val payload = """
+                {"type":"block_actions",
+                 "response_url":"https://hooks.slack.test/response",
+                 "actions":[{"type":"button","action_id":"cancel_expense","value":"$draftId"}]}
+            """.trimIndent()
+
+            assertEquals(HttpStatusCode.OK, postSigned(formBody(payload)))
+            coVerify(timeout = 2_000, exactly = 1) {
+                slack.replaceCard(
+                    "https://hooks.slack.test/response",
+                    "Nothing recorded — marked as not an expense.",
+                )
+            }
+            assertEquals(
+                "CANCELLED",
+                query { ExpenseDraft.selectAll().single()[ExpenseDraft.status] },
+            )
+            assertEquals(
+                "NON_EXPENSE",
+                query { InboundMessage.selectAll().single()[InboundMessage.status] },
+            )
+            assertEquals(0L, query { Expense.selectAll().count() })
+        }
 
     @Test
     fun `signed shopping Add interaction consumes the draft through the real handler`() = testApplication {

@@ -72,7 +72,7 @@ Updated status vocabulary:
 | `COMMAND` | Handled by a deterministic command (`open`, list operations) |
 | `FAILED_COMMAND` | Deterministic command failed — reason retained for diagnosis |
 | `FAILED_PARSE` | LLM returned unusable output — raw text kept |
-| `NON_EXPENSE` | Classified as neither expense nor a known command |
+| `NON_EXPENSE` | Classified or explicitly rejected by a member as not an expense |
 | `SKIPPED` | Duplicate retry |
 
 ---

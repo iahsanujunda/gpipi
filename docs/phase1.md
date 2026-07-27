@@ -54,7 +54,7 @@ Every `@ai` message is captured to `inbound_message` (see 2.1) — including the
 | `COMMAND` | A deterministic command completed successfully | no |
 | `FAILED_COMMAND` | A deterministic command failed — reason retained for diagnosis | no |
 | `FAILED_PARSE` | LLM returned invalid/unusable output — raw text kept for debugging | no |
-| `NON_EXPENSE` | Parsed as a query or chatter (once iter 8 intent split exists) | no |
+| `NON_EXPENSE` | Classified or explicitly rejected by a member as not an expense | no |
 | `SKIPPED` | Duplicate retry — row already existed, never reprocessed | — |
 
 `FAILED_PARSE` rows are the goldmine for prompt work; `NON_EXPENSE` rows become the training set for the iter-8 intent classifier.
@@ -65,8 +65,8 @@ Every `@ai` message is captured to `inbound_message` (see 2.1) — including the
 |-----------|--------|---------------|
 | Merchant in `merchant_category_hint` | Auto-record | `Recorded ✓ · tap to edit` (passive) |
 | No hint, model `confidence >= 0.8` | Auto-record | `Recorded ✓ · tap to edit` (passive) |
-| No hint, `confidence < 0.8` | Require confirm | Editable card, `Confirm` required |
-| Unknown merchant, low confidence | Require confirm | Editable card, category dropdown open |
+| No hint, `confidence < 0.8` | Require confirm | Editable card, `Confirm` or `Not an expense` |
+| Unknown merchant, low confidence | Require confirm | Editable card, category dropdown open plus `Not an expense` |
 
 The routine ¥510 conbini spend just records. Only genuinely ambiguous ones stop you.
 
@@ -619,7 +619,7 @@ Every confirm writes one row. `was_corrected = predicted != final`. Raw text isn
 ### 4.2 Block Kit Card (inline `static_select` + Confirm)
 
 ```
-¥510 · [ Convenience Store ▼ ]   [ Confirm ]
+¥510 · [ Convenience Store ▼ ]   [ Confirm ] [ Not an expense ]
 ```
 
 ```json
@@ -632,6 +632,9 @@ Every confirm writes one row. `was_corrected = predicted != final`. Raw text isn
         "options": [ /* active categories */ ] },
       { "type": "button", "action_id": "confirm_expense",
         "text": { "type": "plain_text", "text": "Confirm" }, "style": "primary",
+        "value": "<draft_id>" },
+      { "type": "button", "action_id": "cancel_expense",
+        "text": { "type": "plain_text", "text": "Not an expense" },
         "value": "<draft_id>" }
     ]}
   ]
@@ -641,6 +644,8 @@ Every confirm writes one row. `was_corrected = predicted != final`. Raw text isn
 Changing the dropdown fires `block_actions`; clicking Confirm fires `block_actions` again with the (possibly changed) selection. One tap for the common case. Use a **modal** (`views.open` → `view_submission`) only later if you want to edit amount + merchant + note together — overkill for fixing just a category.
 
 > Draft state (the extracted-but-unconfirmed expense) can live in a short-lived `expense_draft` row or be encoded in the button `value` — a draft row is cleaner and survives restarts.
+
+`Not an expense` is deliberately more specific than a generic Cancel. It is a human correction to routing: atomically consume the draft as `CANCELLED`, terminalize the inbound row as `NON_EXPENSE`, and write no expense, categorization event, or merchant hint. The guarded `PENDING` draft transition means Confirm and Not an expense cannot both win. Replace the original card with `Nothing recorded — marked as not an expense.` after commit.
 
 ### 4.3 Atomic Confirm Write
 
@@ -676,6 +681,7 @@ suspend fun onConfirm(draft: ExpenseDraft, finalCategoryId: UUID, db: Database) 
 - [ ] Slack confirmation posted only after commit returns
 - [ ] `was_corrected` correctly reflects prediction vs final
 - [ ] Card updates in place (or is replaced) on confirm — no dangling draft
+- [x] `Not an expense` atomically cancels the draft and marks the inbound row `NON_EXPENSE`, without producing a categorization label
 
 ---
 

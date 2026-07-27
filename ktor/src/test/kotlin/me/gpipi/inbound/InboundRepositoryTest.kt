@@ -52,6 +52,32 @@ class InboundRepositoryTest : PersistenceTest() {
     }
 
     @Test
+    fun `markNonExpense sets a successful terminal status`() {
+        val id = capture()!!
+
+        assertEquals(1, query { repo.markNonExpense(id) })
+
+        val row = query { InboundMessage.selectAll().single() }
+        assertEquals("NON_EXPENSE", row[InboundMessage.status])
+        assertNull(row[InboundMessage.failReason])
+    }
+
+    @Test
+    fun `markNonExpense does not overwrite an existing terminal status`() {
+        val id = capture()!!
+        val changed = query {
+            repo.markRecorded(id)
+            repo.markNonExpense(id)
+        }
+
+        assertEquals(0, changed)
+        assertEquals(
+            "RECORDED",
+            query { InboundMessage.selectAll().single()[InboundMessage.status] },
+        )
+    }
+
+    @Test
     fun `markCommand sets a successful terminal status`() {
         val id = capture()!!
 

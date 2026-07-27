@@ -19,6 +19,7 @@ import me.gpipi.shopping.ShoppingItemText
 const val CARD_BLOCK_ID = "expense_confirm"
 const val CATEGORY_ACTION_ID = "category_select"
 const val CONFIRM_ACTION_ID = "confirm_expense"
+const val CANCEL_EXPENSE_ACTION_ID = "cancel_expense"
 const val OPEN_BUDGET_BLOCK_ID = "open_budget"
 const val OPEN_BUDGET_ACTION_ID = "open_budget_link"
 const val SLACK_CHECKBOX_GROUP_MAX = 10   // Slack hard limit per checkboxes element
@@ -214,8 +215,8 @@ fun openBudgetCard(url: String): JsonArray = buildJsonArray {
 
 /**
  * The editable expense card: a summary line, a category dropdown pre-filled with the model's
- * prediction, and a Confirm button carrying the draft id. Changing the dropdown or tapping
- * Confirm both POST to /slack/interactions.
+ * prediction, a Confirm button, and a Not an expense escape hatch. Changing the dropdown or
+ * tapping either button POSTs to /slack/interactions.
  */
 fun expenseCard(
     draftId: UUID,
@@ -236,7 +237,7 @@ fun expenseCard(
                 put("text", summary)
             }
         }
-        // Actions row: dropdown + Confirm
+        // Actions row: dropdown + Confirm + Not an expense
         addJsonObject {
             put("type", "actions")
             put("block_id", CARD_BLOCK_ID)
@@ -257,6 +258,15 @@ fun expenseCard(
                     putJsonObject("text") {
                         put("type", "plain_text")
                         put("text", "Confirm")
+                    }
+                }
+                addJsonObject {
+                    put("type", "button")
+                    put("action_id", CANCEL_EXPENSE_ACTION_ID)
+                    put("value", draftId.toString())
+                    putJsonObject("text") {
+                        put("type", "plain_text")
+                        put("text", "Not an expense")
                     }
                 }
             }

@@ -44,6 +44,15 @@ class InboundRepository {
         }
     }
 
+    fun markNonExpense(id: UUID): Int =
+        InboundMessage.update({
+            (InboundMessage.id eq id) and
+                (InboundMessage.status eq InboundStatus.RECEIVED.name)
+        }) {
+            it[status] = InboundStatus.NON_EXPENSE.name
+            it[failReason] = null
+        }
+
     fun markCommand(id: UUID) {
         InboundMessage.update({
             (InboundMessage.id eq id) and

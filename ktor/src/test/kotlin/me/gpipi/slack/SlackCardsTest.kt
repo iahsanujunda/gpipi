@@ -265,6 +265,20 @@ class SlackCardsTest {
     }
 
     @Test
+    fun `not an expense button carries the draft id without destructive styling`() {
+        val button = card()[1].jsonObject["elements"]!!.jsonArray[2].jsonObject
+
+        assertEquals("button", button["type"]!!.jsonPrimitive.content)
+        assertEquals(CANCEL_EXPENSE_ACTION_ID, button["action_id"]!!.jsonPrimitive.content)
+        assertEquals(draftId.toString(), button["value"]!!.jsonPrimitive.content)
+        assertEquals(
+            "Not an expense",
+            button["text"]!!.jsonObject["text"]!!.jsonPrimitive.content,
+        )
+        assertTrue("style" !in button)
+    }
+
+    @Test
     fun `open budget card contains a single private link button`() {
         val actions = openBudgetCard("https://budget.test/enter#raw-nonce").single().jsonObject
         val button = actions["elements"]!!.jsonArray.single().jsonObject
@@ -291,5 +305,6 @@ class SlackCardsTest {
         assertTrue(CARD_BLOCK_ID == "expense_confirm")
         assertTrue(CATEGORY_ACTION_ID == "category_select")
         assertTrue(CONFIRM_ACTION_ID == "confirm_expense")
+        assertTrue(CANCEL_EXPENSE_ACTION_ID == "cancel_expense")
     }
 }

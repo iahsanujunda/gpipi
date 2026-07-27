@@ -83,6 +83,11 @@ class SlackInteractionHandlerTest : PersistenceTest() {
         responseUrl: String? = this.responseUrl,
     ) = runBlocking { handler.handleConfirm(draftId, finalCategoryId, categoryName, responseUrl) }
 
+    private fun cancel(
+        draftId: UUID,
+        responseUrl: String? = this.responseUrl,
+    ) = runBlocking { handler.handleExpenseCancel(draftId, responseUrl) }
+
     @Test
     fun `confirm with no change records the prediction and commits all four writes`() {
         val msgId = givenInbound()
@@ -194,6 +199,82 @@ class SlackInteractionHandlerTest : PersistenceTest() {
 
         // No card to replace — post to the draft's channel instead.
         coVerify(exactly = 1) { slack.postMessage("C1", match { "Recorded" in it }) }
+        coVerify(exactly = 0) { slack.replaceCard(any(), any()) }
+    }
+
+    @Test
+    fun `not an expense cancels the draft and terminalizes the inbound without labels`() {
+        val msgId = givenInbound()
+        val predicted = givenCategory("Convenience Store")
+        val draftId = givenDraft(msgId, predicted)
+
+        cancel(draftId)
+        confirm(draftId, predicted)
+        cancel(draftId)
+
+        assertEquals("CANCELLED", query {
+            ExpenseDraft.selectAll().single()[ExpenseDraft.status]
+        })
+        assertEquals("NON_EXPENSE", query {
+            InboundMessage.selectAll().single()[InboundMessage.status]
+        })
+        assertEquals(0L, query { Expense.selectAll().count() })
+        assertEquals(0L, query { CategorizationEvent.selectAll().count() })
+        coVerify(exactly = 1) {
+            slack.replaceCard(
+                responseUrl,
+                "Nothing recorded — marked as not an expense.",
+            )
+        }
+        coVerify(exactly = 0) { slack.postMessage(any(), any()) }
+    }
+
+    @Test
+    fun `failed inbound terminalization rolls cancellation back and does not notify Slack`() {
+        val msgId = givenInbound()
+        val predicted = givenCategory("Convenience Store")
+        val draftId = givenDraft(msgId, predicted)
+
+        query {
+            checkNotNull(TransactionManager.currentOrNull()).exec(
+                """alter table inbound_message
+                    add constraint inbound_message_reject_non_expense
+                    check (status <> 'NON_EXPENSE') not valid"""
+            )
+        }
+
+        try {
+            assertFailsWith<Exception> { cancel(draftId) }
+        } finally {
+            query {
+                checkNotNull(TransactionManager.currentOrNull()).exec(
+                    """alter table inbound_message
+                        drop constraint if exists inbound_message_reject_non_expense"""
+                )
+            }
+        }
+
+        assertEquals("PENDING", query {
+            ExpenseDraft.selectAll().single()[ExpenseDraft.status]
+        })
+        assertEquals("RECEIVED", query {
+            InboundMessage.selectAll().single()[InboundMessage.status]
+        })
+        coVerify(exactly = 0) { slack.replaceCard(any(), any()) }
+        coVerify(exactly = 0) { slack.postMessage(any(), any()) }
+    }
+
+    @Test
+    fun `not an expense without a response_url falls back to a channel post`() {
+        val msgId = givenInbound()
+        val predicted = givenCategory("Convenience Store")
+        val draftId = givenDraft(msgId, predicted)
+
+        cancel(draftId, responseUrl = null)
+
+        coVerify(exactly = 1) {
+            slack.postMessage("C1", "Nothing recorded — marked as not an expense.")
+        }
         coVerify(exactly = 0) { slack.replaceCard(any(), any()) }
     }
 }

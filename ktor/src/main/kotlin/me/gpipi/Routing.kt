@@ -32,6 +32,7 @@ import me.gpipi.expense.expenseApiRoutes
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
+import me.gpipi.slack.ListPrototypeCommand
 import me.gpipi.slack.LogExpenseCommand
 import me.gpipi.slack.OpenBudgetCommand
 import me.gpipi.slack.SlackClient
@@ -109,7 +110,10 @@ fun Application.configureRouting() {
     val eventHandler = SlackEventHandler(
         db = db,
         inboundRepo = inboundRepo,
-        commands = listOf(OpenBudgetCommand(authService, slack, webBaseUrl)),
+        commands = listOf(
+            OpenBudgetCommand(authService, slack, webBaseUrl),
+            ListPrototypeCommand(slack),   // THROWAWAY: remove after the checkbox spike (phase3.md step 1)
+        ),
         default = LogExpenseCommand(
             db = db,
             inboundRepo = inboundRepo,

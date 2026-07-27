@@ -36,4 +36,37 @@ class SlackModelsTest {
         assertEquals("cat-456", selected.value)
         assertEquals("Monthly Groceries", selected.text!!.text)
     }
+
+    @Test
+    fun `synthetic checkbox payload exposes acting user and selected item ids`() {
+        val payload = """
+            {"type":"block_actions",
+             "user":{"id":"U_FIXTURE"},
+             "response_url":"https://hooks.slack.test/r",
+             "actions":[{
+                 "type":"checkboxes",
+                 "action_id":"shopping_mark_bought",
+                 "block_id":"shopping_list_0",
+                 "selected_options":[
+                     {"text":{"type":"plain_text","text":"milk"},
+                      "value":"00000000-0000-0000-0000-000000000001"},
+                     {"text":{"type":"plain_text","text":"eggs"},
+                      "value":"00000000-0000-0000-0000-000000000002"}
+                 ]
+             }]}
+        """.trimIndent()
+
+        val interaction = json.decodeFromString<Interaction>(payload)
+        val action = interaction.actions.single()
+
+        assertEquals("U_FIXTURE", interaction.user?.id)
+        assertEquals(SHOPPING_MARK_BOUGHT_ACTION_ID, action.actionId)
+        assertEquals(
+            listOf(
+                "00000000-0000-0000-0000-000000000001",
+                "00000000-0000-0000-0000-000000000002",
+            ),
+            action.selectedOptions.map { it.value },
+        )
+    }
 }

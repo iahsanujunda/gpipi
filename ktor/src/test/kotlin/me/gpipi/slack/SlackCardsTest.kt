@@ -4,6 +4,8 @@ import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -19,6 +21,151 @@ class SlackCardsTest {
     private fun card(merchant: String? = "conbini") =
         expenseCard(draftId, amount = 510, merchant = merchant,
             predictedCategoryId = conbini.id, categories = categories)
+
+    private fun checkboxBlocks(card: JsonArray): List<JsonObject> =
+        card.mapNotNull { element ->
+            val block = element.jsonObject
+            val firstElement = block["elements"]?.jsonArray?.firstOrNull()?.jsonObject
+                ?: return@mapNotNull null
+            block.takeIf {
+                firstElement["type"]?.jsonPrimitive?.content == "checkboxes"
+            }
+        }
+
+    private fun checkboxElements(card: JsonArray): List<JsonObject> =
+        checkboxBlocks(card).map { it["elements"]!!.jsonArray.single().jsonObject }
+
+    private fun options(card: JsonArray) =
+        checkboxElements(card).flatMap { it["options"]!!.jsonArray }
+
+    @Test
+    fun `shopping card renders one checkbox group for three items`() {
+        val items = List(3) { index ->
+            ShoppingListItem(UUID(0, index + 1L), "item ${index + 1}")
+        }
+
+        val groups = checkboxElements(shoppingListCard(items))
+
+        assertEquals(1, groups.size)
+        assertEquals(3, groups.single()["options"]!!.jsonArray.size)
+        assertEquals(
+            SHOPPING_MARK_BOUGHT_ACTION_ID,
+            groups.single()["action_id"]!!.jsonPrimitive.content,
+        )
+    }
+
+    @Test
+    fun `shopping card chunks twelve items into groups of ten and two`() {
+        val items = List(12) { index ->
+            ShoppingListItem(UUID(0, index + 1L), "item ${index + 1}")
+        }
+
+        val card = shoppingListCard(items)
+        val blocks = checkboxBlocks(card)
+        val groups = checkboxElements(card)
+
+        assertEquals(listOf(10, 2), groups.map { it["options"]!!.jsonArray.size })
+        assertEquals(2, blocks.map { it["block_id"]!!.jsonPrimitive.content }.distinct().size)
+        assertTrue(
+            groups.all {
+                it["action_id"]!!.jsonPrimitive.content == SHOPPING_MARK_BOUGHT_ACTION_ID
+            },
+        )
+    }
+
+    @Test
+    fun `shopping options carry item UUIDs`() {
+        val items = listOf(
+            ShoppingListItem(UUID(0, 1), "milk"),
+            ShoppingListItem(UUID(0, 2), "eggs"),
+        )
+
+        val values = options(shoppingListCard(items))
+            .map { it.jsonObject["value"]!!.jsonPrimitive.content }
+
+        assertEquals(items.map { it.id.toString() }, values)
+    }
+
+    @Test
+    fun `shopping labels include nonblank quantity and note`() {
+        val items = listOf(
+            ShoppingListItem(UUID(0, 1), "milk"),
+            ShoppingListItem(UUID(0, 2), "ground beef", quantity = "1kg"),
+            ShoppingListItem(UUID(0, 3), "diapers", note = "size L, for night"),
+            ShoppingListItem(
+                UUID(0, 4),
+                "milk",
+                quantity = "2 cartons",
+                note = "low fat",
+            ),
+            ShoppingListItem(UUID(0, 5), "bread", quantity = " ", note = ""),
+        )
+
+        val labels = options(shoppingListCard(items)).map {
+            it.jsonObject["text"]!!.jsonObject["text"]!!.jsonPrimitive.content
+        }
+
+        assertEquals(
+            listOf(
+                "milk",
+                "ground beef · 1kg",
+                "diapers · size L, for night",
+                "milk · 2 cartons · low fat",
+                "bread",
+            ),
+            labels,
+        )
+    }
+
+    @Test
+    fun `shopping option labels respect the Slack limit`() {
+        val card = shoppingListCard(
+            listOf(ShoppingListItem(UUID(0, 1), "x".repeat(100))),
+        )
+
+        val label = options(card).single()
+            .jsonObject["text"]!!.jsonObject["text"]!!.jsonPrimitive.content
+
+        assertEquals(SLACK_OPTION_TEXT_MAX, label.length)
+        assertTrue(label.endsWith("…"))
+    }
+
+    @Test
+    fun `shopping card renders feedback and Undo for a mutation`() {
+        val mutationId = UUID.randomUUID()
+        val card = shoppingListCard(
+            items = listOf(ShoppingListItem(UUID(0, 1), "eggs")),
+            feedback = "Milk marked bought ✓",
+            undoMutationId = mutationId,
+        )
+
+        val sectionTexts = card.mapNotNull {
+            it.jsonObject["text"]?.jsonObject?.get("text")?.jsonPrimitive?.content
+        }
+        val undo = card.mapNotNull {
+            it.jsonObject["elements"]?.jsonArray?.singleOrNull()?.jsonObject
+        }.single { it["action_id"]?.jsonPrimitive?.content == UNDO_SHOPPING_ACTION_ID }
+
+        assertTrue("Milk marked bought ✓" in sectionTexts)
+        assertEquals(mutationId.toString(), undo["value"]!!.jsonPrimitive.content)
+        assertEquals("Undo", undo["text"]!!.jsonObject["text"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun `shopping card omits Undo when there is no mutation`() {
+        val card = shoppingListCard(
+            items = listOf(ShoppingListItem(UUID(0, 1), "milk")),
+            feedback = "Already on the list",
+        )
+
+        val actionIds = card.flatMap {
+            it.jsonObject["elements"]?.jsonArray.orEmpty()
+        }.mapNotNull {
+            it.jsonObject["action_id"]?.jsonPrimitive?.content
+        }
+
+        assertTrue(UNDO_SHOPPING_ACTION_ID !in actionIds)
+    }
 
     @Test
     fun `summary section shows amount and merchant`() {

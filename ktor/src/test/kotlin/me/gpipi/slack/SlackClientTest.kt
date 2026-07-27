@@ -11,6 +11,7 @@ import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -22,6 +23,69 @@ import kotlinx.serialization.json.put
 import me.gpipi.configureSerialization
 
 class SlackClientTest {
+    @Test
+    fun `replaceCard sends replacement blocks with fallback text`() = testApplication {
+        lateinit var receivedBody: JsonObject
+        application {
+            configureSerialization()
+            routing {
+                post("/response") {
+                    receivedBody = call.receive()
+                    call.respond(buildJsonObject { put("ok", true) })
+                }
+            }
+        }
+
+        val slack = SlackClient(
+            http = createClient {
+                install(ContentNegotiation) { json() }
+            },
+            botToken = "xoxb-test",
+            apiBaseUrl = "/api",
+        )
+        val blocks = buildJsonArray {
+            addJsonObject { put("type", "section") }
+        }
+
+        slack.replaceCard(
+            responseUrl = "/response",
+            text = "Milk marked bought ✓",
+            blocks = blocks,
+        )
+
+        assertEquals(true, receivedBody["replace_original"]!!.jsonPrimitive.content.toBoolean())
+        assertEquals("Milk marked bought ✓", receivedBody["text"]!!.jsonPrimitive.content)
+        assertEquals(blocks, receivedBody["blocks"]!!.jsonArray)
+    }
+
+    @Test
+    fun `replaceCard without blocks preserves text-only behavior`() = testApplication {
+        lateinit var receivedBody: JsonObject
+        application {
+            configureSerialization()
+            routing {
+                post("/response") {
+                    receivedBody = call.receive()
+                    call.respond(buildJsonObject { put("ok", true) })
+                }
+            }
+        }
+
+        val slack = SlackClient(
+            http = createClient {
+                install(ContentNegotiation) { json() }
+            },
+            botToken = "xoxb-test",
+            apiBaseUrl = "/api",
+        )
+
+        slack.replaceCard("/response", "Recorded ✓")
+
+        assertEquals(true, receivedBody["replace_original"]!!.jsonPrimitive.content.toBoolean())
+        assertEquals("Recorded ✓", receivedBody["text"]!!.jsonPrimitive.content)
+        assertTrue("blocks" !in receivedBody)
+    }
+
     @Test
     fun `postEphemeral posts the channel user and text to the ephemeral endpoint`() = testApplication {
         lateinit var receivedBody: JsonObject

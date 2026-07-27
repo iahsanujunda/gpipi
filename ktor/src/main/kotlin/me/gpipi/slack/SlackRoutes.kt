@@ -12,6 +12,9 @@ import java.util.UUID
 import kotlin.text.Charsets.UTF_8
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -71,6 +74,13 @@ fun Route.slackInteractionRoutes(signingSecret: String, handler: SlackInteractio
         call.application.launch {
             try {
                 val payloadJson = URLDecoder.decode(raw.removePrefix("payload="), UTF_8)
+                // THROWAWAY: capture a genuine checkbox payload for the fixture, then remove.
+                // response_url is an authenticated callback and must never be copied into logs.
+                val capture = json.parseToJsonElement(payloadJson).jsonObject
+                val safeCapture = JsonObject(
+                    capture + ("response_url" to JsonPrimitive("[redacted]")),
+                )
+                call.application.log.info("INTERACTION SPIKE (response_url redacted): $safeCapture")
                 val interaction = json.decodeFromString<Interaction>(payloadJson)
                 if (interaction.type != "block_actions") return@launch
 

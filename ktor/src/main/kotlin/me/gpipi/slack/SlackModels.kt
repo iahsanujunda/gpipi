@@ -28,6 +28,7 @@ data class SlackEvent(
 @Serializable
 data class Interaction(
     val type: String? = null,
+    val user: SlackUser? = null,
     val actions: List<Action> = emptyList(),
     val state: State? = null,
     @SerialName("response_url") val responseUrl: String? = null
@@ -36,13 +37,20 @@ data class Interaction(
 @Serializable data class Action(
     @SerialName("action_id") val actionId: String? = null,
     val value: String? = null,
+    @SerialName("selected_options") val selectedOptions: List<SelectedOption> = emptyList(),
 )
+
 @Serializable data class State(val values: Map<String, Map<String, SelectValue>> = emptyMap())
+
 @Serializable data class SelectValue(
     @SerialName("selected_option") val selectedOption: SelectedOption? = null,
 )
+
 @Serializable data class SelectedOption(
     val value: String? = null,
     val text: SlackText? = null,   // the option's display name (category name) lives here
 )
+
 @Serializable data class SlackText(val text: String? = null)
+
+@Serializable data class SlackUser(val id: String? = null)

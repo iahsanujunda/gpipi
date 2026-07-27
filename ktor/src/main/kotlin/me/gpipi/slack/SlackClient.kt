@@ -79,11 +79,14 @@ class SlackClient(
         postChat("chat.postMessage", body)
     }
 
-    suspend fun replaceCard(responseUrl: String, text: String) {
+    suspend fun replaceCard(responseUrl: String, text: String, blocks: JsonArray? = null) {
         http.post(responseUrl) {
             contentType(Application.Json)
-            setBody(buildJsonObject { put("replace_original", true); put("text", text) })
+            setBody(buildJsonObject {
+                put("replace_original", true)
+                put("text", text)
+                blocks?.let { put("blocks", it) }
+            })
         }
     }
-
 }

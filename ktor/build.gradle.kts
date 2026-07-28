@@ -29,6 +29,7 @@ kotlin {
 }
 dependencies {
     implementation(ktorLibs.serialization.kotlinx.json)
+    implementation(ktorLibs.server.callId)
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.server.core)

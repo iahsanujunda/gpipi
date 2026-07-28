@@ -6,6 +6,8 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.util.AttributeKey
+import io.micrometer.core.instrument.MeterRegistry
+import me.gpipi.observability.AppObservabilityKey
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
 
@@ -20,12 +22,13 @@ fun ApplicationConfig.dbConfig() = DbConfig(
 
 data class Db(val database: Database, val dataSource: HikariDataSource)
 
-fun connectDatabase(cfg: DbConfig): Db {
+fun connectDatabase(cfg: DbConfig, meterRegistry: MeterRegistry? = null): Db {
     val pool = HikariDataSource(HikariConfig().apply {
         jdbcUrl = cfg.url
         username = cfg.user
         password = cfg.password
         maximumPoolSize = cfg.maxPoolSize
+        meterRegistry?.let(::setMetricRegistry)
     })
     Flyway.configure().dataSource(pool).load().migrate()  // migrate on boot
     return Db(Database.connect(pool), pool)
@@ -34,7 +37,8 @@ fun connectDatabase(cfg: DbConfig): Db {
 val DbKey = AttributeKey<Db>("Db")
 
 fun Application.configureDatabase() {
-    val db = connectDatabase(environment.config.dbConfig())
+    val meterRegistry = attributes.getOrNull(AppObservabilityKey)?.meterRegistry
+    val db = connectDatabase(environment.config.dbConfig(), meterRegistry)
     monitor.subscribe(ApplicationStopped) { db.dataSource.close() }
     attributes.put(DbKey, db)
 }

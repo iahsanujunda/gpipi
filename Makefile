@@ -6,7 +6,10 @@
 #       DATABASE_URL='jdbc:postgresql://<supabase-pooler-host>:5432/postgres' \
 #       DATABASE_USER='postgres.<ref>' DATABASE_PASSWORD='<pw>' \
 #       SLACK_SIGNING_SECRET='<...>' SLACK_BOT_OAUTH_TOKEN='xoxb-<...>' \
-#       OPENROUTER_API_KEY='<...>'
+#       OPENROUTER_API_KEY='<...>' \
+#       OTEL_TRACES_EXPORTER='otlp' OTEL_EXPORTER_OTLP_PROTOCOL='http/protobuf' \
+#       OTEL_EXPORTER_OTLP_ENDPOINT='https://<collector>' \
+#       OTEL_EXPORTER_OTLP_HEADERS='Authorization=Basic%20<token>'
 # Then point the Slack app's Event Subscription URL at https://gpipi-bot.fly.dev/slack/events.
 
 .PHONY: deploy deploy-local

@@ -32,6 +32,7 @@ dependencies {
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.server.core)
+    implementation(ktorLibs.server.metrics.micrometer)
     implementation(ktorLibs.server.netty)
     implementation(ktorLibs.server.statusPages)
     implementation(libs.logback.classic)
@@ -51,6 +52,17 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.12")
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("com.sksamuel.aedile:aedile-core:3.0.4")
+
+    implementation(platform("io.micrometer:micrometer-bom:1.17.0"))
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
+    implementation(platform("io.opentelemetry:opentelemetry-bom:1.62.0"))
+    implementation(platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:2.28.1-alpha"))
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+    implementation("io.opentelemetry:opentelemetry-extension-kotlin")
+    implementation("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure")
+    implementation("io.opentelemetry.instrumentation:opentelemetry-ktor-3.0")
+    runtimeOnly("io.opentelemetry.instrumentation:opentelemetry-logback-mdc-1.0")
 
     implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
 

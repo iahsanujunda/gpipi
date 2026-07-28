@@ -1,8 +1,10 @@
 package me.gpipi.slack
 
+import io.opentelemetry.api.trace.Span
 import kotlinx.coroutines.CancellationException
 import me.gpipi.config.dbQuery
 import me.gpipi.inbound.InboundRepository
+import me.gpipi.observability.AppObservability
 import org.jetbrains.exposed.v1.jdbc.Database
 
 class SlackEventHandler(
@@ -10,6 +12,7 @@ class SlackEventHandler(
     private val inboundRepo: InboundRepository,
     private val commands: List<SlackCommand>,
     private val default: SlackCommand,
+    private val observability: AppObservability? = null,
 ) {
     suspend fun handle(payload: SlackEnvelope) {
         val msg = SlackMessage.from(payload) ?: return
@@ -26,10 +29,15 @@ class SlackEventHandler(
 
         val command = commands.firstOrNull { it.matches(msg.body) }
         if (command == null) {
-            default.handle(msg, msgId)
+            val commandName = default.commandName()
+            Span.current().setAttribute("gpipi.slack.command", commandName)
+            val outcome = default.handle(msg, msgId)
+            recordOutcome(commandName, outcome)
             return
         }
 
+        val commandName = command.commandName()
+        Span.current().setAttribute("gpipi.slack.command", commandName)
         val outcome = try {
             command.handle(msg, msgId)
         } catch (ex: CancellationException) {
@@ -37,6 +45,7 @@ class SlackEventHandler(
         } catch (ex: Exception) {
             SlackCommandOutcome.Failed(ex.commandFailureReason())
         }
+        recordOutcome(commandName, outcome)
 
         dbQuery(db) {
             when (outcome) {
@@ -49,4 +58,21 @@ class SlackEventHandler(
             }
         }
     }
+
+    private fun recordOutcome(commandName: String, outcome: SlackCommandOutcome) {
+        val outcomeName = when (outcome) {
+            SlackCommandOutcome.Completed -> "completed"
+            is SlackCommandOutcome.Failed -> "failed"
+            SlackCommandOutcome.Pending -> "pending"
+        }
+        Span.current().setAttribute("gpipi.slack.outcome", outcomeName)
+        observability?.recordSlackCommand(commandName, outcomeName)
+    }
+
+    private fun SlackCommand.commandName(): String =
+        this::class.simpleName
+            ?.removeSuffix("Command")
+            ?.replace(Regex("([a-z])([A-Z])"), "$1_$2")
+            ?.lowercase()
+            ?: "unknown"
 }

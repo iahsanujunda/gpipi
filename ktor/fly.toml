@@ -39,6 +39,10 @@ swap_size_mb = 512
     method = 'get'
     path = '/health'
 
+[metrics]
+  port = 8080
+  path = '/metrics'
+
 [[vm]]
   size = 'shared-cpu-1x'
   memory = '512mb'

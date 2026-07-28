@@ -1,7 +1,12 @@
 package me.gpipi.config
 
+import io.opentelemetry.api.trace.SpanKind
+import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.context.Context
+import io.opentelemetry.extension.kotlin.asContextElement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import me.gpipi.observability.TelemetryRuntime
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 
@@ -20,7 +25,24 @@ import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
  * transaction may not roll back when the outer throws). Keep network calls (OpenRouter, Slack)
  * OUTSIDE the block: open a transaction only around the actual writes.
  */
-suspend fun <T> dbQuery(db: Database, block: suspend () -> T): T =
-    withContext(Dispatchers.IO) {
-        suspendTransaction(db = db) { block() }
+suspend fun <T> dbQuery(db: Database, block: suspend () -> T): T {
+    val parent = Context.current()
+    val span = TelemetryRuntime.tracer("me.gpipi.database")
+        .spanBuilder("db.transaction")
+        .setParent(parent)
+        .setSpanKind(SpanKind.CLIENT)
+        .setAttribute("db.system.name", "postgresql")
+        .startSpan()
+
+    return try {
+        withContext(Dispatchers.IO + parent.with(span).asContextElement()) {
+            suspendTransaction(db = db) { block() }
+        }
+    } catch (cause: Throwable) {
+        span.recordException(cause)
+        span.setStatus(StatusCode.ERROR)
+        throw cause
+    } finally {
+        span.end()
     }
+}

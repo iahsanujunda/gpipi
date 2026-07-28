@@ -34,3 +34,22 @@ If the server starts successfully, you'll see the following output:
 2024-12-04 14:32:45.584 [main] INFO  Application - Application started in 0.303 seconds.
 2024-12-04 14:32:45.682 [main] INFO  Application - Responding at http://0.0.0.0:8080
 ```
+
+## Observability
+
+Every HTTP response includes `X-Trace-Id`, and application logs include matching `trace_id` and
+`span_id` fields. `/metrics` exposes Prometheus-format Ktor, JVM, Hikari, and application metrics;
+Fly scrapes it through the `[metrics]` entry in `fly.toml`.
+
+Trace export is off by default. Configure an OTLP backend with:
+
+```shell
+OTEL_TRACES_EXPORTER=otlp
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+OTEL_TRACES_SAMPLER=parentbased_traceidratio
+OTEL_TRACES_SAMPLER_ARG=1.0
+```
+
+Hosted collectors can additionally use `OTEL_EXPORTER_OTLP_HEADERS`. Never put these headers in
+source control; set them as Fly secrets in production.

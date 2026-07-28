@@ -420,6 +420,7 @@ Capture each as it becomes clear, then extend this document.
 - **CORS:** the backend permits the static-site origin with credentials on all `/api/**` routes — `allowCredentials = true` forbids a wildcard origin, so the origin is named explicitly (config, not `*`).
 - **Config keys (added in iter 1):** `session.signKey` ← `SESSION_SIGN_KEY` (HMAC key for the session cookie), `web.baseUrl` ← `WEB_BASE_URL` (full origin, used to build the magic link), `cors.allowedOrigin` ← `CORS_ALLOWED_ORIGIN` (host[:port], no scheme — `allowHost` takes schemes separately). All three are read with `config.property(...)`, which throws on boot if missing; mirror them in `.env.example` and inject them in the test config (`configureWithTestDb`).
 - **Transfer ledger purity:** balances and variance are always derived by summing the append-only `transfer` ledger — never stored as a mutable column.
+- **Observability:** OpenTelemetry owns request, background-work, database, and outbound HTTP traces; Micrometer owns HTTP/JVM/Hikari and domain metrics. Logs include `trace_id` and `span_id`, and HTTP responses return `X-Trace-Id`. Slack's application-scoped work explicitly inherits the request context before the 3-second ACK ends its server span. High-cardinality identifiers (`event_id`, draft/mutation ids) belong on spans, never metric tags; message text, session/nonces, credentials, and Slack response URLs never enter telemetry. Trace export is opt-in through standard `OTEL_*` settings, while Fly scrapes `/metrics`.
 
 ---
 

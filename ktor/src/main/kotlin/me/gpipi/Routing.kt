@@ -15,6 +15,7 @@ import io.ktor.server.application.log
 import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
+import io.opentelemetry.instrumentation.ktor.v3_0.KtorClientTelemetry
 import me.gpipi.ai.OpenRouterClient
 import me.gpipi.auth.AuthNonceRepository
 import me.gpipi.auth.AuthService
@@ -32,6 +33,8 @@ import me.gpipi.expense.expenseApiRoutes
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
+import me.gpipi.observability.AppObservabilityKey
+import me.gpipi.observability.TRACE_ID_HEADER
 import me.gpipi.slack.HelpCommand
 import me.gpipi.slack.LogExpenseCommand
 import me.gpipi.slack.OpenBudgetCommand
@@ -68,11 +71,15 @@ fun Application.configureRouting() {
     val cfg = environment.config
     val botToken = cfg.propertyOrNull("slack.botToken")?.getString().orEmpty()
     val openRouterKey = cfg.propertyOrNull("openrouter.apiKey")?.getString().orEmpty()
+    val observability = attributes[AppObservabilityKey]
 
     require(botToken.isNotBlank()) { "SLACK_BOT_OAUTH_TOKEN is missing. set it in .env and restart." }
     require(openRouterKey.isNotBlank()) { "OPENROUTER_API_KEY is missing. set it in .env and restart." }
 
     val httpClient = HttpClient(CIO) {
+        install(KtorClientTelemetry) {
+            setOpenTelemetry(observability.openTelemetry)
+        }
         install(ContentNegotiation) { json() }
         install(HttpTimeout) { requestTimeoutMillis = 30_000 }
         install(HttpRequestRetry) {
@@ -137,6 +144,7 @@ fun Application.configureRouting() {
             draftRepo = ExpenseDraftRepository(),
             slack = slack,
         ),
+        observability = observability,
     )
 
     val interactionHandler = SlackInteractionHandler(
@@ -155,6 +163,10 @@ fun Application.configureRouting() {
         allowHost(cfg.property("cors.allowedOrigin").getString(), schemes = listOf("https","http"))
         allowCredentials = true
         allowHeader(HttpHeaders.ContentType)
+        allowHeader("traceparent")
+        allowHeader("tracestate")
+        allowHeader("baggage")
+        exposeHeader(TRACE_ID_HEADER)
         allowMethod(HttpMethod.Put); allowMethod(HttpMethod.Post)
     }
 

@@ -2,12 +2,8 @@ package me.gpipi
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpRequestRetry
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
@@ -72,21 +68,17 @@ fun Application.configureRouting() {
     require(botToken.isNotBlank()) { "SLACK_BOT_OAUTH_TOKEN is missing. set it in .env and restart." }
     require(openRouterKey.isNotBlank()) { "OPENROUTER_API_KEY is missing. set it in .env and restart." }
 
-    val httpClient = HttpClient(CIO) {
-        install(ContentNegotiation) { json() }
-        install(HttpTimeout) { requestTimeoutMillis = 30_000 }
-        install(HttpRequestRetry) {
-            retryOnServerErrors(maxRetries = 2)
-            retryOnException(maxRetries = 2, retryOnTimeout = true)
-            exponentialDelay()
-        }
+    val slackHttpClient = HttpClient(CIO) { configureSlackHttpClient() }
+    val openRouterHttpClient = HttpClient(CIO) { configureOpenRouterHttpClient() }
+    monitor.subscribe(ApplicationStopped) {
+        slackHttpClient.close()
+        openRouterHttpClient.close()
     }
-    monitor.subscribe(ApplicationStopped) { httpClient.close() }
 
-    val slack = SlackClient(httpClient, botToken)
+    val slack = SlackClient(slackHttpClient, botToken)
 
     val orClient = OpenRouterClient(
-        httpClient,
+        openRouterHttpClient,
         openRouterKey,
         cfg.property("openrouter.model").getString()
     )

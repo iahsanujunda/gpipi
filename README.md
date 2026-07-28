@@ -64,6 +64,35 @@ The fixed launcher keeps navigation out of the way until it is needed. It always
 
 ## How it works
 
+### One authoritative database schema
+
+The database toolchain is deliberately shaped around one schema owner: the Flyway SQL migrations in `ktor/src/main/resources/db/migration`. Exposed never creates or evolves tables, and Supabase is only the hosted PostgreSQL service—there is no second Supabase migration history to keep synchronized.
+
+```mermaid
+flowchart LR
+    Flyway["Flyway SQL<br/>single schema authority"]
+    Flyway --> Generator["Apply to disposable<br/>PostgreSQL Testcontainer"]
+    Generator --> Pgen["pgen introspection<br/>and generated Exposed types"]
+    Pgen --> Compiler["Kotlin repositories<br/>checked by compiler"]
+    Flyway --> Tests["Real PostgreSQL<br/>integration tests"]
+    Flyway --> Production["Flyway at startup<br/>Supabase PostgreSQL"]
+```
+
+For code generation, `pgenGenerateSpec` starts PostgreSQL 17 in Testcontainers, applies the real Flyway history, and introspects the resulting live schema. `pgenGenerateCode` turns that specification into the Exposed table objects used by the repositories. The application therefore queries through Kotlin mappings derived from PostgreSQL's actual interpretation of the migrations rather than through a second hand-maintained model.
+
+The persistence tests use another real PostgreSQL Testcontainer and the production database bootstrap, so they apply the same migrations before exercising repositories, constraints, transactions, partial indexes, and advisory locks. At deployment, the Ktor application runs that same Flyway history in-process against Supabase before serving database traffic.
+
+This moves a useful class of schema drift earlier: after regenerating the model, a renamed, removed, or incompatibly typed column that application code still references normally becomes a Kotlin compile error. PostgreSQL integration tests cover the things a type system cannot prove, such as constraints, indexes, SQL behavior, and transaction semantics.
+
+That compile-time claim depends on regeneration. If a migration changes but `pgenGenerateSpec` is not run, the old committed specification can still generate stale types and compile. New tables must also be added to the pgen table allowlist. The safe schema-change workflow is therefore:
+
+1. Add a Flyway migration.
+2. Register any new table in the pgen allowlist.
+3. Run `pgenGenerateSpec` and `pgenGenerateCode`.
+4. Compile and run the Testcontainers-backed suite.
+
+CI can make the boundary strict by regenerating from scratch and failing when the generated specification differs from the committed one. Additive columns that no code uses need not cause a compile error; semantic changes outside the generated type surface are intentionally left to the PostgreSQL tests.
+
 ### Passwordless authentication from Slack
 
 The `open` command turns an already verified Slack identity into a short-lived browser session without introducing a second login:

@@ -130,12 +130,13 @@ class ShoppingExtractionServiceTest {
     @Test
     fun `extract wraps malformed JSON as ShoppingExtractionException`() {
         coEvery { orClient.chat(any(), any(), any(), any()) } returns ChatResult(
-            content = "not json at all {",
+            content = "not json at all { sensitive shopping text",
             model = testModel,
         )
 
-        assertFailsWith<ShoppingExtractionException> {
+        val failure = assertFailsWith<ShoppingExtractionException> {
             runBlocking { service().extract("milk") }
         }
+        assertEquals("Extraction didn't match schema", failure.message)
     }
 }

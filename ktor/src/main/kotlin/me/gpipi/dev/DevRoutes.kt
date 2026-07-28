@@ -1,6 +1,7 @@
 package me.gpipi.dev
 
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.log
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -16,6 +17,7 @@ fun Route.devRoutes(extractionService: ExtractionService) {
         try {
             call.respond(extractionService.extract(text).extraction)
         } catch (ex: ExtractionException) {
+            call.application.log.error("Development extraction failed", ex)
             call.respond(HttpStatusCode.UnprocessableEntity, ExtractError(ex.message))
         }
     }

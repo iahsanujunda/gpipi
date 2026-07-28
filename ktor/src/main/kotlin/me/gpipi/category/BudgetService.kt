@@ -43,6 +43,7 @@ class BudgetService(
     private val budgetZone: ZoneId = DEFAULT_BUDGET_ZONE,
 ) {
     private companion object {
+        const val UNIQUE_VIOLATION_SQL_STATE = "23505"
         val SUPPORTED_PERIODS = setOf("WEEKLY", "MONTHLY")
     }
 
@@ -67,8 +68,12 @@ class BudgetService(
             }
             activeCategories.advanceAndRebuild()
             BudgetMutationResult.Created(id)
-        } catch (_: ExposedSQLException) {
-            BudgetMutationResult.DuplicateName(request.name)
+        } catch (ex: ExposedSQLException) {
+            if (ex.sqlState == UNIQUE_VIOLATION_SQL_STATE) {
+                BudgetMutationResult.DuplicateName(request.name)
+            } else {
+                throw ex
+            }
         }
     }
 
@@ -87,8 +92,11 @@ class BudgetService(
                     slackLoggable = request.slackLoggable,
                 )
             }
-        } catch (_: ExposedSQLException) {
-            return BudgetMutationResult.DuplicateName(request.name)
+        } catch (ex: ExposedSQLException) {
+            if (ex.sqlState == UNIQUE_VIOLATION_SQL_STATE) {
+                return BudgetMutationResult.DuplicateName(request.name)
+            }
+            throw ex
         }
 
         return if (updated) {

@@ -14,8 +14,22 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.slf4j.MDC
 
 class ObservabilityTest {
+
+    @Test
+    fun `request context survives background coroutine thread switches`() = runBlocking {
+        withContext(requestMdcContext("request-123", "event-456")) {
+            withContext(Dispatchers.Default) {
+                assertEquals("request-123", MDC.get(REQUEST_ID_MDC_KEY))
+                assertEquals("event-456", MDC.get(EVENT_ID_MDC_KEY))
+            }
+        }
+    }
 
     @Test
     fun `requests receive a generated request id and preserve a valid incoming id`() = testApplication {

@@ -39,7 +39,7 @@ class SlackClient(
         val payload = try {
             Json.parseToJsonElement(text).jsonObject
         } catch (ex: Exception) {
-            log.warn("{} returned an invalid response", method)
+            log.warn("$method returned an invalid response", ex)
             throw SlackApiException(method, "invalid_response", ex)
         }
         val ok = payload["ok"]?.jsonPrimitive?.booleanOrNull == true

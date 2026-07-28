@@ -39,6 +39,7 @@ dependencies {
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)
     implementation(ktorLibs.client.contentNegotiation)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.11.0")
     implementation(ktorLibs.server.auth)
     implementation(ktorLibs.server.sessions)
     implementation(ktorLibs.server.cors)

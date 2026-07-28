@@ -3,6 +3,9 @@ package me.gpipi.slack
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import me.gpipi.auth.AuthService
+import org.slf4j.LoggerFactory
+
+private val openBudgetLog = LoggerFactory.getLogger(OpenBudgetCommand::class.java)
 
 class OpenBudgetCommand(
     private val authService: AuthService,
@@ -32,6 +35,7 @@ class OpenBudgetCommand(
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: Exception) {
+            openBudgetLog.error("Open budget command failed", ex)
             postFailureFeedback(msg)
             SlackCommandOutcome.Failed(ex.commandFailureReason())
         }
@@ -46,8 +50,8 @@ class OpenBudgetCommand(
             )
         } catch (ex: CancellationException) {
             throw ex
-        } catch (_: Exception) {
-            // Preserve the original command failure even when feedback cannot be delivered.
+        } catch (feedbackFailure: Exception) {
+            openBudgetLog.warn("Could not send open budget failure feedback", feedbackFailure)
         }
     }
 }

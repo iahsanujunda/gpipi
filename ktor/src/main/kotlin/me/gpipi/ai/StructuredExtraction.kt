@@ -38,7 +38,7 @@ suspend fun <T> OpenRouterClient.extractStructured(
     val value = try {
         extractionJson.decodeFromString(spec.deserializer, completion.content)
     } catch (ex: SerializationException) {
-        throw wrap("Extraction didn't match schema: ${completion.content.take(200)}", ex)
+        throw wrap("Extraction didn't match schema", ex)
     }
 
     return ExtractionOutcome(value, completion.model)

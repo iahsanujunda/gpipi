@@ -2,6 +2,7 @@ package me.gpipi.slack
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.log
+import io.ktor.server.plugins.callid.callId
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
@@ -9,9 +10,11 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import java.net.URLDecoder
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.text.Charsets.UTF_8
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import me.gpipi.requestMdcContext
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -49,8 +52,14 @@ fun Route.slackRoutes(signingSecret: String, handler: SlackEventHandler) {
 
         // App-scoped launch so the work survives the response returning; the request's own
         // scope would cancel it the moment we respond.
-        call.application.launch {
-            handler.handle(payload)
+        call.application.launch(requestMdcContext(call.callId, payload.eventId)) {
+            try {
+                handler.handle(payload)
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (ex: Exception) {
+                call.application.log.error("Slack event processing failed", ex)
+            }
         }
     }
 }
@@ -68,7 +77,7 @@ fun Route.slackInteractionRoutes(signingSecret: String, handler: SlackInteractio
 
         // Parse + dispatch inside the launch so a malformed payload can't throw after we've
         // already responded — log and drop instead.
-        call.application.launch {
+        call.application.launch(requestMdcContext(call.callId)) {
             try {
                 val payloadJson = URLDecoder.decode(raw.removePrefix("payload="), UTF_8)
                 val interaction = json.decodeFromString<Interaction>(payloadJson)
@@ -134,8 +143,10 @@ fun Route.slackInteractionRoutes(signingSecret: String, handler: SlackInteractio
                         )
                     }
                 }
+            } catch (ex: CancellationException) {
+                throw ex
             } catch (ex: Exception) {
-                call.application.log.warn("Dropping malformed Slack interaction: ${ex.message}")
+                call.application.log.error("Slack interaction processing failed", ex)
             }
         }
     }

@@ -7,6 +7,9 @@ import me.gpipi.extraction.ExtractionException
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.inbound.InboundRepository
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.slf4j.LoggerFactory
+
+private val logExpenseLog = LoggerFactory.getLogger(LogExpenseCommand::class.java)
 
 class LogExpenseCommand(
     private val db: Database,
@@ -25,6 +28,7 @@ class LogExpenseCommand(
         val result = try {
             extractionService.extract(msg.text)
         } catch (ex: ExtractionException) {
+            logExpenseLog.error("Expense extraction failed", ex)
             dbQuery(db) {
                 inboundRepo.markFailed(inboundMessageId, ex.message)
             }

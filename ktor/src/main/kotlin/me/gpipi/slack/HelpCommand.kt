@@ -2,6 +2,9 @@ package me.gpipi.slack
 
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
+import org.slf4j.LoggerFactory
+
+private val helpCommandLog = LoggerFactory.getLogger(HelpCommand::class.java)
 
 /**
  * Answers "what can this bot do?" with a private command cheat sheet. It touches nothing but
@@ -28,6 +31,7 @@ class HelpCommand(
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: Exception) {
+            helpCommandLog.error("Help command failed", ex)
             SlackCommandOutcome.Failed(ex.commandFailureReason())
         }
     }

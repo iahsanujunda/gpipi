@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="430" height="940" viewBox="0 0 430 940" role="img" aria-labelledby="title description">
+  <title id="title">Expanded Household Assistant navigation and main page action</title>
+  <desc id="description">The mobile Budgeting page is dimmed behind the expanded launcher. Add budget line appears as the main page action above links to Budgeting, Activity, and Shopping list.</desc>
+
+  <defs>
+    <clipPath id="screen-clip">
+      <rect x="28" y="18" width="374" height="904" rx="40" />
+    </clipPath>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity="0.18" />
+    </filter>
+    <filter id="control-shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1D4E89" flood-opacity="0.25" />
+    </filter>
+    <style>
+      text { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .heading { fill: #1D4E89; font-weight: 700; }
+      .secondary { fill: #526966; }
+      .menu-label { fill: #FFFFFF; font-size: 11px; font-weight: 800; letter-spacing: 1.4px; }
+      .menu-text { font-size: 15px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="430" height="940" fill="#E7F5F7" />
+  <rect x="20" y="8" width="390" height="924" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+  <rect x="28" y="18" width="374" height="904" rx="40" fill="#F4FAFB" />
+
+  <g clip-path="url(#screen-clip)">
+    <rect x="28" y="18" width="374" height="904" fill="#F4FAFB" />
+    <rect x="28" y="18" width="374" height="38" fill="#FFFFFF" />
+    <text x="48" y="42" fill="#1D4E89" font-size="13" font-weight="700">9:41</text>
+    <g fill="none" stroke="#1D4E89" stroke-width="1.8" stroke-linecap="round">
+      <path d="M348 38c4-5 9-5 13 0" />
+      <path d="M351 41c2-3 5-3 7 0" />
+      <rect x="370" y="33" width="18" height="10" rx="2" />
+    </g>
+    <rect x="372.5" y="35.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+
+    <rect x="28" y="56" width="374" height="58" fill="#FFFFFF" />
+    <path d="M59 75 49 85l10 10M50 85h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="88" y="91" fill="#1D4E89" font-size="17" font-weight="700">Household Assistant</text>
+    <line x1="28" y1="113.5" x2="402" y2="113.5" stroke="#C9E2E5" />
+
+    <!-- Budget content remains visible as context behind the modal launcher. -->
+    <text x="44" y="160" class="heading" font-size="30">Budgeting</text>
+    <rect x="44" y="194" width="342" height="144" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="64" y="229" class="heading" font-size="18">Eating Out</text>
+    <text x="64" y="255" class="secondary" font-size="14">Restaurants, cafes, and takeout</text>
+    <rect x="64" y="277" width="122" height="26" rx="13" fill="#DFF4F4" />
+    <text x="125" y="295" text-anchor="middle" class="secondary" font-size="11" font-weight="700">MONTHLY · JUL</text>
+    <text x="64" y="323" class="heading" font-size="16">¥12,400 spent</text>
+    <rect x="44" y="354" width="342" height="144" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <text x="64" y="389" class="heading" font-size="18">Groceries</text>
+    <text x="64" y="415" class="secondary" font-size="14">Weekly household essentials</text>
+    <rect x="64" y="437" width="132" height="26" rx="13" fill="#DFF4F4" />
+    <text x="130" y="455" text-anchor="middle" class="secondary" font-size="11" font-weight="700">WEEKLY · 27–2 AUG</text>
+    <text x="64" y="483" class="heading" font-size="16">¥6,850 spent</text>
+
+    <!-- Scrim covers both page and fixed dock. -->
+    <rect x="28" y="114" width="374" height="808" fill="#1D4E89" fill-opacity="0.62" />
+
+    <!-- Main page action -->
+    <text x="105" y="438" class="menu-label">PAGE ACTIONS</text>
+    <line x1="105" y1="448" x2="325" y2="448" stroke="#3FC1C0" stroke-width="3" />
+    <rect x="105" y="462" width="220" height="48" rx="24" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="2" filter="url(#control-shadow)" />
+    <path d="M132 479v14M125 486h14" stroke="#16679A" stroke-width="2.2" stroke-linecap="round" />
+    <text x="156" y="492" fill="#1D4E89" class="menu-text">Add budget line</text>
+
+    <!-- Primary destinations -->
+    <text x="105" y="550" class="menu-label">NAVIGATION</text>
+    <line x1="105" y1="560" x2="325" y2="560" stroke="#3FC1C0" stroke-width="3" />
+
+    <rect x="105" y="574" width="220" height="48" rx="24" fill="#16679A" filter="url(#control-shadow)" />
+    <rect x="126" y="590" width="15" height="15" rx="3" fill="none" stroke="#FFFFFF" stroke-width="2" />
+    <path d="M130 596h7M130 601h7" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" />
+    <text x="156" y="604" fill="#FFFFFF" class="menu-text">Budgets</text>
+
+    <rect x="105" y="632" width="220" height="48" rx="24" fill="#FFFFFF" filter="url(#control-shadow)" />
+    <path d="M126 664v-9M132 664v-16M138 664v-12" fill="none" stroke="#16679A" stroke-width="2.2" stroke-linecap="round" />
+    <text x="156" y="662" fill="#1D4E89" class="menu-text">Activity</text>
+
+    <rect x="105" y="690" width="220" height="48" rx="24" fill="#FFFFFF" filter="url(#control-shadow)" />
+    <rect x="126" y="705" width="17" height="18" rx="3" fill="none" stroke="#16679A" stroke-width="2" />
+    <path d="m130 711 2 2 4-5M130 718h8" fill="none" stroke="#16679A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="156" y="720" fill="#1D4E89" class="menu-text">Shopping list</text>
+
+    <!-- Fixed dock and stable launcher -->
+    <rect x="28" y="820" width="374" height="102" fill="#1D4E89" fill-opacity="0.26" />
+    <circle cx="215" cy="862" r="28" fill="#16679A" filter="url(#control-shadow)" />
+    <path d="m205 852 20 20M225 852l-20 20" fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" />
+    <text x="215" y="909" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700">Close navigation</text>
+  </g>
+
+  <rect x="166" y="27" width="98" height="24" rx="12" fill="#1D4E89" />
+</svg>

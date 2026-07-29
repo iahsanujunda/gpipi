@@ -101,7 +101,12 @@ export default function WalletDetailPage() {
         </IconButton>
       </Stack>
 
-      <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 3.5 }}>
+      <Paper
+        component="section"
+        aria-label="Wallet balance summary"
+        variant="outlined"
+        sx={{ p: { xs: 2.5, sm: 3 } }}
+      >
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1.2fr) minmax(220px, .8fr)' }, gap: 3 }}>
           <Stack spacing={0.5}>
             <Typography color="text.secondary" sx={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.08em' }}>

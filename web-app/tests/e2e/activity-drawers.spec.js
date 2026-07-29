@@ -23,6 +23,11 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByText('vegetables and pantry restock')).toBeVisible()
 })
 
+test('expense cards use the shared surface radius on mobile', async ({ page }) => {
+  const table = page.getByRole('table', { name: 'Household expenses' })
+  await expect(table.getByRole('row').nth(1)).toHaveCSS('border-radius', '12px')
+})
+
 test('mobile select drawer animates, stays below the viewport top, and dismisses through the revealed backdrop', async ({ page }) => {
   const category = page.getByRole('combobox', { name: 'Category' })
   const samples = await category.evaluate(async (trigger) => {

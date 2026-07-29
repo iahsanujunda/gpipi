@@ -57,7 +57,6 @@ function TransactionCard({ item }) {
         rowGap: 1,
         alignItems: 'center',
         p: 2.5,
-        borderRadius: 3,
       }}
     >
       <Box role="cell" sx={{ gridArea: 'description', minWidth: 0 }}>

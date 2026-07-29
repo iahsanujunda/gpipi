@@ -127,7 +127,7 @@ function ExpenseLedger({ expenses }) {
       sx={{
         border: { xs: 0, md: 1 },
         borderColor: { md: 'divider' },
-        borderRadius: { md: 3 },
+        borderRadius: { md: 1 },
         bgcolor: { md: 'background.paper' },
         overflow: { md: 'hidden' },
       }}
@@ -197,7 +197,7 @@ function ExpenseLedger({ expenses }) {
               borderColor: 'divider',
               borderWidth: { xs: 1, md: 0 },
               borderBottomWidth: { md: 1 },
-              borderRadius: { xs: 3, md: 0 },
+              borderRadius: { xs: 1, md: 0 },
               '&:last-of-type': { borderBottomWidth: { md: 0 } },
             }}
           >

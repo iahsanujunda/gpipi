@@ -88,7 +88,11 @@ test('wallet list, movement sheet, and detail stay contained on mobile', async (
   expect(editBox).not.toBeNull()
   expect(editBox.width).toBeGreaterThanOrEqual(44)
   expect(editBox.height).toBeGreaterThanOrEqual(44)
-  await expect(page.getByRole('table', { name: 'Wallet transactions' })).toBeVisible()
+  const balanceSummary = page.getByRole('region', { name: 'Wallet balance summary' })
+  const transactionTable = page.getByRole('table', { name: 'Wallet transactions' })
+  await expect(balanceSummary).toHaveCSS('border-radius', '12px')
+  await expect(transactionTable).toBeVisible()
+  await expect(transactionTable.getByRole('row').first()).toHaveCSS('border-radius', '12px')
   await expectNoHorizontalOverflow(page)
 })
 

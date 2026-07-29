@@ -26,14 +26,14 @@ export default function EnterPage() {
     if (!nonce) return
 
     redeem(nonce)
-      .then(() => navigate('/budgets', { replace: true }))
+      .then(() => navigate('/wallets', { replace: true }))
       .catch(() => setError('This access link is invalid or has expired. Request a new link in Slack.'))
       .finally(() => {
         if (pendingNonce === nonce) pendingNonce = null
       })
   }, [navigate, nonce, redeem])
 
-  if (user) return <Navigate to="/budgets" replace />
+  if (user) return <Navigate to="/wallets" replace />
 
   return (
     <Box component="main" sx={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', p: 3 }}>

@@ -27,6 +27,8 @@ import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestAccount
+import me.gpipi.support.insertTestCategory
 import org.jetbrains.exposed.v1.jdbc.insert
 
 /**
@@ -44,16 +46,7 @@ class ExtractionServiceTest : PersistenceTest() {
     )
 
     private fun seedCategory(name: String, description: String = "desc"): UUID = query {
-        val catId = UUID.randomUUID()
-        Category.insert {
-            it[Category.id] = catId
-            it[Category.name] = name
-            it[Category.description] = description
-            it[Category.period] = "MONTHLY"
-            it[Category.amount] = 50000L
-            it[Category.slackLoggable] = true
-        }
-        catId
+        insertTestCategory(name = name, description = description)
     }
 
     private fun okJson(category: String) =
@@ -69,12 +62,14 @@ class ExtractionServiceTest : PersistenceTest() {
         description: String,
         amount: Long = 75_000L,
         slackLoggable: Boolean = true,
+        accountId: String = query { insertTestAccount() }.toString(),
     ) = UpsertBudgetRequest(
         name = name,
         description = description,
         period = "MONTHLY",
         amount = amount,
         slackLoggable = slackLoggable,
+        accountId = accountId,
     )
 
     // --- pure builders (no DB, no network) ---

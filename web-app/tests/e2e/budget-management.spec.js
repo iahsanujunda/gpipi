@@ -272,6 +272,8 @@ test('creates a budget through the mobile drawer review flow', async ({ page }) 
   await expect(sheet).toHaveAttribute('data-exit-duration-ms', '320')
 
   await page.getByRole('textbox', { name: 'Name' }).fill('Pet care E2E')
+  await page.getByRole('combobox', { name: 'Wallet or account' }).click()
+  await page.getByRole('option', { name: 'Everyday account' }).click()
   await page.getByRole('textbox', { name: 'Description' }).fill('Vet visits, pet food, and medicine')
   await page.getByRole('textbox', { name: 'Budget cap' }).fill('12000')
   await page.getByRole('button', { name: 'Review budget line' }).click()

@@ -60,7 +60,7 @@ The fixed launcher keeps navigation out of the way until it is needed. It always
 | Structured extraction | OpenRouter with strict JSON Schema responses |
 | State | PostgreSQL, Exposed transactions, and Flyway migrations |
 | Frontend | React, Vite, Material UI, and TanStack Query |
-| Runtime | Ktor on Fly.io in Tokyo; static frontend assets on Cloudflare |
+| Runtime | Ktor on Fly.io in Tokyo; static frontend assets and same-origin `/api` proxy on Cloudflare |
 
 ## How it works
 

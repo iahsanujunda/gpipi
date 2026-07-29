@@ -7,6 +7,8 @@ import ProtectedRoute from '@/auth/ProtectedRoute'
 import ActivityPage from '@/activity/ActivityPage'
 import BudgetsPage from '@/budgets/BudgetsPage'
 import ShoppingPage from '@/shopping/ShoppingPage'
+import WalletDetailPage from '@/wallets/WalletDetailPage'
+import WalletsPage from '@/wallets/WalletsPage'
 
 export const routes = [
   { path: '/enter', element: <EnterPage /> },
@@ -19,7 +21,9 @@ export const routes = [
       {
         element: <AppLayout />,
         children: [
-          { index: true, element: <Navigate to="/budgets" replace /> },
+          { index: true, element: <Navigate to="/wallets" replace /> },
+          { path: 'wallets', element: <WalletsPage /> },
+          { path: 'wallets/:id', element: <WalletDetailPage /> },
           { path: 'budgets', element: <BudgetsPage /> },
           { path: 'activity', element: <ActivityPage /> },
           { path: 'shopping', element: <ShoppingPage /> },

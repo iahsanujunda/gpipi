@@ -12,6 +12,9 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
 import me.gpipi.ai.OpenRouterClient
+import me.gpipi.account.AccountRepository
+import me.gpipi.account.AccountService
+import me.gpipi.account.accountApiRoutes
 import me.gpipi.auth.AuthNonceRepository
 import me.gpipi.auth.AuthService
 import me.gpipi.auth.authRoutes
@@ -84,6 +87,7 @@ fun Application.configureRouting() {
     )
 
     val categoryRepo = CategoryRepository()
+    val accountRepo = AccountRepository()
     val inboundRepo = InboundRepository()
     val expenseRepo = ExpenseRepository()
     val activeCategoryCatalog = ActiveCategoryCatalog(db, categoryRepo)
@@ -92,6 +96,10 @@ fun Application.configureRouting() {
         categoryRepo = categoryRepo,
         expenseRepo = expenseRepo,
         activeCategories = activeCategoryCatalog,
+    )
+    val accountService = AccountService(
+        db = db,
+        repository = accountRepo,
     )
 
     val authService = AuthService(
@@ -147,7 +155,10 @@ fun Application.configureRouting() {
         allowHost(cfg.property("cors.allowedOrigin").getString(), schemes = listOf("https","http"))
         allowCredentials = true
         allowHeader(HttpHeaders.ContentType)
-        allowMethod(HttpMethod.Put); allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Patch)
+        allowMethod(HttpMethod.Delete)
     }
 
     routing {
@@ -157,6 +168,7 @@ fun Application.configureRouting() {
         slackInteractionRoutes(signingSecret, interactionHandler)
         authenticate("auth-session") {
             expenseApiRoutes(db, expenseRepo)
+            accountApiRoutes(accountService)
             budgetApiRoutes(budgetService)
             shoppingApiRoutes(shoppingService)
         }

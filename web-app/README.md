@@ -15,7 +15,10 @@ npm run build
 ```
 
 During local development, Vite proxies `/api` to Ktor on `http://localhost:8080`.
-For a separately hosted production build, set `VITE_API_URL` to the Ktor origin.
+Production keeps the same browser-facing shape: Cloudflare serves the static app and
+reverse-proxies `/api/**` to Ktor, so `VITE_API_URL` stays unset and the
+`SameSite=Lax` session cookie remains first-party. Do not point production directly
+at an unrelated Ktor origin; cross-site cookie delivery is not a supported topology.
 Set `VITE_SLACK_RETURN_URL` to the Slack deep link that the app-bar back button
 should open. Without it, the app falls back to browser history and then the
 generic Slack application link.

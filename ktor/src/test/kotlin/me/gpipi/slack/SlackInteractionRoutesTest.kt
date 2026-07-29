@@ -32,6 +32,7 @@ import me.gpipi.shopping.ShoppingDraftItemInput
 import me.gpipi.shopping.ShoppingRepository
 import me.gpipi.shopping.ShoppingService
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestCategory
 import me.gpipi.support.configureWithTestDb
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -67,16 +68,7 @@ class SlackInteractionRoutesTest : PersistenceTest() {
     private fun <T> query(block: () -> T): T = runBlocking { dbQuery(db) { block() } }
 
     private fun givenCategory(name: String): UUID = query {
-        val id = UUID.randomUUID()
-        Category.insert {
-            it[Category.id] = id
-            it[Category.name] = name
-            it[Category.description] = "desc for $name"
-            it[Category.period] = "MONTHLY"
-            it[Category.amount] = 60000L
-            it[Category.slackLoggable] = true
-        }
-        id
+        insertTestCategory(name = name, description = "desc for $name", amount = 60_000L)
     }
 
     private fun givenInbound(): UUID = runBlocking {

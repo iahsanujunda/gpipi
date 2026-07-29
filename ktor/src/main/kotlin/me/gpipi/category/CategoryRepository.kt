@@ -2,6 +2,7 @@ package me.gpipi.category
 
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import me.gpipi.generated.db.base.public1.Account
 import me.gpipi.generated.db.base.public1.Category
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -25,6 +26,8 @@ data class BudgetRow(
     val amount: Long,
     val active: Boolean,
     val slackLoggable: Boolean,
+    val accountId: String,
+    val accountName: String,
 )
 
 class CategoryRepository {
@@ -43,7 +46,7 @@ class CategoryRepository {
             }
 
     fun listBudgets(): List<BudgetRow> =
-        Category
+        (Category innerJoin Account)
             .select(
                 Category.id,
                 Category.name,
@@ -52,6 +55,8 @@ class CategoryRepository {
                 Category.amount,
                 Category.active,
                 Category.slackLoggable,
+                Category.accountId,
+                Account.name,
             )
             .where { Category.active eq true }
             .orderBy(Category.name to SortOrder.ASC)
@@ -63,7 +68,9 @@ class CategoryRepository {
                     period = row[Category.period],
                     amount = row[Category.amount],
                     active = row[Category.active],
-                    slackLoggable = row[Category.slackLoggable]
+                    slackLoggable = row[Category.slackLoggable],
+                    accountId = row[Category.accountId].toString(),
+                    accountName = row[Account.name],
                 )
             }
 
@@ -72,7 +79,8 @@ class CategoryRepository {
                period: String,
                amount: Long,
                active: Boolean,
-               slackLoggable: Boolean): UUID {
+               slackLoggable: Boolean,
+               accountId: UUID): UUID {
         val id = UUID.randomUUID()
         Category.insert {
             it[Category.id] = id
@@ -82,6 +90,7 @@ class CategoryRepository {
             it[Category.amount] = amount
             it[Category.active] = active
             it[Category.slackLoggable] = slackLoggable
+            it[Category.accountId] = accountId
         }
         return id
     }
@@ -92,7 +101,8 @@ class CategoryRepository {
                period: String,
                amount: Long,
                active: Boolean,
-               slackLoggable: Boolean): Boolean =
+               slackLoggable: Boolean,
+               accountId: UUID): Boolean =
         Category.update(
             { Category.id eq id }
         ) {
@@ -102,6 +112,7 @@ class CategoryRepository {
             it[Category.amount] = amount
             it[Category.active] = active
             it[Category.slackLoggable] = slackLoggable
+            it[Category.accountId] = accountId
         }
             .let { rowsUpdated -> rowsUpdated > 0 }
 

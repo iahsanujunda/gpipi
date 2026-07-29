@@ -44,6 +44,7 @@ class BudgetService(
 ) {
     private companion object {
         const val UNIQUE_VIOLATION_SQL_STATE = "23505"
+        const val FOREIGN_KEY_VIOLATION_SQL_STATE = "23503"
         val SUPPORTED_PERIODS = setOf("WEEKLY", "MONTHLY")
     }
 
@@ -54,6 +55,7 @@ class BudgetService(
 
     suspend fun create(request: UpsertBudgetRequest): BudgetMutationResult {
         validate(request)?.let { return it }
+        val accountId = UUID.fromString(request.accountId)
 
         return try {
             val id = dbQuery(db) {
@@ -64,21 +66,27 @@ class BudgetService(
                     amount = request.amount,
                     active = request.active,
                     slackLoggable = request.slackLoggable,
+                    accountId = accountId,
                 )
             }
             activeCategories.advanceAndRebuild()
             BudgetMutationResult.Created(id)
         } catch (ex: ExposedSQLException) {
-            if (ex.sqlState == UNIQUE_VIOLATION_SQL_STATE) {
-                BudgetMutationResult.DuplicateName(request.name)
-            } else {
-                throw ex
+            when (ex.sqlState) {
+                UNIQUE_VIOLATION_SQL_STATE ->
+                    BudgetMutationResult.DuplicateName(request.name)
+
+                FOREIGN_KEY_VIOLATION_SQL_STATE ->
+                    BudgetMutationResult.Invalid("Selected wallet was not found.")
+
+                else -> throw ex
             }
         }
     }
 
     suspend fun update(id: UUID, request: UpsertBudgetRequest): BudgetMutationResult {
         validate(request)?.let { return it }
+        val accountId = UUID.fromString(request.accountId)
 
         val updated = try {
             dbQuery(db) {
@@ -90,11 +98,16 @@ class BudgetService(
                     amount = request.amount,
                     active = request.active,
                     slackLoggable = request.slackLoggable,
+                    accountId = accountId,
                 )
             }
         } catch (ex: ExposedSQLException) {
-            if (ex.sqlState == UNIQUE_VIOLATION_SQL_STATE) {
-                return BudgetMutationResult.DuplicateName(request.name)
+            when (ex.sqlState) {
+                UNIQUE_VIOLATION_SQL_STATE ->
+                    return BudgetMutationResult.DuplicateName(request.name)
+
+                FOREIGN_KEY_VIOLATION_SQL_STATE ->
+                    return BudgetMutationResult.Invalid("Selected wallet was not found.")
             }
             throw ex
         }
@@ -157,6 +170,16 @@ class BudgetService(
             request.amount < 0 ->
                 BudgetMutationResult.Invalid("'amount' must be zero or greater.")
 
+            request.accountId.toUuidOrNull() == null ->
+                BudgetMutationResult.Invalid("'accountId' must be a UUID.")
+
             else -> null
         }
 }
+
+private fun String.toUuidOrNull(): UUID? =
+    try {
+        UUID.fromString(this)
+    } catch (_: IllegalArgumentException) {
+        null
+    }

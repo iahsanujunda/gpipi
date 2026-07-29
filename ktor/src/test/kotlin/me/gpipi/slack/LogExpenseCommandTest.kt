@@ -21,6 +21,7 @@ import me.gpipi.generated.db.base.public1.ExpenseDraft
 import me.gpipi.generated.db.base.public1.InboundMessage
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestCategory
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
@@ -53,14 +54,13 @@ class LogExpenseCommandTest : PersistenceTest() {
     }
 
     private fun givenCategory() = query {
-        Category.insert {
-            it[Category.id] = categoryId
-            it[Category.name] = "Eating Out"
-            it[Category.description] = "restaurants, cafes, ramen"
-            it[Category.amount] = 15_000L
-            it[Category.period] = "WEEKLY"
-            it[Category.slackLoggable] = true
-        }
+        insertTestCategory(
+            id = categoryId,
+            name = "Eating Out",
+            description = "restaurants, cafes, ramen",
+            amount = 15_000L,
+            period = "WEEKLY",
+        )
     }
 
     private fun givenInboundMessage(): UUID = runBlocking {

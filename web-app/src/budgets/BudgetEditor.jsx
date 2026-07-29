@@ -9,6 +9,7 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
+  MenuItem,
   Stack,
   Switch,
   TextField,
@@ -23,6 +24,7 @@ import {
   WarningIcon,
 } from '@/app/AppIcons'
 import AnimatedBottomSheet from '@/components/AnimatedBottomSheet'
+import AdaptiveSelect from '@/components/AdaptiveSelect'
 
 const EMPTY_FORM = {
   name: '',
@@ -31,10 +33,16 @@ const EMPTY_FORM = {
   period: 'MONTHLY',
   active: true,
   slackLoggable: true,
+  accountId: '',
 }
 
-function formFromBudget(budget) {
-  if (!budget) return EMPTY_FORM
+function formFromBudget(budget, accounts) {
+  if (!budget) {
+    return {
+      ...EMPTY_FORM,
+      accountId: accounts.length === 1 ? accounts[0].id : '',
+    }
+  }
   return {
     name: budget.name,
     description: budget.description,
@@ -42,6 +50,7 @@ function formFromBudget(budget) {
     period: budget.period,
     active: budget.active,
     slackLoggable: budget.slackLoggable,
+    accountId: budget.accountId,
   }
 }
 
@@ -62,6 +71,7 @@ function validate(form) {
   if (!form.description.trim()) errors.description = 'Describe what belongs in this budget line.'
   if (!/^\d+$/.test(amount)) errors.amount = 'Enter a whole JPY amount of zero or greater.'
   if (!['WEEKLY', 'MONTHLY'].includes(form.period)) errors.period = 'Choose a budget period.'
+  if (!form.accountId) errors.accountId = 'Choose the wallet that funds this budget line.'
   return errors
 }
 
@@ -73,6 +83,7 @@ function requestFromForm(form) {
     period: form.period,
     active: form.active,
     slackLoggable: form.slackLoggable,
+    accountId: form.accountId,
   }
 }
 
@@ -100,6 +111,7 @@ function FieldSummary({ label, children }) {
 }
 
 function EditorForm({
+  accounts,
   errors,
   form,
   mode,
@@ -118,6 +130,18 @@ function EditorForm({
         onChange={(event) => onChange('name', event.target.value)}
         slotProps={{ htmlInput: { maxLength: 120 } }}
       />
+      <AdaptiveSelect
+        required
+        label="Wallet or account"
+        value={form.accountId}
+        error={Boolean(errors.accountId)}
+        helperText={errors.accountId ?? 'Future expenses recorded here will reduce this wallet.'}
+        onChange={(event) => onChange('accountId', event.target.value)}
+      >
+        {accounts.map((account) => (
+          <MenuItem key={account.id} value={account.id}>{account.name}</MenuItem>
+        ))}
+      </AdaptiveSelect>
       <TextField
         required
         multiline
@@ -210,8 +234,11 @@ function EditorForm({
   )
 }
 
-function Review({ budget, form, mode }) {
+function Review({ accounts, budget, form, mode }) {
   const request = requestFromForm(form)
+  const accountName = accounts.find((account) => account.id === request.accountId)?.name
+    ?? budget?.accountName
+    ?? 'Unknown wallet'
 
   if (mode === 'create') {
     return (
@@ -230,6 +257,7 @@ function Review({ budget, form, mode }) {
               {formatMoney(request.amount)} · {request.period}
             </Typography>
           </FieldSummary>
+          <FieldSummary label="Wallet">{accountName}</FieldSummary>
           <FieldSummary label="Slack logging">
             {request.slackLoggable ? 'On' : 'Off'}
           </FieldSummary>
@@ -265,6 +293,11 @@ function Review({ budget, form, mode }) {
       previous: budget.slackLoggable ? 'On' : 'Off',
       next: request.slackLoggable ? 'On' : 'Off',
     },
+    budget.accountId !== request.accountId && {
+      label: 'Wallet',
+      previous: budget.accountName,
+      next: accountName,
+    },
   ].filter(Boolean)
 
   return (
@@ -287,6 +320,11 @@ function Review({ budget, form, mode }) {
           </FieldSummary>
         ))}
       </Stack>
+      {budget.accountId !== request.accountId && (
+        <Alert severity="info">
+          This changes where future expenses are recorded. Historical transactions stay in their current wallet.
+        </Alert>
+      )}
     </Stack>
   )
 }
@@ -334,6 +372,7 @@ function DiscardConfirmation({ budget }) {
 }
 
 function EditorSurface({
+  accounts,
   budget,
   errors,
   form,
@@ -399,6 +438,7 @@ function EditorSurface({
         )}
         {stage === 'form' && (
           <EditorForm
+            accounts={accounts}
             errors={errors}
             form={form}
             mode={mode}
@@ -406,7 +446,7 @@ function EditorSurface({
             onDeactivate={onDeactivate}
           />
         )}
-        {stage === 'review' && <Review budget={budget} form={form} mode={mode} />}
+        {stage === 'review' && <Review accounts={accounts} budget={budget} form={form} mode={mode} />}
         {stage === 'deactivate' && <DeactivateConfirmation budget={budget} />}
         {stage === 'discard' && <DiscardConfirmation budget={budget} />}
       </Box>
@@ -464,6 +504,7 @@ function EditorSurface({
 }
 
 export default function BudgetEditor({
+  accounts,
   budget,
   createMutation,
   deactivateMutation,
@@ -479,7 +520,7 @@ export default function BudgetEditor({
   const theme = useTheme()
   const mobile = useMediaQuery(theme.breakpoints.down('md'))
   const mode = budget ? 'edit' : 'create'
-  const initialForm = useMemo(() => formFromBudget(budget), [budget])
+  const initialForm = useMemo(() => formFromBudget(budget, accounts), [accounts, budget])
   const [form, setForm] = useState(initialForm)
   const [stage, setStage] = useState('form')
   const [errors, setErrors] = useState({})
@@ -557,6 +598,7 @@ export default function BudgetEditor({
   const visibleStage = discardRequested && dirty ? 'discard' : stage
   const surface = (
     <EditorSurface
+      accounts={accounts}
       budget={budget}
       errors={errors}
       form={form}

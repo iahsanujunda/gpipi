@@ -52,6 +52,7 @@ class BudgetRoutesTest {
         amount = 75_000L,
         active = true,
         slackLoggable = true,
+        accountId = UUID.randomUUID().toString(),
     )
 
     @Test
@@ -65,6 +66,8 @@ class BudgetRoutesTest {
                 amount = 75_000L,
                 active = true,
                 slackLoggable = true,
+                accountId = "00000000-0000-0000-0000-000000000010",
+                accountName = "Default wallet",
             ),
         )
         coEvery { service.listBudgets() } returns budgets

@@ -10,6 +10,7 @@ const mockUseBudgetSpend = vi.fn()
 const mockUseCreateBudget = vi.fn()
 const mockUseUpdateBudget = vi.fn()
 const mockUseDeactivateBudget = vi.fn()
+const mockUseWallets = vi.fn()
 
 vi.mock('@/budgets/queries', () => ({
   useBudgets: () => mockUseBudgets(),
@@ -19,6 +20,17 @@ vi.mock('@/budgets/queries', () => ({
   useDeactivateBudget: () => mockUseDeactivateBudget(),
 }))
 
+vi.mock('@/wallets/queries', () => ({
+  useWallets: () => mockUseWallets(),
+}))
+
+const everydayWallet = {
+  id: '90000000-0000-0000-0000-000000000001',
+  name: 'Everyday account',
+  balance: 28400,
+  assignedBudgetCount: 4,
+}
+
 const eatingOut = {
   id: '00000000-0000-0000-0000-000000000001',
   name: 'Eating Out',
@@ -27,6 +39,8 @@ const eatingOut = {
   amount: 15000,
   active: true,
   slackLoggable: true,
+  accountId: everydayWallet.id,
+  accountName: everydayWallet.name,
 }
 
 const groceries = {
@@ -37,6 +51,8 @@ const groceries = {
   amount: 75000,
   active: true,
   slackLoggable: true,
+  accountId: everydayWallet.id,
+  accountName: everydayWallet.name,
 }
 
 const transport = {
@@ -47,6 +63,8 @@ const transport = {
   amount: 20000,
   active: true,
   slackLoggable: true,
+  accountId: everydayWallet.id,
+  accountName: everydayWallet.name,
 }
 
 const homeRepairs = {
@@ -57,6 +75,8 @@ const homeRepairs = {
   amount: 0,
   active: true,
   slackLoggable: false,
+  accountId: everydayWallet.id,
+  accountName: everydayWallet.name,
 }
 
 function spendRow(budget, spent) {
@@ -121,6 +141,11 @@ describe('BudgetsPage', () => {
     mockUseCreateBudget.mockReturnValue(mutation())
     mockUseUpdateBudget.mockReturnValue(mutation())
     mockUseDeactivateBudget.mockReturnValue(mutation())
+    mockUseWallets.mockReturnValue({
+      data: [everydayWallet],
+      isPending: false,
+      isError: false,
+    })
   })
 
   it('shows the active fields returned by Ktor without a permanent create button', () => {
@@ -130,6 +155,7 @@ describe('BudgetsPage', () => {
     expect(screen.getByRole('heading', { name: 'Weekly' })).toBeInTheDocument()
     expect(screen.getByText('20–26 JUL')).toBeInTheDocument()
     expect(screen.getByText('SLACK ON')).toBeInTheDocument()
+    expect(screen.getAllByText('Everyday account')).not.toHaveLength(0)
     expect(screen.getAllByText(/Cap ¥15,000/)).not.toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Add budget line' })).not.toBeInTheDocument()
   })
@@ -298,6 +324,7 @@ describe('BudgetsPage', () => {
       period: 'MONTHLY',
       active: true,
       slackLoggable: true,
+      accountId: everydayWallet.id,
     })
     await waitFor(() => expect(dialog).not.toBeInTheDocument())
     expect(screen.getByRole('status')).toHaveTextContent('Pet care created')

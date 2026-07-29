@@ -84,6 +84,12 @@ class ExpenseRepository {
         note: String?,
         categoryId: UUID,
     ): UUID {
+        val accountId = Category
+            .select(Category.accountId)
+            .where { Category.id eq categoryId }
+            .singleOrNull()
+            ?.get(Category.accountId)
+            ?: throw IllegalArgumentException("Unknown category id: $categoryId")
         val id = UUID.randomUUID()
         Expense.insert {
             it[Expense.id]               = id
@@ -92,6 +98,7 @@ class ExpenseRepository {
             it[Expense.amount]           = amount
             it[Expense.currency]         = currency
             it[Expense.categoryId]       = categoryId
+            it[Expense.accountId]        = accountId
             it[Expense.merchant]         = merchant
             it[Expense.note]             = note
         }

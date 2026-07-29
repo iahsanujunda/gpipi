@@ -105,6 +105,10 @@
     <g id="add-icon">
       <path d="M12 3v18M3 12h18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
     </g>
+
+    <g id="swap-icon">
+      <path d="M5 2v12m-3-3 3 3 3-3M11 14V2M8 5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
   </defs>
 
   <rect width="1380" height="1980" fill="#E7F5F7" />
@@ -129,7 +133,7 @@
       <path d="m345 214 6 6-6 6" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       <rect x="42" y="236" width="96" height="24" rx="12" fill="#DFF4F4" />
       <text x="90" y="252" class="chip" text-anchor="middle">3 BUDGET LINES</text>
-      <text x="42" y="283" class="eyebrow">AVAILABLE BALANCE</text>
+      <text x="42" y="283" class="eyebrow">BALANCE</text>
       <text x="348" y="287" class="money">¥87,420</text>
       <line x1="42" y1="300" x2="348" y2="300" stroke="#C9E2E5" />
       <g transform="translate(96 310)" color="#16679A"><use href="#move-icon" /></g>
@@ -140,7 +144,7 @@
       <path d="m345 370 6 6-6 6" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       <rect x="42" y="392" width="90" height="24" rx="12" fill="#DFF4F4" />
       <text x="87" y="408" class="chip" text-anchor="middle">1 BUDGET LINE</text>
-      <text x="42" y="439" class="eyebrow">AVAILABLE BALANCE</text>
+      <text x="42" y="439" class="eyebrow">BALANCE</text>
       <text x="348" y="443" class="money">−¥2,300</text>
       <line x1="42" y1="456" x2="348" y2="456" stroke="#C9E2E5" />
       <g transform="translate(96 466)" color="#16679A"><use href="#move-icon" /></g>
@@ -151,7 +155,7 @@
       <path d="m345 526 6 6-6 6" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       <rect x="42" y="548" width="96" height="24" rx="12" fill="#DFF4F4" />
       <text x="90" y="564" class="chip" text-anchor="middle">3 BUDGET LINES</text>
-      <text x="42" y="595" class="eyebrow">AVAILABLE BALANCE</text>
+      <text x="42" y="595" class="eyebrow">BALANCE</text>
       <text x="348" y="599" class="money">¥64,000</text>
       <line x1="42" y1="612" x2="348" y2="612" stroke="#C9E2E5" />
       <g transform="translate(96 622)" color="#16679A"><use href="#move-icon" /></g>
@@ -273,29 +277,33 @@
         <text x="42" y="252" class="eyebrow">FROM</text>
         <text x="42" y="280" class="body" font-size="15">External account</text>
         <path d="m342 258 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
-        <text x="28" y="311" class="secondary" font-size="11">Employer, side gig, cash, or another untracked source.</text>
+        <g role="button" aria-label="Swap From and To">
+          <circle cx="195" cy="322" r="22" fill="#16679A" filter="url(#control-shadow)" />
+          <g transform="translate(187 314)" color="#FFFFFF"><use href="#swap-icon" /></g>
+        </g>
 
-        <rect x="28" y="328" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="42" y="345" class="eyebrow">TO</text>
-        <text x="42" y="373" class="body" font-size="15">Household account</text>
-        <path d="m342 351 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
+        <rect x="28" y="352" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="369" class="eyebrow">TO</text>
+        <text x="42" y="397" class="body" font-size="15">Household account</text>
+        <path d="m342 375 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
 
-        <rect x="28" y="399" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="42" y="416" class="eyebrow">AMOUNT</text>
-        <text x="42" y="444" class="body" font-size="17" font-weight="700">¥ 120,000</text>
+        <rect x="28" y="423" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="440" class="eyebrow">AMOUNT</text>
+        <text x="42" y="468" class="body" font-size="17" font-weight="700">¥ 120,000</text>
 
-        <rect x="28" y="470" width="334" height="64" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="42" y="487" class="eyebrow">NOTE · OPTIONAL</text>
-        <text x="42" y="516" class="secondary" font-size="13">July salary · employer</text>
+        <rect x="28" y="494" width="334" height="64" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="511" class="eyebrow">NOTE · OPTIONAL</text>
+        <text x="42" y="540" class="secondary" font-size="13">July salary · employer</text>
 
-        <rect x="28" y="550" width="334" height="64" rx="10" fill="#DFF4F4" />
-        <text x="42" y="573" class="eyebrow">HOUSEHOLD ACCOUNT</text>
-        <text x="42" y="598" class="secondary" font-size="12">¥87,420 →</text>
-        <text x="348" y="598" class="heading" font-size="18" text-anchor="end">¥207,420</text>
+        <rect x="28" y="574" width="334" height="64" rx="10" fill="#DFF4F4" />
+        <text x="42" y="597" class="eyebrow">BALANCE AFTER MOVEMENT</text>
+        <text x="348" y="597" class="eyebrow" text-anchor="end">UPDATED NOW</text>
+        <text x="42" y="622" class="secondary" font-size="12">¥87,420 →</text>
+        <text x="348" y="622" class="heading" font-size="18" text-anchor="end">¥207,420</text>
 
-        <rect x="28" y="630" width="334" height="48" rx="10" fill="#16679A" />
-        <text x="195" y="660" class="button">Review money movement</text>
-        <text x="195" y="710" class="button-secondary">Cancel</text>
+        <rect x="28" y="654" width="334" height="48" rx="10" fill="#16679A" />
+        <text x="195" y="684" class="button">Review money movement</text>
+        <text x="195" y="731" class="button-secondary">Cancel</text>
       </g>
     </g>
 
@@ -318,30 +326,35 @@
         <text x="42" y="252" class="eyebrow">FROM</text>
         <text x="42" y="280" class="body" font-size="15">Household account</text>
         <path d="m342 258 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
+        <g role="button" aria-label="Swap From and To">
+          <circle cx="195" cy="322" r="22" fill="#16679A" filter="url(#control-shadow)" />
+          <g transform="translate(187 314)" color="#FFFFFF"><use href="#swap-icon" /></g>
+        </g>
 
-        <rect x="28" y="306" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="42" y="323" class="eyebrow">TO</text>
-        <text x="42" y="351" class="body" font-size="15">Eating out wallet</text>
-        <path d="m342 329 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
+        <rect x="28" y="352" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="369" class="eyebrow">TO</text>
+        <text x="42" y="397" class="body" font-size="15">Eating out wallet</text>
+        <path d="m342 375 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
 
-        <rect x="28" y="377" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="42" y="394" class="eyebrow">AMOUNT</text>
-        <text x="42" y="422" class="body" font-size="17" font-weight="700">¥ 5,000</text>
+        <rect x="28" y="423" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="440" class="eyebrow">AMOUNT</text>
+        <text x="42" y="468" class="body" font-size="17" font-weight="700">¥ 5,000</text>
 
-        <rect x="28" y="448" width="334" height="64" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="42" y="465" class="eyebrow">NOTE · OPTIONAL</text>
-        <text x="42" y="494" class="secondary" font-size="13">Move unused grocery funding</text>
+        <rect x="28" y="494" width="334" height="64" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="511" class="eyebrow">NOTE · OPTIONAL</text>
+        <text x="42" y="540" class="secondary" font-size="13">Move unused grocery funding</text>
 
-        <rect x="28" y="528" width="334" height="86" rx="10" fill="#DFF4F4" />
-        <text x="42" y="552" class="eyebrow">BALANCES AFTER MOVEMENT</text>
-        <text x="42" y="578" class="secondary" font-size="12">Household account</text>
-        <text x="348" y="578" class="body" font-size="12" font-weight="700" text-anchor="end">¥87,420 → ¥82,420</text>
-        <text x="42" y="599" class="secondary" font-size="12">Eating out wallet</text>
-        <text x="348" y="599" class="body" font-size="12" font-weight="700" text-anchor="end">−¥2,300 → ¥2,700</text>
+        <rect x="28" y="574" width="334" height="80" rx="10" fill="#DFF4F4" />
+        <text x="42" y="596" class="eyebrow">BALANCES AFTER MOVEMENT</text>
+        <text x="348" y="596" class="eyebrow" text-anchor="end">UPDATED NOW</text>
+        <text x="42" y="621" class="secondary" font-size="12">Household account</text>
+        <text x="348" y="621" class="body" font-size="12" font-weight="700" text-anchor="end">¥87,420 → ¥82,420</text>
+        <text x="42" y="642" class="secondary" font-size="12">Eating out wallet</text>
+        <text x="348" y="642" class="body" font-size="12" font-weight="700" text-anchor="end">−¥2,300 → ¥2,700</text>
 
-        <rect x="28" y="630" width="334" height="48" rx="10" fill="#16679A" />
-        <text x="195" y="660" class="button">Review money movement</text>
-        <text x="195" y="710" class="button-secondary">Cancel</text>
+        <rect x="28" y="668" width="334" height="48" rx="10" fill="#16679A" />
+        <text x="195" y="698" class="button">Review money movement</text>
+        <text x="195" y="741" class="button-secondary">Cancel</text>
       </g>
     </g>
 
@@ -354,7 +367,7 @@
       <g transform="translate(332 122)" color="#16679A"><use href="#edit-icon" /></g>
 
       <rect x="24" y="174" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="42" y="198" class="eyebrow">AVAILABLE BALANCE</text>
+      <text x="42" y="198" class="eyebrow">BALANCE</text>
       <text x="348" y="228" class="money">¥87,420</text>
       <text x="42" y="252" class="secondary" font-size="11">Incoming − outgoing − expenses</text>
       <rect x="42" y="260" width="96" height="22" rx="11" fill="#DFF4F4" />

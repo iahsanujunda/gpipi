@@ -111,6 +111,8 @@ pgen {
             addTable("public", "shopping_mutation")
             addTable("public", "shopping_item")
             addTable("public", "shopping_mutation_item")
+            addTable("public", "account")
+            addTable("public", "money_movement")
         }
         columnTypeMappings {
             add(

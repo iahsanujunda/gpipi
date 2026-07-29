@@ -16,6 +16,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   EditIcon,
+  WalletIcon,
   WarningIcon,
 } from '@/app/AppIcons'
 import { useNavigationGuard, usePageAction } from '@/app/pageActions'
@@ -27,6 +28,7 @@ import {
   useDeactivateBudget,
   useUpdateBudget,
 } from './queries'
+import { useWallets } from '@/wallets/queries'
 
 const BUDGET_ZONE = 'Asia/Tokyo'
 
@@ -373,6 +375,10 @@ function BudgetCards({
                 <Stack spacing={0.5} sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography variant="h6" component="h2">{budget.name}</Typography>
                   <Typography color="text.secondary" variant="body2">{budget.description}</Typography>
+                  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', color: 'text.secondary' }}>
+                    <WalletIcon sx={{ fontSize: 17 }} />
+                    <Typography variant="body2">{budget.accountName}</Typography>
+                  </Stack>
                 </Stack>
                 <EditButton budget={budget} onEdit={onEdit} />
               </Stack>
@@ -463,7 +469,7 @@ function Difference({ historical, spend }) {
   )
 }
 
-const tableGrid = 'minmax(180px, 1.25fr) minmax(210px, 1.4fr) minmax(150px, .85fr) 60px 52px'
+const tableGrid = 'minmax(160px, 1.15fr) minmax(120px, .8fr) minmax(200px, 1.35fr) minmax(145px, .85fr) 60px 52px'
 
 function BudgetTable({
   ariaLabel,
@@ -506,6 +512,7 @@ function BudgetTable({
         >
           {[
             'Budget line',
+            'Wallet',
             historical ? 'Spent / current cap' : 'Spent / cap',
             'Difference',
             'Slack',
@@ -553,6 +560,10 @@ function BudgetTable({
                 <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>{budget.name}</Typography>
                 <Typography color="text.secondary" variant="body2" noWrap>{budget.description}</Typography>
               </Box>
+              <Stack role="cell" direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0 }}>
+                <WalletIcon sx={{ color: 'primary.main', fontSize: 18, flex: '0 0 auto' }} />
+                <Typography variant="body2" noWrap>{budget.accountName}</Typography>
+              </Stack>
               <Box role="cell" sx={{ minWidth: 0 }}>
                 <DesktopSpending
                   budget={budget}
@@ -793,6 +804,7 @@ export default function BudgetsPage() {
   const [weeklyDate, setWeeklyDate] = useState(currentDate)
   const [monthlyDate, setMonthlyDate] = useState(() => monthStart(currentDate))
   const budgets = useBudgets()
+  const wallets = useWallets()
   const weeklySpend = useBudgetSpend(weeklyDate)
   const monthlySpend = useBudgetSpend(monthlyDate)
   const createMutation = useCreateBudget()
@@ -900,6 +912,15 @@ export default function BudgetsPage() {
         </Alert>
       )}
 
+      {wallets.isError && (
+        <Alert
+          severity="warning"
+          action={<Button color="inherit" onClick={() => wallets.refetch()}>Retry</Button>}
+        >
+          Wallet choices are unavailable. Budget details remain visible, but create and edit cannot be saved yet.
+        </Alert>
+      )}
+
       {!budgets.isPending && !budgets.isError && rows.length === 0 && (
         <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 3 } }}>
           <Stack spacing={2} sx={{ alignItems: 'flex-start' }}>
@@ -962,6 +983,7 @@ export default function BudgetsPage() {
 
       {editor && (
         <BudgetEditor
+          accounts={wallets.data ?? []}
           budget={editor.budget}
           createMutation={createMutation}
           deactivateMutation={deactivateMutation}

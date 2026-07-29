@@ -274,6 +274,7 @@ The payday view shows the computed plan. The member accepts each line, edits amo
 
 - Payday view: proposed transfers grouped by funder → destination, each line editable; "add transfer" for reallocations; a confirm action that records the actuals.
 - Ledger view: recorded transfers for the period.
+- Interaction baseline: [payday funding mobile flow](mockups/payday-funding-views.svg), covering the computed plan, edit and confirmation drawers, ledger variance, and account/routing setup.
 - CSRF hardening becomes real here (first write path) — `SameSite=Lax` cookie plus, if needed, a CSRF token on state-changing requests.
 
 ### Definition of Done

@@ -9,6 +9,7 @@ Related references:
 - [Phase 2 product and API plan](phase2.md)
 - [Budget page, default state](mockups/budget-mobile-default.svg)
 - [Budget utilization states](mockups/budget-spend-vs-cap-views.svg)
+- [Payday funding mobile flow](mockups/payday-funding-views.svg)
 - [Activity page, default state](mockups/activity-mobile-default.svg)
 - [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
@@ -260,6 +261,17 @@ The create/edit flow is locked in:
 - After a successful write, close the editor, refresh the budget query, announce concise feedback, and temporarily mark the affected row with an accent border.
 
 Funder and destination account information belong to the later payday-routing slice. Do not squeeze them into this editor or the current read-state card.
+
+### Payday funding
+
+Use `Payday` as the page heading and keep `Plan` and `Ledger` as two views of the same selected month.
+
+- The Plan view leads with planned, recorded, and remaining totals, then groups proposed movements by funder. Each movement names both real accounts, shows the amount in tabular numerals, and exposes its contributing budget-line count.
+- Editing a proposed movement uses the shared adaptive bottom drawer on phones and a bounded dialog from medium widths upward. The edited amount is labelled as the actual amount and keeps the computed suggestion visible for comparison.
+- Confirmation has a separate review surface. It shows the occurrence date, every movement, any difference from the computed plan, the batch total, and explicit copy that only confirmed movements enter the ledger.
+- The Ledger view is read-only. It pairs exact plan-versus-actual variance with recorded movements and offers `Add reallocation` as a new append action rather than editing an existing row.
+- Accounts and routing are setup, not ledger content. Show which owned account receives income and require every active budget line to name a funder and destination before its plan can be confirmed. Missing routing needs an inline recovery action and must not be hidden.
+- Do not use a status field to make a planned movement look like a transfer. `Not recorded` is presentation copy derived from the plan/actual comparison, not persisted transfer state.
 
 ### Activity page
 

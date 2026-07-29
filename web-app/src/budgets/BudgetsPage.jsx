@@ -118,7 +118,7 @@ function formatPeriodWindow(period, budgetDate, spend) {
   const endParts = dateParts(end)
   const range = startParts.month === endParts.month
     ? `${startParts.day}–${endParts.day} ${endParts.month}`
-    : `${startParts.day} ${startParts.month}–${endParts.day} ${endParts.month}`
+    : `${startParts.day} ${startParts.month} – ${endParts.day} ${endParts.month}`
   return `WEEKLY · ${range}`
 }
 
@@ -605,6 +605,7 @@ function PeriodNavigator({
     : monthStart(budgetDate) !== monthStart(currentDate)
   const periodName = weekly ? 'week' : 'month'
   const periodLabel = formatPeriodLabel(period, budgetDate, spend)
+  const crossesMonth = weekly && periodLabel.includes(' – ')
 
   function move(amount) {
     const next = weekly
@@ -638,7 +639,10 @@ function PeriodNavigator({
         spacing={0.1}
         sx={{
           justifyContent: 'center',
-          width: { xs: 104, sm: 116 },
+          width: {
+            xs: crossesMonth ? 132 : 104,
+            sm: crossesMonth ? 140 : 116,
+          },
           minHeight: 44,
           px: 1.25,
           border: 1,
@@ -651,7 +655,16 @@ function PeriodNavigator({
         <Typography sx={periodEyebrowSx}>
           {historical ? `Past ${periodName}` : `This ${periodName}`}
         </Typography>
-        <Typography sx={{ color: 'text.heading', fontSize: '0.75rem', fontWeight: 700 }}>
+        <Typography
+          data-period-range
+          sx={{
+            color: 'text.heading',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            lineHeight: 1.25,
+            whiteSpace: 'nowrap',
+          }}
+        >
           {periodLabel}
         </Typography>
       </Stack>

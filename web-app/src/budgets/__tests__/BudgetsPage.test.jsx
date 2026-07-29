@@ -160,6 +160,22 @@ describe('BudgetsPage', () => {
     expect(screen.queryByRole('button', { name: 'Add budget line' })).not.toBeInTheDocument()
   })
 
+  it('keeps a cross-month weekly range explicit and on one line', () => {
+    mockUseBudgetSpend.mockReturnValue({
+      data: [{
+        ...spendRow(eatingOut, 12000),
+        windowStart: '2026-07-27',
+        windowEndExclusive: '2026-08-03',
+      }],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getByText('27 JUL – 2 AUG')).toHaveStyle({ whiteSpace: 'nowrap' })
+  })
+
   it('moves weekly and monthly history independently and labels current-cap comparisons', async () => {
     const user = userEvent.setup()
     mockUseBudgets.mockReturnValue({

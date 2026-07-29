@@ -242,7 +242,7 @@ On phones, render each budget line as a card rather than a compressed table row.
 - Name as the card title.
 - Description as supporting text.
 - Associated wallet/account by name, with a wallet icon. Do not hide this association inside Edit.
-- The line's exact active window as a compact chip, for example `WEEKLY · 20–26 JUL` or `MONTHLY · JUL 2026`.
+- The line's exact active window as a compact chip, for example `WEEKLY · 20–26 JUL` or `MONTHLY · JUL 2026`. A week crossing a month boundary names both endpoints with a spaced en dash, such as `29 JUN – 5 JUL`, and remains on one line in a selectively wider period control.
 - `SLACK ON` or `PLANNING ONLY` as a second chip, independently of color.
 - Spent and exact difference as the primary financial values. Say `¥3,000 left` or `¥2,000 over`; do not make users infer the difference from a bar.
 - Cap and real utilization percentage as supporting values.

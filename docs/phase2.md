@@ -180,7 +180,7 @@ A Ktor `Authentication` provider named `"auth-session"` wrapping the `/api/**` g
 ### 1.5 Frontend
 
 - `/enter` route: reads `location.hash`, POSTs redeem, then routes into the app.
-- Expense table: columns (date, description from the Slack message with its mention and exact extracted amount removed from either edge, category, amount); client sort + date/category filter; read-only. Other numbers remain intact, and the extracted note is the fallback after raw Slack text expires.
+- Expense table: columns (date, description from the Slack message with its mention and exact extracted amount removed from either edge, category, amount); client sort + date/category filter; read-only. Other numbers remain intact. An extracted note is accepted only when it is a contiguous span copied from the original Slack message; model-authored analysis is discarded before the draft is stored. That verified user text is the fallback after raw Slack text expires.
 - Activity visual baseline: [mobile default mockup](mockups/activity-mobile-default.svg), with cards on phones and the same fields promoted to a table from medium widths upward. Phone selectors and date pickers follow the shared animated bottom-drawer pattern shown in the [drawer-state mockup](mockups/activity-mobile-drawer-states.svg).
 - Production exposes the frontend and `/api/**` under one browser origin: Cloudflare serves the static app and reverse-proxies `/api/**` to Ktor. `VITE_API_URL` therefore stays unset in production, just as it does behind Vite's local proxy. This keeps the signed `SameSite=Lax` session cookie first-party; CORS is not relied on to make cross-site cookies work.
 

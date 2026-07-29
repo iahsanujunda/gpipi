@@ -126,8 +126,8 @@
     <g transform="translate(35 230)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Wallets</text>
-      <text x="24" y="170" class="secondary" font-size="12">Balances from recorded funding and spending.</text>
 
+      <g transform="translate(0 -22)">
       <rect x="24" y="192" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
       <text x="42" y="220" class="heading" font-size="17">Household account</text>
       <path d="m345 214 6 6-6 6" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -160,6 +160,7 @@
       <line x1="42" y1="612" x2="348" y2="612" stroke="#C9E2E5" />
       <g transform="translate(96 622)" color="#16679A"><use href="#move-icon" /></g>
       <text x="214" y="638" class="button-secondary">Move money</text>
+      </g>
       <use href="#phone-footer" />
     </g>
 

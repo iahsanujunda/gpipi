@@ -10,7 +10,12 @@ import {
   Typography,
 } from '@mui/material'
 import { Link } from 'react-router'
-import { AddIcon, CheckIcon, WalletIcon } from '@/app/AppIcons'
+import {
+  AddIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  WalletIcon,
+} from '@/app/AppIcons'
 import { usePageAction } from '@/app/pageActions'
 import MoneyMovementEditor from './MoneyMovementEditor'
 import WalletEditor from './WalletEditor'
@@ -53,9 +58,13 @@ function WalletCard({ onMoveMoney, wallet }) {
         flexDirection: 'column',
         minHeight: 254,
         overflow: 'hidden',
-        borderRadius: 3.5,
         transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1), border-color 180ms ease',
-        '&:hover': { borderColor: 'primary.light', transform: 'translateY(-2px)' },
+        '&:hover, &:focus-within': { borderColor: 'primary.light' },
+        '&:hover': { transform: 'translateY(-2px)' },
+        '&:hover .wallet-detail-indicator, &:focus-within .wallet-detail-indicator': {
+          color: 'primary.main',
+          transform: 'translateX(2px)',
+        },
         '@media (prefers-reduced-motion: reduce)': { transition: 'none', '&:hover': { transform: 'none' } },
       }}
     >
@@ -83,6 +92,19 @@ function WalletCard({ onMoveMoney, wallet }) {
                 {wallet.assignedBudgetCount} {wallet.assignedBudgetCount === 1 ? 'budget line' : 'budget lines'}
               </Typography>
             </Stack>
+            <ChevronRightIcon
+              aria-hidden="true"
+              className="wallet-detail-indicator"
+              sx={{
+                ml: 'auto',
+                mt: 0.75,
+                color: 'text.secondary',
+                flex: '0 0 auto',
+                fontSize: 22,
+                transition: 'color 180ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+                '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
+              }}
+            />
           </Stack>
           <Stack spacing={0.25} sx={{ mt: 'auto' }}>
             <Typography color="text.secondary" sx={{ fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.08em' }}>
@@ -155,12 +177,7 @@ export default function WalletsPage() {
   const rows = wallets.data ?? []
   return (
     <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4" component="h1">Wallets</Typography>
-        <Typography color="text.secondary">
-          Recorded money in, money out, and spending—without pretending to be your bank.
-        </Typography>
-      </Stack>
+      <Typography variant="h4" component="h1">Wallets</Typography>
 
       {success && (
         <Alert icon={<CheckIcon />} severity="success" role="status" sx={{ border: 1, borderColor: 'brandAccent.main', bgcolor: 'highlight.main' }}>

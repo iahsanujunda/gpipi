@@ -156,6 +156,36 @@ class ExpenseRepositoryTest : PersistenceTest() {
     }
 
     @Test
+    fun `description removes the extracted amount when Slack text puts it last`() {
+        assertEquals("jidouki", expenseDescription("jidouki 150", note = null, amount = 150))
+        assertEquals(
+            "mipi popok etc",
+            expenseDescription("mipi popok etc ¥1,476 JPY", note = null, amount = 1_476),
+        )
+        assertEquals(
+            "shinjuku halal",
+            expenseDescription("<@U123> shinjuku halal 9 699円.", note = null, amount = 9_699),
+        )
+        assertEquals("cycle park", expenseDescription("cycle park 200.", note = null, amount = 200))
+    }
+
+    @Test
+    fun `description preserves other numbers and text without the extracted amount`() {
+        assertEquals(
+            "Route 150 cafe",
+            expenseDescription("Route 150 cafe 800", note = null, amount = 800),
+        )
+        assertEquals(
+            "topup pasmo",
+            expenseDescription("topup pasmo", note = null, amount = 1_000),
+        )
+        assertEquals(
+            "Studio 150",
+            expenseDescription("Studio 150", note = null, amount = 200),
+        )
+    }
+
+    @Test
     fun `list falls back to the extracted note when Slack text has expired`() {
         val msgId = givenInbound(text = null)
         val catId = givenCategory("Eating Out")

@@ -180,7 +180,7 @@ A Ktor `Authentication` provider named `"auth-session"` wrapping the `/api/**` g
 ### 1.5 Frontend
 
 - `/enter` route: reads `location.hash`, POSTs redeem, then routes into the app.
-- Expense table: columns (date, description from the Slack message, category, amount); client sort + date/category filter; read-only.
+- Expense table: columns (date, description from the Slack message with its mention and exact extracted amount removed from either edge, category, amount); client sort + date/category filter; read-only. Other numbers remain intact, and the extracted note is the fallback after raw Slack text expires.
 - Activity visual baseline: [mobile default mockup](mockups/activity-mobile-default.svg), with cards on phones and the same fields promoted to a table from medium widths upward. Phone selectors and date pickers follow the shared animated bottom-drawer pattern shown in the [drawer-state mockup](mockups/activity-mobile-drawer-states.svg).
 - Production exposes the frontend and `/api/**` under one browser origin: Cloudflare serves the static app and reverse-proxies `/api/**` to Ktor. `VITE_API_URL` therefore stays unset in production, just as it does behind Vite's local proxy. This keeps the signed `SameSite=Lax` session cookie first-party; CORS is not relied on to make cross-site cookies work.
 
@@ -331,7 +331,7 @@ Payday is a repeated use of the same movement form:
 
 Reallocation uses the same form with a tracked account on both sides. Sending money out uses a tracked source and **External account** as the destination. A tracked-to-tracked movement is one database row and one transaction; never create two loosely coupled rows.
 
-When the drawer is opened from a wallet card, that wallet is pre-filled as **To** and **External account** is the default **From** — the payday top-up is the highest-frequency action, so it is the zero-configuration path. A centered icon-only **Swap** button between the From and To selectors exchanges the two endpoints in place, so the same card-launched drawer reaches an external send (tracked wallet moved into From) or a reallocation (a second tracked wallet chosen on the other side) without re-selecting the wallet the user started from. Its accessible name is `Swap From and To`; Swap preserves amount, date, and note, then requests a fresh preview.
+When the drawer is opened from a wallet card, that wallet is pre-filled as **To** and **External account** is the default **From** — the payday top-up is the highest-frequency action, so it is the zero-configuration path. A centered icon-only **Swap** button with up/down opposed arrows sits between the vertically stacked From and To selectors and exchanges the two endpoints in place, so the same card-launched drawer reaches an external send (tracked wallet moved into From) or a reallocation (a second tracked wallet chosen on the other side) without re-selecting the wallet the user started from. Its accessible name is `Swap From and To`; Swap preserves amount, date, and note, then requests a fresh preview.
 
 Money movements are append-only in this iteration. If correction becomes necessary, add a reversing movement rather than mutating history. Account metadata and a budget line's future wallet association remain editable. Accounts are not deletable or deactivatable in this iteration because budgets, historical expenses, and movements reference them.
 
@@ -375,7 +375,7 @@ There is deliberately no global transfer ledger, monthly payday plan, variance e
 
 - `/wallets` is the primary wallet view: cards show account name, assigned-budget count, and current derived balance. Negative balances are rendered normally, not as data errors.
 - `Add wallet or account` is the Wallets page action in the shared launcher. New accounts start at ¥0.
-- Tapping a card opens its detail view. The account title has an adjacent Edit action; the rest of the page shows assigned budgets, current balance, and that account's transactions.
+- Tapping a card opens its detail view; a trailing right chevron makes this navigation affordance visible alongside the separate `Move money` action. The account title has an adjacent Edit action; the rest of the page shows assigned budgets, current balance, and that account's transactions.
 - The detail timeline reuses Activity's mobile transaction-card hierarchy: description/source and signed amount, category or movement chip, then date/note metadata.
 - Each wallet card exposes `Move money`. The adaptive movement drawer supports external top-up, external send, and tracked-to-tracked reallocation, opening pre-filled per §2.4 with a labelled `Swap From and To` action.
 - Once endpoints, amount, and occurrence date are valid, the drawer requests the backend preview and shows its `balanceBefore → balanceAfter` values. External top-up/send shows the single tracked wallet; reallocation shows both. **External account** has no tracked balance and is deliberately absent.

@@ -56,6 +56,10 @@ test('wallet list, movement sheet, and detail stay contained on mobile', async (
   const cards = page.getByRole('article')
   const everydayCard = cards.filter({ hasText: 'Everyday account' })
   const billsCard = cards.filter({ hasText: 'Bills account' })
+  await expect(page.getByText('Recorded money in, money out, and spending—without pretending to be your bank.')).toHaveCount(0)
+  await expect(everydayCard.locator('.wallet-detail-indicator')).toBeVisible()
+  await expect(everydayCard).toHaveCSS('border-radius', '12px')
+
   const [everydayBox, billsBox, moveBox] = await Promise.all([
     everydayCard.boundingBox(),
     billsCard.boundingBox(),

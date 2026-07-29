@@ -273,7 +273,7 @@ Changing the wallet association changes where future expenses are recorded. The 
 Use `Wallets` as the page heading. The primary view is the wallet/account list, not a payday plan or global ledger.
 
 - Each card shows the wallet name, assigned-budget count, and current balance derived from recorded activity. Use tabular numerals and allow negative values without an error treatment.
-- The whole card opens wallet detail. Keep one explicit `Move money` button on each card for the repeated payday-allocation workflow.
+- The whole card opens wallet detail. A trailing right chevron provides the directional cue; keep one explicit `Move money` button on each card for the repeated payday-allocation workflow.
 - `Add wallet or account` lives in the route-aware launcher. Creation asks for name and optional description, explains that the wallet begins at ¥0, then uses a review step before writing.
 - Wallet detail places an outlined Edit action next to the title. It shows balance, assigned budgets, and a newest-first transaction list scoped to that wallet.
 - Wallet transaction cards reuse Activity's hierarchy: description/source and signed amount on the first row, budget or movement chip next, and date/note metadata last.
@@ -283,7 +283,7 @@ The `Move money` flow uses the shared adaptive drawer on phones and a bounded di
 
 - From and To each allow either a tracked wallet or `External account`, but at least one side must be tracked.
 - When opened from a wallet card, preselect `External account` as From and the card's wallet as To. This makes the common payday top-up immediately usable.
-- Center a `44 × 44 px` icon-only Swap button between the selectors. Use the primary-action background with a white opposed-arrows icon; no visible `Swap` text is needed. Its accessible name is `Swap From and To`; it exchanges the endpoints, preserves amount/date/note, keeps focus on the button, and announces the new direction. It is an action button, never an on/off switch.
+- Center a `44 × 44 px` icon-only Swap button between the vertically stacked selectors. Use the primary-action background with white up/down opposed arrows; no visible `Swap` text is needed. Its accessible name is `Swap From and To`; it exchanges the endpoints, preserves amount/date/note, keeps focus on the button, and announces the new direction. It is an action button, never an on/off switch.
 - External → tracked is a top-up; tracked → external is a send; tracked → tracked is a reallocation.
 - Require a positive integer JPY amount. The occurrence-date control uses `Asia/Tokyo`, permits today or a past date, and never offers a future date; backend validation remains authoritative. Allow a note for salary source, side gig, correction context, or other detail.
 - Request balance preview from the backend after endpoints, amount, and occurrence date are valid. Show before → after for tracked wallets only: one line for external top-up/send and two lines for reallocation. Never show a balance for External account.

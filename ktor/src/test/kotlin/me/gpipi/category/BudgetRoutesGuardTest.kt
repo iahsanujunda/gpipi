@@ -1,10 +1,12 @@
 package me.gpipi.category
 
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
@@ -41,6 +43,7 @@ class BudgetRoutesGuardTest {
         boot()
 
         val response = client.post("/api/budgets/categories") {
+            header(HttpHeaders.Origin, "https://budget.test")
             contentType(ContentType.Application.Json)
             setBody(budgetBody)
         }
@@ -54,6 +57,7 @@ class BudgetRoutesGuardTest {
         val id = "00000000-0000-0000-0000-000000000001"
 
         val response = client.put("/api/budgets/categories/$id") {
+            header(HttpHeaders.Origin, "https://budget.test")
             contentType(ContentType.Application.Json)
             setBody(budgetBody)
         }
@@ -66,7 +70,9 @@ class BudgetRoutesGuardTest {
         boot()
         val id = "00000000-0000-0000-0000-000000000001"
 
-        val response = client.put("/api/budgets/categories/$id/deactivate")
+        val response = client.put("/api/budgets/categories/$id/deactivate") {
+            header(HttpHeaders.Origin, "https://budget.test")
+        }
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }

@@ -72,6 +72,7 @@ export default function AdaptiveDateField({
   value,
   onChange,
   label,
+  max,
   name,
   slotProps = {},
   ...textFieldProps
@@ -85,6 +86,7 @@ export default function AdaptiveDateField({
   const titleId = useId()
   const monthId = useId()
   const selectedDate = parseDateKey(value)
+  const maximumDate = parseDateKey(max)
   const cells = useMemo(() => calendarCells(visibleMonth), [visibleMonth])
   const accessibleLabel = label ?? textFieldProps['aria-label'] ?? name ?? 'Choose date'
   const displayValue = selectedDate ? displayDateFormatter.format(selectedDate) : ''
@@ -100,6 +102,10 @@ export default function AdaptiveDateField({
         onChange={onChange}
         slotProps={{
           ...slotProps,
+          htmlInput: {
+            max,
+            ...slotProps.htmlInput,
+          },
           inputLabel: {
             shrink: true,
             ...slotProps.inputLabel,
@@ -222,7 +228,13 @@ export default function AdaptiveDateField({
             <Typography id={monthId} aria-live="polite" sx={{ fontWeight: 700 }}>
               {monthFormatter.format(visibleMonth)}
             </Typography>
-            <IconButton aria-label="Next month" onClick={() => changeMonth(1)}>
+            <IconButton
+              aria-label="Next month"
+              disabled={Boolean(
+                maximumDate && monthStart(visibleMonth) >= monthStart(maximumDate),
+              )}
+              onClick={() => changeMonth(1)}
+            >
               <ChevronRightIcon />
             </IconButton>
           </Stack>
@@ -262,12 +274,14 @@ export default function AdaptiveDateField({
                 cell.day,
               )
               const selected = candidateKey === value
+              const disabled = Boolean(maximumDate && candidate > maximumDate)
 
               return (
                 <Box key={cell.key} role="gridcell" sx={{ display: 'grid', placeItems: 'center' }}>
                   <Button
                     aria-label={fullDateFormatter.format(candidate)}
                     aria-pressed={selected}
+                    disabled={disabled}
                     onClick={() => commit(candidateKey)}
                     sx={{
                       minWidth: 44,

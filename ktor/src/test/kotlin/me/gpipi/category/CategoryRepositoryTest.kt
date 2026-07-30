@@ -10,6 +10,8 @@ import kotlinx.coroutines.runBlocking
 import me.gpipi.config.dbQuery
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestAccount
+import me.gpipi.support.insertTestCategory
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -25,17 +27,12 @@ class CategoryRepositoryTest : PersistenceTest() {
         active: Boolean,
         slackLoggable: Boolean = true,
     ): UUID = query {
-        val id = UUID.randomUUID()
-        Category.insert {
-            it[Category.id] = id
-            it[Category.name] = name
-            it[Category.description] = description
-            it[Category.period] = "MONTHLY"
-            it[Category.amount] = 50000L
-            it[Category.slackLoggable] = slackLoggable
-            it[Category.active] = active
-        }
-        id
+        insertTestCategory(
+            name = name,
+            description = description,
+            active = active,
+            slackLoggable = slackLoggable,
+        )
     }
 
     @Test
@@ -82,6 +79,7 @@ class CategoryRepositoryTest : PersistenceTest() {
                 amount = 75_000L,
                 active = true,
                 slackLoggable = false,
+                accountId = insertTestAccount(),
             )
         }
 
@@ -106,6 +104,7 @@ class CategoryRepositoryTest : PersistenceTest() {
                 amount = 20_000L,
                 active = true,
                 slackLoggable = true,
+                accountId = insertTestAccount(),
             )
         }
 
@@ -118,6 +117,7 @@ class CategoryRepositoryTest : PersistenceTest() {
                     amount = 30_000L,
                     active = true,
                     slackLoggable = false,
+                    accountId = insertTestAccount(),
                 )
             }
         }
@@ -143,6 +143,7 @@ class CategoryRepositoryTest : PersistenceTest() {
                 amount = 80_000L,
                 active = false,
                 slackLoggable = false,
+                accountId = insertTestAccount(),
             )
         }
 
@@ -170,6 +171,7 @@ class CategoryRepositoryTest : PersistenceTest() {
                 amount = 10_000L,
                 active = true,
                 slackLoggable = true,
+                accountId = insertTestAccount(),
             )
         }
 

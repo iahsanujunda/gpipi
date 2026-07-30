@@ -18,10 +18,12 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import org.slf4j.LoggerFactory
 
 class AiException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 private val json = Json { ignoreUnknownKeys = true }
+private val log = LoggerFactory.getLogger(OpenRouterClient::class.java)
 
 @Serializable private data class ChatMessage(val content: String? = null)
 @Serializable private data class ChatChoice(val message: ChatMessage)
@@ -70,6 +72,7 @@ class OpenRouterClient(
             put("temperature", 0)
         }
 
+        log.info("Calling OpenRouter model={} schema={}", model, schemaName)
         val response = try {
             http.post("$apiBaseUrl/chat/completions") {
                 bearerAuth(apiKey)
@@ -81,6 +84,12 @@ class OpenRouterClient(
         } catch (ex: Exception) {
             throw AiException("OpenRouter call failed", ex)
         }
+        log.info(
+            "OpenRouter responded model={} schema={} status={}",
+            model,
+            schemaName,
+            response.status.value,
+        )
 
         if (!response.status.isSuccess()) {
             throw AiException("OpenRouter ${response.status}: ${response.bodyAsText().take(200)}")

@@ -8,6 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -27,6 +28,8 @@ import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestAccount
+import me.gpipi.support.insertTestCategory
 import org.jetbrains.exposed.v1.jdbc.insert
 
 /**
@@ -44,16 +47,7 @@ class ExtractionServiceTest : PersistenceTest() {
     )
 
     private fun seedCategory(name: String, description: String = "desc"): UUID = query {
-        val catId = UUID.randomUUID()
-        Category.insert {
-            it[Category.id] = catId
-            it[Category.name] = name
-            it[Category.description] = description
-            it[Category.period] = "MONTHLY"
-            it[Category.amount] = 50000L
-            it[Category.slackLoggable] = true
-        }
-        catId
+        insertTestCategory(name = name, description = description)
     }
 
     private fun okJson(category: String) =
@@ -69,12 +63,14 @@ class ExtractionServiceTest : PersistenceTest() {
         description: String,
         amount: Long = 75_000L,
         slackLoggable: Boolean = true,
+        accountId: String = query { insertTestAccount() }.toString(),
     ) = UpsertBudgetRequest(
         name = name,
         description = description,
         period = "MONTHLY",
         amount = amount,
         slackLoggable = slackLoggable,
+        accountId = accountId,
     )
 
     // --- pure builders (no DB, no network) ---
@@ -90,6 +86,8 @@ class ExtractionServiceTest : PersistenceTest() {
 
         assertTrue("- Eating Out — restaurants, cafes" in prompt)
         assertTrue("- Transport — trains, buses" in prompt)
+        assertTrue("copy one concise contiguous span from the message verbatim" in prompt)
+        assertTrue("Never infer" in prompt)
         assertTrue("{{CATEGORIES}}" !in prompt)
         assertTrue("Leisure" !in prompt)
         assertTrue("Sapi mupi" !in prompt)
@@ -101,8 +99,11 @@ class ExtractionServiceTest : PersistenceTest() {
 
         val enum = schema["properties"]!!.jsonObject["category"]!!
             .jsonObject["enum"]!!.jsonArray.map { it.jsonPrimitive.content }
+        val noteDescription = schema["properties"]!!.jsonObject["note"]!!
+            .jsonObject["description"]!!.jsonPrimitive.content
 
         assertEquals(listOf("Eating Out", "Transport"), enum)
+        assertTrue("copied verbatim from the user message" in noteDescription)
     }
 
     // --- extract() orchestration ---
@@ -118,6 +119,50 @@ class ExtractionServiceTest : PersistenceTest() {
         assertEquals("Eating Out", result.extraction.category)
         assertEquals(eatingOutId, result.categoryId)
         assertEquals(testModel, result.model)
+    }
+
+    @Test
+    fun `extract discards model-authored commentary that was not in the message`() {
+        seedCategory("Transport")
+        coEvery { orClient.chat(any(), any(), any(), any()) } returns ChatResult(
+            content = """
+                {
+                  "amount": 200,
+                  "currency": "JPY",
+                  "merchant": "cycle park",
+                  "category": "Transport",
+                  "confidence": 0.7,
+                  "note": "The amount is unusually low, suggesting a partial payment."
+                }
+            """.trimIndent(),
+            model = testModel,
+        )
+
+        val result = runBlocking { service().extract("cycle park 200") }
+
+        assertNull(result.extraction.note)
+    }
+
+    @Test
+    fun `extract retains an explicit user note copied from the message`() {
+        seedCategory("Eating Out")
+        coEvery { orClient.chat(any(), any(), any(), any()) } returns ChatResult(
+            content = """
+                {
+                  "amount": 1500,
+                  "currency": "JPY",
+                  "merchant": null,
+                  "category": "Eating Out",
+                  "confidence": 0.9,
+                  "note": "birthday dinner"
+                }
+            """.trimIndent(),
+            model = testModel,
+        )
+
+        val result = runBlocking { service().extract("1500 ramen, birthday dinner") }
+
+        assertEquals("birthday dinner", result.extraction.note)
     }
 
     @Test

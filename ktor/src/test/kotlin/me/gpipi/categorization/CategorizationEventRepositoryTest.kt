@@ -14,6 +14,7 @@ import me.gpipi.generated.db.base.public1.CategorizationEvent
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestCategory
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
@@ -29,16 +30,7 @@ class CategorizationEventRepositoryTest : PersistenceTest() {
     }
 
     private fun givenCategory(name: String): UUID = query {
-        val catId = UUID.randomUUID()
-        Category.insert {
-            it[Category.id] = catId
-            it[Category.name] = name
-            it[Category.description] = "desc for $name"
-            it[Category.period] = "MONTHLY"
-            it[Category.amount] = 60000L
-            it[Category.slackLoggable] = true
-        }
-        catId
+        insertTestCategory(name = name, description = "desc for $name", amount = 60_000L)
     }
 
     private fun givenExpense(msgId: UUID, catId: UUID): UUID = query {

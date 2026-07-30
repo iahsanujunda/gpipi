@@ -2,12 +2,8 @@ package me.gpipi
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpRequestRetry
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.install
@@ -15,8 +11,10 @@ import io.ktor.server.application.log
 import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
-import io.opentelemetry.instrumentation.ktor.v3_0.KtorClientTelemetry
 import me.gpipi.ai.OpenRouterClient
+import me.gpipi.account.AccountRepository
+import me.gpipi.account.AccountService
+import me.gpipi.account.accountApiRoutes
 import me.gpipi.auth.AuthNonceRepository
 import me.gpipi.auth.AuthService
 import me.gpipi.auth.authRoutes
@@ -33,8 +31,6 @@ import me.gpipi.expense.expenseApiRoutes
 import me.gpipi.extraction.ExtractionService
 import me.gpipi.health.healthRoutes
 import me.gpipi.inbound.InboundRepository
-import me.gpipi.observability.AppObservabilityKey
-import me.gpipi.observability.TRACE_ID_HEADER
 import me.gpipi.slack.HelpCommand
 import me.gpipi.slack.LogExpenseCommand
 import me.gpipi.slack.OpenBudgetCommand
@@ -71,34 +67,27 @@ fun Application.configureRouting() {
     val cfg = environment.config
     val botToken = cfg.propertyOrNull("slack.botToken")?.getString().orEmpty()
     val openRouterKey = cfg.propertyOrNull("openrouter.apiKey")?.getString().orEmpty()
-    val observability = attributes[AppObservabilityKey]
 
     require(botToken.isNotBlank()) { "SLACK_BOT_OAUTH_TOKEN is missing. set it in .env and restart." }
     require(openRouterKey.isNotBlank()) { "OPENROUTER_API_KEY is missing. set it in .env and restart." }
 
-    val httpClient = HttpClient(CIO) {
-        install(KtorClientTelemetry) {
-            setOpenTelemetry(observability.openTelemetry)
-        }
-        install(ContentNegotiation) { json() }
-        install(HttpTimeout) { requestTimeoutMillis = 30_000 }
-        install(HttpRequestRetry) {
-            retryOnServerErrors(maxRetries = 2)
-            retryOnException(maxRetries = 2, retryOnTimeout = true)
-            exponentialDelay()
-        }
+    val slackHttpClient = HttpClient(CIO) { configureSlackHttpClient() }
+    val openRouterHttpClient = HttpClient(CIO) { configureOpenRouterHttpClient() }
+    monitor.subscribe(ApplicationStopped) {
+        slackHttpClient.close()
+        openRouterHttpClient.close()
     }
-    monitor.subscribe(ApplicationStopped) { httpClient.close() }
 
-    val slack = SlackClient(httpClient, botToken)
+    val slack = SlackClient(slackHttpClient, botToken)
 
     val orClient = OpenRouterClient(
-        httpClient,
+        openRouterHttpClient,
         openRouterKey,
         cfg.property("openrouter.model").getString()
     )
 
     val categoryRepo = CategoryRepository()
+    val accountRepo = AccountRepository()
     val inboundRepo = InboundRepository()
     val expenseRepo = ExpenseRepository()
     val activeCategoryCatalog = ActiveCategoryCatalog(db, categoryRepo)
@@ -107,6 +96,10 @@ fun Application.configureRouting() {
         categoryRepo = categoryRepo,
         expenseRepo = expenseRepo,
         activeCategories = activeCategoryCatalog,
+    )
+    val accountService = AccountService(
+        db = db,
+        repository = accountRepo,
     )
 
     val authService = AuthService(
@@ -144,7 +137,6 @@ fun Application.configureRouting() {
             draftRepo = ExpenseDraftRepository(),
             slack = slack,
         ),
-        observability = observability,
     )
 
     val interactionHandler = SlackInteractionHandler(
@@ -163,11 +155,10 @@ fun Application.configureRouting() {
         allowHost(cfg.property("cors.allowedOrigin").getString(), schemes = listOf("https","http"))
         allowCredentials = true
         allowHeader(HttpHeaders.ContentType)
-        allowHeader("traceparent")
-        allowHeader("tracestate")
-        allowHeader("baggage")
-        exposeHeader(TRACE_ID_HEADER)
-        allowMethod(HttpMethod.Put); allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Patch)
+        allowMethod(HttpMethod.Delete)
     }
 
     routing {
@@ -177,6 +168,7 @@ fun Application.configureRouting() {
         slackInteractionRoutes(signingSecret, interactionHandler)
         authenticate("auth-session") {
             expenseApiRoutes(db, expenseRepo)
+            accountApiRoutes(accountService)
             budgetApiRoutes(budgetService)
             shoppingApiRoutes(shoppingService)
         }

@@ -150,6 +150,17 @@ test('weekly and monthly history controls move independently', async ({ page }) 
 test('period selectors stay aligned with their headings while mobile dates change', async ({ page }) => {
   const weekly = page.locator('section[aria-labelledby="weekly-budget-heading"]')
   const monthly = page.locator('section[aria-labelledby="monthly-budget-heading"]')
+  const weeklyRange = weekly.locator('[data-period-range]')
+
+  for (let offset = 0; offset < 5; offset += 1) {
+    if ((await weeklyRange.textContent()).includes(' – ')) break
+    await weekly.getByRole('button', { name: 'Previous week' }).click()
+  }
+  await expect(weeklyRange).toHaveText(/^\d{1,2} [A-Z]{3} – \d{1,2} [A-Z]{3}$/)
+  await expect(weeklyRange).toHaveCSS('white-space', 'nowrap')
+  await expect.poll(
+    () => weeklyRange.evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true)
 
   const weeklySamples = await samplePeriodHeaderWhileChanging(weekly, 'Previous week')
   expectPeriodHeaderToStayAligned(weeklySamples)
@@ -272,6 +283,8 @@ test('creates a budget through the mobile drawer review flow', async ({ page }) 
   await expect(sheet).toHaveAttribute('data-exit-duration-ms', '320')
 
   await page.getByRole('textbox', { name: 'Name' }).fill('Pet care E2E')
+  await page.getByRole('combobox', { name: 'Wallet or account' }).click()
+  await page.getByRole('option', { name: 'Everyday account' }).click()
   await page.getByRole('textbox', { name: 'Description' }).fill('Vet visits, pet food, and medicine')
   await page.getByRole('textbox', { name: 'Budget cap' }).fill('12000')
   await page.getByRole('button', { name: 'Review budget line' }).click()

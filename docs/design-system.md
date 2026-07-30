@@ -9,6 +9,7 @@ Related references:
 - [Phase 2 product and API plan](phase2.md)
 - [Budget page, default state](mockups/budget-mobile-default.svg)
 - [Budget utilization states](mockups/budget-spend-vs-cap-views.svg)
+- [Wallets and money movement flow](mockups/payday-funding-views.svg)
 - [Activity page, default state](mockups/activity-mobile-default.svg)
 - [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
@@ -38,6 +39,8 @@ Navigation stays visually quiet until requested. Pages should lead with the user
 - Never rely on color alone for state or validation.
 - Confirm budget mutations before saving.
 - Deactivate budget lines instead of deleting historical references.
+- Treat wallet balances as projections of recorded movements and expenses; never imply bank synchronization.
+- Permit negative wallet balances and explain them as valid recorded state, not an error.
 - Keep loading, empty, error, saved, and unsaved states visible and unambiguous.
 
 ## Application shell
@@ -96,23 +99,25 @@ The dock is a full-width, fixed-position **content-occluding surface**. Its purp
 - Mark the active destination with a filled primary pill, white text, and `aria-current="page"`.
 - Set `aria-expanded="true"` on the launcher.
 
-The current order from top to bottom is:
+Once Wallets ships, the order from top to bottom is:
 
-1. Budgets
-2. Activity
+1. Wallets
+2. Budgets
+3. Activity
+4. Shopping list
 
-Activity sits closest to the thumb because it is expected to be used most frequently. Slack magic links may deep-link directly to any destination.
+Slack magic links may deep-link directly to any destination.
 
 ### Route-aware page actions
 
 The launcher keeps one stable identity, while its expanded contents may include one or more actions contributed by the current page.
 
-- On Budgeting, show `Add budget line` above the navigation group. Do not show it on Activity.
+- On Wallets, show `Add wallet or account`; on Budgeting, show `Add budget line`. Do not show a page action on Activity or Shopping list.
 - Render contextual actions as buttons and destinations as links.
 - Label the action group `Page actions` outside its buttons, using the same section-header treatment as `Navigation`. An action button contains only its icon and action label.
 - Stack multiple page actions in registration order with the same `220 px` pill width and `8 px` gap as navigation. Retain the accent border so action buttons remain distinguishable from destination links without relying on the group label alone.
 - Keep the rare page action above the destinations, leaving frequent navigation closer to the thumb.
-- Selecting an action closes the launcher before invoking that action. `Add budget line` opens the New budget line adaptive dialog.
+- Selecting an action closes the launcher before invoking that action. Add actions open their corresponding adaptive create dialog.
 - Do not change the resting launcher icon or accessible name according to the page action.
 - Populated Budgeting views do not repeat a persistent Add button in page content. The empty state is the deliberate exception and exposes `Add first budget line` directly.
 
@@ -236,7 +241,8 @@ On phones, render each budget line as a card rather than a compressed table row.
 
 - Name as the card title.
 - Description as supporting text.
-- The line's exact active window as a compact chip, for example `WEEKLY · 20–26 JUL` or `MONTHLY · JUL 2026`.
+- Associated wallet/account by name, with a wallet icon. Do not hide this association inside Edit.
+- The line's exact active window as a compact chip, for example `WEEKLY · 20–26 JUL` or `MONTHLY · JUL 2026`. A week crossing a month boundary names both endpoints with a spaced en dash, such as `29 JUN – 5 JUL`, and remains on one line in a selectively wider period control.
 - `SLACK ON` or `PLANNING ONLY` as a second chip, independently of color.
 - Spent and exact difference as the primary financial values. Say `¥3,000 left` or `¥2,000 over`; do not make users infer the difference from a bar.
 - Cap and real utilization percentage as supporting values.
@@ -246,12 +252,13 @@ The utilization bar is a supporting comparison signal. Clamp its visual fill at 
 
 Fetch budget definitions and spend projections independently. While spend is loading, keep the name, description, period, Slack state, and Edit action usable and show a local skeleton in the financial area. If only spend fails, keep the same budget details available and show an inline `Spending unavailable` state with a safe Retry action. Join the resources by category ID, never by display name.
 
-Show a compact outlined Edit icon button on each phone card. From medium widths upward, adapt the same rows to a table with Budget line, Window, Spent / cap, Difference, Slack, and Edit columns. Weekly and monthly lines retain their own windows; do not combine them into one household utilization bar.
+Show a compact outlined Edit icon button on each phone card. From medium widths upward, adapt the same rows to a table with Budget line, Wallet, Spent / cap, Difference, Slack, and Edit columns. Weekly and monthly sections retain their own window controls; do not combine them into one household utilization bar.
 
 The create/edit flow is locked in:
 
 - On phones, use the shared animated bottom drawer. From medium widths upward, use a bounded centered dialog.
-- Create and edit use the same fields: name, description, integer JPY cap, weekly/monthly period, and Slack logging.
+- Create and edit use the same fields: name, description, required wallet/account, integer JPY cap, weekly/monthly period, and Slack logging.
+- If only one wallet exists, it may be preselected, but the field remains visible and appears in review.
 - Keep `active` implicit for creation. Deactivation is a separate destructive action; there is no delete.
 - A valid form advances to a review surface before any request is sent. Creation reviews the complete record; editing reviews changed fields only.
 - API validation, conflicts, and request errors stay inside the editor without clearing entered values.
@@ -259,7 +266,31 @@ The create/edit flow is locked in:
 - Deactivation has its own confirmation surface and explains that historical expenses remain.
 - After a successful write, close the editor, refresh the budget query, announce concise feedback, and temporarily mark the affected row with an accent border.
 
-Funder and destination account information belong to the later payday-routing slice. Do not squeeze them into this editor or the current read-state card.
+Changing the wallet association changes where future expenses are recorded. The review surface names that consequence; it must not imply that historical transactions will move.
+
+### Wallets and money movement
+
+Use `Wallets` as the page heading. The primary view is the wallet/account list, not a payday plan or global ledger.
+
+- Each card shows the wallet name, assigned-budget count, and current balance derived from recorded activity. Use tabular numerals and allow negative values without an error treatment.
+- The whole card opens wallet detail. A trailing right chevron provides the directional cue; keep one explicit `Move money` button on each card for the repeated payday-allocation workflow.
+- `Add wallet or account` lives in the route-aware launcher. Creation asks for name and optional description, explains that the wallet begins at ¥0, then uses a review step before writing.
+- Wallet detail places an outlined Edit action next to the title. It shows balance, assigned budgets, and a newest-first transaction list scoped to that wallet.
+- Wallet transaction cards reuse Activity's hierarchy: description/source and signed amount on the first row, budget or movement chip next, and date/note metadata last.
+- There is no standalone ledger view. Users inspect transactions from the wallet whose balance they affected.
+
+The `Move money` flow uses the shared adaptive drawer on phones and a bounded dialog from medium widths upward:
+
+- From and To each allow either a tracked wallet or `External account`, but at least one side must be tracked.
+- When opened from a wallet card, preselect `External account` as From and the card's wallet as To. This makes the common payday top-up immediately usable.
+- Center a `44 × 44 px` icon-only Swap button between the vertically stacked selectors. Use the primary-action background with white up/down opposed arrows; no visible `Swap` text is needed. Its accessible name is `Swap From and To`; it exchanges the endpoints, preserves amount/date/note, keeps focus on the button, and announces the new direction. It is an action button, never an on/off switch.
+- External → tracked is a top-up; tracked → external is a send; tracked → tracked is a reallocation.
+- Require a positive integer JPY amount. The occurrence-date control uses `Asia/Tokyo`, permits today or a past date, and never offers a future date; backend validation remains authoritative. Allow a note for salary source, side gig, correction context, or other detail.
+- Request balance preview from the backend after endpoints, amount, and occurrence date are valid. Show before → after for tracked wallets only: one line for external top-up/send and two lines for reallocation. Never show a balance for External account.
+- Treat preview values as authoritative at their displayed calculation time, not as reserved funds. Use a stable skeleton while refreshing; preserve input and offer Retry on failure. Invalid movement input keeps Review unavailable, but a slow or failed preview request does not: Review shows that the balance preview is unavailable and explains that final balances will be checked when the movement is recorded.
+- On confirmation, replace the preview with the backend's post-write balances and refresh affected wallet queries. Negative results remain allowed.
+- Review the occurrence date, From, To, amount, note, and projected balances when available before recording.
+- A tracked-to-tracked reallocation is presented and announced as one action, never as two independent operations.
 
 ### Activity page
 

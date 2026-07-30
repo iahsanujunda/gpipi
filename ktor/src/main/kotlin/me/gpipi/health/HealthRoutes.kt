@@ -31,7 +31,7 @@ fun Route.healthRoutes(db: Database) {
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: Exception) {
-            log.warn("readiness check failed: ${ex.message}")
+            log.warn("Readiness check failed", ex)
             call.respond(HttpStatusCode.ServiceUnavailable, mapOf("status" to "unavailable"))
         }
     }

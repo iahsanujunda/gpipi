@@ -4,6 +4,51 @@
       "name": "base",
       "tables": [
         {
+          "name": "public.account",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "name",
+              "type": "text"
+            },
+            {
+              "name": "description",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "updated_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "account_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [
+            {
+              "name": "account_name_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "account_name_not_blank"
+            }
+          ]
+        },
+        {
           "name": "public.auth_nonce",
           "columns": [
             {
@@ -182,6 +227,10 @@
               "name": "slack_loggable",
               "type": "bool",
               "defaultExpr": "true"
+            },
+            {
+              "name": "account_id",
+              "type": "uuid"
             }
           ],
           "primaryKey": {
@@ -190,6 +239,18 @@
               "id"
             ]
           },
+          "foreignKeys": [
+            {
+              "name": "category_account_id_fkey",
+              "targetTable": "public.account",
+              "references": [
+                {
+                  "sourceColumn": "account_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
           "uniqueConstraints": [
             {
               "name": "category_name_key"
@@ -249,6 +310,10 @@
             {
               "name": "category_id",
               "type": "uuid"
+            },
+            {
+              "name": "account_id",
+              "type": "uuid"
             }
           ],
           "primaryKey": {
@@ -258,6 +323,16 @@
             ]
           },
           "foreignKeys": [
+            {
+              "name": "expense_account_id_fkey",
+              "targetTable": "public.account",
+              "references": [
+                {
+                  "sourceColumn": "account_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
             {
               "name": "expense_category_id_fkey",
               "targetTable": "public.category",
@@ -432,6 +507,99 @@
           "uniqueConstraints": [
             {
               "name": "inbound_message_event_id_key"
+            }
+          ]
+        },
+        {
+          "name": "public.money_movement",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "idempotency_key",
+              "type": "uuid"
+            },
+            {
+              "name": "from_account_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "to_account_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "amount",
+              "type": "int8"
+            },
+            {
+              "name": "occurred_at",
+              "type": "pg_catalog.timestamptz"
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "created_by_user_id",
+              "type": "text"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "money_movement_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "money_movement_from_account_id_fkey",
+              "targetTable": "public.account",
+              "references": [
+                {
+                  "sourceColumn": "from_account_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "money_movement_to_account_id_fkey",
+              "targetTable": "public.account",
+              "references": [
+                {
+                  "sourceColumn": "to_account_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "money_movement_idempotency_key_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "money_movement_amount_positive"
+            },
+            {
+              "name": "money_movement_creator_not_blank"
+            },
+            {
+              "name": "money_movement_endpoints_differ"
+            },
+            {
+              "name": "money_movement_has_tracked_endpoint"
             }
           ]
         },

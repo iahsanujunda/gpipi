@@ -32,7 +32,9 @@ Rules:
   4. If more than one category could apply, choose the closest match and lower confidence.
 - confidence: Return a number from 0 to 1 representing confidence in the complete extraction. Lower it
   when the amount is unclear, the merchant is unknown, or categorization requires guessing.
-- note: Return any useful information not already represented by amount, merchant, or category.
+- note: Only when the user explicitly supplied a useful detail not already represented by amount,
+  merchant, or category, copy one concise contiguous span from the message verbatim. Never infer,
+  paraphrase, explain, justify the category, comment on the amount, or mention missing context.
   Otherwise return null.
 
 Categories:
@@ -56,7 +58,13 @@ class ExtractionService(
             putJsonObject("merchant")   { putJsonArray("type") { add("string"); add("null") } }
             putJsonObject("category")   { put("type", "string"); putJsonArray("enum") { categories.forEach { add(it.name) } } }
             putJsonObject("confidence") { put("type", "number"); put("minimum", 0); put("maximum", 1) }
-            putJsonObject("note")       { putJsonArray("type") { add("string"); add("null") } }
+            putJsonObject("note") {
+                putJsonArray("type") { add("string"); add("null") }
+                put(
+                    "description",
+                    "A concise contiguous span copied verbatim from the user message; never model reasoning or inferred context.",
+                )
+            }
         }
         putJsonArray("required") { add("amount"); add("currency"); add("category"); add("confidence") }
         put("additionalProperties", false)
@@ -79,8 +87,14 @@ class ExtractionService(
 
         val categoryId = categories.firstOrNull { it.name == outcome.value.category }?.id
             ?: throw ExtractionException("Model returned unknown category '${outcome.value.category}'")
+        val extraction = outcome.value.copy(
+            note = outcome.value.note
+                ?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?.takeIf { text.contains(it, ignoreCase = true) },
+        )
 
-        return ExtractionResult(outcome.value, categoryId, categories, outcome.model)
+        return ExtractionResult(extraction, categoryId, categories, outcome.model)
     }
 }
 

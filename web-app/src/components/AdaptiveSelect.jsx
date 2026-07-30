@@ -28,6 +28,7 @@ export default function AdaptiveSelect({
   onChange,
   label,
   name,
+  displayEmpty = false,
   slotProps = {},
   ...textFieldProps
 }) {
@@ -51,7 +52,13 @@ export default function AdaptiveSelect({
         label={label}
         value={value}
         onChange={onChange}
-        slotProps={slotProps}
+        slotProps={{
+          ...slotProps,
+          select: {
+            ...slotProps.select,
+            displayEmpty,
+          },
+        }}
       >
         {children}
       </TextField>

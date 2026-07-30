@@ -14,9 +14,14 @@ import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestAccount
+import me.gpipi.support.insertTestCategory
+import me.gpipi.support.testCategoryAccountId
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 
 class ExpenseRepositoryTest : PersistenceTest() {
     private val expenseRepository = ExpenseRepository()
@@ -31,16 +36,10 @@ class ExpenseRepositoryTest : PersistenceTest() {
 
     private fun givenCategory(name: String = "Monthly Groceries"): UUID = runBlocking {
         dbQuery(db) {
-            val catId = UUID.randomUUID()
-            Category.insert {
-                it[Category.id] = catId
-                it[Category.name] = name
-                it[Category.description] = "supermarket runs, bulk shopping"
-                it[Category.period] = "MONTHLY"
-                it[Category.amount] = 50000L
-                it[Category.slackLoggable] = true
-            }
-            catId
+            insertTestCategory(
+                name = name,
+                description = "supermarket runs, bulk shopping",
+            )
         }
     }
 
@@ -58,6 +57,7 @@ class ExpenseRepositoryTest : PersistenceTest() {
                 it[Expense.amount] = amount
                 it[Expense.currency] = "JPY"
                 it[Expense.categoryId] = categoryId
+                it[Expense.accountId] = testCategoryAccountId(categoryId)
                 it[Expense.spentAt] = spentAt
             }
         }
@@ -82,6 +82,32 @@ class ExpenseRepositoryTest : PersistenceTest() {
         assertEquals(1500L, row[Expense.amount])
         assertEquals("Ito Yokado", row[Expense.merchant])
         assertEquals(catId, row[Expense.categoryId])
+        assertEquals(query { testCategoryAccountId(catId) }, row[Expense.accountId])
+    }
+
+    @Test
+    fun `expense snapshots its wallet when the category is later rerouted`() {
+        val originalAccount = query { insertTestAccount("Original wallet") }
+        val newAccount = query { insertTestAccount("New wallet") }
+        val categoryId = query {
+            insertTestCategory(name = "Rerouted budget", accountId = originalAccount)
+        }
+        val messageId = givenInbound()
+
+        val expenseId = query {
+            expenseRepository.insert(extraction(), messageId, "U1", categoryId)
+        }
+        query {
+            Category.update({ Category.id eq categoryId }) {
+                it[Category.accountId] = newAccount
+            }
+        }
+
+        val expenseAccount = query {
+            Expense.selectAll().where { Expense.id eq expenseId }.single()[Expense.accountId]
+        }
+        assertEquals(originalAccount, expenseAccount)
+        assertEquals(newAccount, query { testCategoryAccountId(categoryId) })
     }
 
     @Test
@@ -127,6 +153,36 @@ class ExpenseRepositoryTest : PersistenceTest() {
         val expense = query { expenseRepository.list(from = null, to = null, categoryId = null).single() }
 
         assertEquals("ramen & gyoza <late>", expense.description)
+    }
+
+    @Test
+    fun `description removes the extracted amount when Slack text puts it last`() {
+        assertEquals("jidouki", expenseDescription("jidouki 150", note = null, amount = 150))
+        assertEquals(
+            "mipi popok etc",
+            expenseDescription("mipi popok etc ¥1,476 JPY", note = null, amount = 1_476),
+        )
+        assertEquals(
+            "shinjuku halal",
+            expenseDescription("<@U123> shinjuku halal 9 699円.", note = null, amount = 9_699),
+        )
+        assertEquals("cycle park", expenseDescription("cycle park 200.", note = null, amount = 200))
+    }
+
+    @Test
+    fun `description preserves other numbers and text without the extracted amount`() {
+        assertEquals(
+            "Route 150 cafe",
+            expenseDescription("Route 150 cafe 800", note = null, amount = 800),
+        )
+        assertEquals(
+            "topup pasmo",
+            expenseDescription("topup pasmo", note = null, amount = 1_000),
+        )
+        assertEquals(
+            "Studio 150",
+            expenseDescription("Studio 150", note = null, amount = 200),
+        )
     }
 
     @Test

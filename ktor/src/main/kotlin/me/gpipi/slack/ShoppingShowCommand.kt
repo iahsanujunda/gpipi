@@ -3,6 +3,9 @@ package me.gpipi.slack
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import me.gpipi.shopping.ShoppingService
+import org.slf4j.LoggerFactory
+
+private val shoppingShowLog = LoggerFactory.getLogger(ShoppingShowCommand::class.java)
 
 class ShoppingShowCommand(
     private val shoppingService: ShoppingService,
@@ -28,6 +31,7 @@ class ShoppingShowCommand(
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: Exception) {
+            shoppingShowLog.error("Shopping list command failed", ex)
             try {
                 slack.postMessage(
                     msg.channelId,
@@ -35,8 +39,8 @@ class ShoppingShowCommand(
                 )
             } catch (feedbackFailure: CancellationException) {
                 throw feedbackFailure
-            } catch (_: Exception) {
-                // Preserve the original failure.
+            } catch (feedbackFailure: Exception) {
+                shoppingShowLog.warn("Could not send shopping list failure feedback", feedbackFailure)
             }
             SlackCommandOutcome.Failed(ex.commandFailureReason())
         }

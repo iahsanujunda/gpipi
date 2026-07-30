@@ -16,6 +16,8 @@ import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
+import me.gpipi.support.insertTestAccount
+import me.gpipi.support.testCategoryAccountId
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
@@ -38,6 +40,9 @@ class BudgetServiceTest : PersistenceTest() {
         amount: Long = 75_000L,
         active: Boolean = true,
         slackLoggable: Boolean = true,
+        accountId: String = runBlocking {
+            dbQuery(db) { insertTestAccount() }
+        }.toString(),
     ) = UpsertBudgetRequest(
         name = name,
         description = description,
@@ -45,6 +50,7 @@ class BudgetServiceTest : PersistenceTest() {
         amount = amount,
         active = active,
         slackLoggable = slackLoggable,
+        accountId = accountId,
     )
 
     private suspend fun givenBudget(
@@ -85,6 +91,7 @@ class BudgetServiceTest : PersistenceTest() {
                 it[Expense.amount] = amount
                 it[Expense.currency] = "JPY"
                 it[Expense.categoryId] = categoryId
+                it[Expense.accountId] = testCategoryAccountId(categoryId)
                 it[Expense.spentAt] = spentAt
             }
         }

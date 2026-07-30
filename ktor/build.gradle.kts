@@ -29,6 +29,7 @@ kotlin {
 }
 dependencies {
     implementation(ktorLibs.serialization.kotlinx.json)
+    implementation(ktorLibs.server.callId)
     implementation(ktorLibs.server.callLogging)
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.server.core)
@@ -39,6 +40,7 @@ dependencies {
     implementation(ktorLibs.client.core)
     implementation(ktorLibs.client.cio)
     implementation(ktorLibs.client.contentNegotiation)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:1.11.0")
     implementation(ktorLibs.server.auth)
     implementation(ktorLibs.server.sessions)
     implementation(ktorLibs.server.cors)
@@ -121,6 +123,8 @@ pgen {
             addTable("public", "shopping_mutation")
             addTable("public", "shopping_item")
             addTable("public", "shopping_mutation_item")
+            addTable("public", "account")
+            addTable("public", "money_movement")
         }
         columnTypeMappings {
             add(

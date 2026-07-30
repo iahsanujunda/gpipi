@@ -42,14 +42,20 @@ internal fun expenseDescription(sourceText: String?, note: String?, amount: Long
         .toString()
         .map(Char::toString)
         .joinToString("""[,\s_]?""")
+    val currencyUnit = """(?:円|jpy|yen)"""
     val leadingAmount = Regex(
-        """^\s*(?:[¥￥]\s*)?$amountPattern(?:\s*(?:円|jpy|yen))?(?=\s|[:,.—-]|$)[\s:,.—-]*""",
+        """^\s*(?:[¥￥]\s*)?$amountPattern(?:\s*$currencyUnit)?(?=\s|[:,.—-]|$)[\s:,.—-]*""",
+        RegexOption.IGNORE_CASE,
+    )
+    val trailingAmount = Regex(
+        """(?:[\s:,.—-]+(?:[¥￥]\s*)?|[¥￥]\s*)$amountPattern(?:\s*$currencyUnit)?[\s:,.—-]*$""",
         RegexOption.IGNORE_CASE,
     )
 
     val description = sourceText
         ?.replaceFirst(leadingSlackMention, "")
         ?.replaceFirst(leadingAmount, "")
+        ?.replaceFirst(trailingAmount, "")
         ?.replaceFirst(leadingConnector, "")
         ?.decodeSlackEntities()
         ?.trim()
@@ -84,6 +90,12 @@ class ExpenseRepository {
         note: String?,
         categoryId: UUID,
     ): UUID {
+        val accountId = Category
+            .select(Category.accountId)
+            .where { Category.id eq categoryId }
+            .singleOrNull()
+            ?.get(Category.accountId)
+            ?: throw IllegalArgumentException("Unknown category id: $categoryId")
         val id = UUID.randomUUID()
         Expense.insert {
             it[Expense.id]               = id
@@ -92,6 +104,7 @@ class ExpenseRepository {
             it[Expense.amount]           = amount
             it[Expense.currency]         = currency
             it[Expense.categoryId]       = categoryId
+            it[Expense.accountId]        = accountId
             it[Expense.merchant]         = merchant
             it[Expense.note]             = note
         }

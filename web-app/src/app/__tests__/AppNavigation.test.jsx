@@ -43,7 +43,7 @@ function NavigationWithTwoActions({ onAdd, onDuplicate }) {
 }
 
 describe('AppNavigation', () => {
-  it('reveals the three authenticated destinations and marks the current page', async () => {
+  it('reveals the four authenticated destinations and marks the current page', async () => {
     const user = userEvent.setup()
     renderWithProviders(<AppNavigation />, { route: '/budgets' })
 
@@ -56,10 +56,11 @@ describe('AppNavigation', () => {
     await user.click(launcher)
 
     expect(navigationMask).toHaveAttribute('data-mask-state', 'dimmed')
+    expect(screen.getByRole('link', { name: 'Wallets' })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('link', { name: 'Budgets' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Activity' })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('link', { name: 'Shopping list' })).not.toHaveAttribute('aria-current')
-    expect(screen.getAllByRole('link')).toHaveLength(3)
+    expect(screen.getAllByRole('link')).toHaveLength(4)
     expect(screen.getByRole('button', { name: 'Close navigation' })).toHaveAttribute('aria-expanded', 'true')
   })
 

@@ -6,6 +6,9 @@ import me.gpipi.config.dbQuery
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.observability.AppObservability
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.slf4j.LoggerFactory
+
+private val slackEventLog = LoggerFactory.getLogger(SlackEventHandler::class.java)
 
 class SlackEventHandler(
     private val db: Database,
@@ -43,6 +46,7 @@ class SlackEventHandler(
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: Exception) {
+            slackEventLog.error("Slack command ${command::class.simpleName} failed unexpectedly", ex)
             SlackCommandOutcome.Failed(ex.commandFailureReason())
         }
         recordOutcome(commandName, outcome)

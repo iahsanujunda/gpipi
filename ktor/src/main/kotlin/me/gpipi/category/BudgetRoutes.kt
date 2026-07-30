@@ -23,6 +23,7 @@ data class UpsertBudgetRequest(
     val amount: Long,
     val active: Boolean = true,
     val slackLoggable: Boolean = true,
+    val accountId: String,
 )
 
 @Serializable

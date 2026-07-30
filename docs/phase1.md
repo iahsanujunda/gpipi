@@ -417,11 +417,13 @@ Return JSON matching the schema. Rules:
   - Use the merchant to decide only when no spend type is stated.
     Example: "510 at seven eleven" → Convenience Store.
 - confidence: 0-1. Lower it when the merchant is unknown or the category is a guess.
-- note: anything the user added that isn't amount/merchant/category, else null.
+- note: only a useful detail explicitly supplied by the user that is not amount/merchant/category; copy one concise contiguous span verbatim. Never infer, paraphrase, explain the category, comment on the amount, or mention missing context. Otherwise return null.
 
 Categories:
 {{CATEGORIES}}
 ```
+
+The prompt is reinforced by a provenance guard after deserialization: a non-null note is retained only when it occurs as a contiguous case-insensitive span in the original Slack message. Model-authored reasoning is discarded before the pending draft is written, so only user-supplied text can reach `expense.note`.
 
 In iter 2, `ExtractionService` is also responsible for building the extraction JSON schema and resolving the returned category name to a `category_id` FK, returning `Pair<Extraction, UUID>` to the handler.
 
@@ -567,12 +569,12 @@ suspend fun extract(text: String): Pair<Extraction, UUID> {
 
 **Periods.** Two categories can hold overlapping intent but different periods — that's the point. A weekly konbini/quick-meal line resets weekly; a monthly supermarket line resets monthly. The description carries the signal for the model; the amount reinforces it.
 
-**Not every budget line is an expense someone types.** Fixed obligations — mortgage, insurance, recurring transfers, investment contributions — are budget lines that matter for planning and for phase 2's payday funding, but nobody will ever post `@ai 50000 for KPR`. They just happen on schedule.
+**Not every budget line is an expense someone types.** Fixed obligations — mortgage, insurance, recurring transfers, investment contributions — still matter for planning and still require phase 2's wallet association, but nobody will ever post `@ai 50000 for KPR`. They just happen on schedule.
 
 Offering them in the extraction enum actively *hurts* accuracy: it dilutes the model's choice set with options that can never be correct for a typed message. Hence `slack_loggable`:
 
 - `CategoryRepository.findActive()` — the projection that feeds the prompt and the enum — filters `slack_loggable = true and active = true`.
-- Phase 2's payday funding reads **all** active categories, loggable or not, because that is where the money must go.
+- Phase 2's Budgeting and Wallets surfaces read **all** active categories, loggable or not, so every line has a visible wallet association.
 
 Same table, two projections, each seeing only what it needs.
 
@@ -786,7 +788,7 @@ Threshold starts at `0.80`; adjust against `categorization_event` after real usa
 
 # Iteration 7 — Frontend → see Phase 2
 
-The web frontend is specified in its own document, **Phase 2: Frontend & Magic-Link Auth**. It covers Slack-brokered magic-link authentication, the expense list, the payday funding view, budget management, and savings goals — each an independently deployable iteration.
+The web frontend is specified in its own document, **Phase 2: Frontend & Magic-Link Auth**. It covers Slack-brokered magic-link authentication, the expense list, wallets and payday money movement, budget management, and savings goals — each an independently deployable iteration.
 
 Through phase 1, budgets and categories are editable directly in Supabase, so no frontend is needed to run the bot. Phase 2 begins once the bot is in daily use and its real requirements are understood.
 

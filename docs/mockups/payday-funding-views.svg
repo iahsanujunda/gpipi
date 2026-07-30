@@ -1,0 +1,414 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="1980" viewBox="0 0 1380 1980" role="img" aria-labelledby="title description">
+  <title id="title">Wallet balances and money movement mobile flow</title>
+  <desc id="description">Six mobile mockups show the wallet list and balances, the contextual add-wallet action, wallet creation, adding money from an external source, reallocating money between wallets, and a wallet detail page with its recorded transactions.</desc>
+
+  <defs>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity="0.16" />
+    </filter>
+    <filter id="sheet-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="-8" stdDeviation="16" flood-color="#17312E" flood-opacity="0.16" />
+    </filter>
+    <filter id="control-shadow" x="-20%" y="-30%" width="140%" height="170%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1D4E89" flood-opacity="0.22" />
+    </filter>
+    <style>
+      .app { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .board-title { fill: #1D4E89; font-size: 28px; font-weight: 760; letter-spacing: -0.6px; }
+      .board-copy { fill: #526966; font-size: 14px; }
+      .board-label { fill: #1D4E89; font-size: 12px; font-weight: 760; letter-spacing: 1.4px; }
+      .heading { fill: #1D4E89; font-weight: 720; letter-spacing: -0.35px; }
+      .body { fill: #17312E; }
+      .secondary { fill: #526966; }
+      .eyebrow { fill: #526966; font-size: 10px; font-weight: 720; letter-spacing: 0.9px; }
+      .chip { fill: #526966; font-size: 9px; font-weight: 720; letter-spacing: 0.55px; }
+      .button { fill: #FFFFFF; font-size: 13px; font-weight: 720; text-anchor: middle; }
+      .button-secondary { fill: #16679A; font-size: 13px; font-weight: 720; text-anchor: middle; }
+      .money { fill: #1D4E89; font-size: 22px; font-weight: 760; text-anchor: end; }
+      .signed-positive { fill: #16679A; font-size: 15px; font-weight: 740; text-anchor: end; }
+      .signed-negative { fill: #17312E; font-size: 15px; font-weight: 740; text-anchor: end; }
+      .small { fill: #526966; font-size: 11px; }
+    </style>
+
+    <g id="phone-base">
+      <rect x="0" y="0" width="390" height="760" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+      <rect x="8" y="8" width="374" height="744" rx="40" fill="#F4FAFB" />
+      <rect x="8" y="8" width="374" height="38" rx="40" fill="#FFFFFF" />
+      <rect x="8" y="32" width="374" height="14" fill="#FFFFFF" />
+      <text x="28" y="33" class="heading" font-size="13">9:41</text>
+      <g fill="none" stroke="#1D4E89" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M328 28c4-5 9-5 13 0" />
+        <path d="M331 31c2-3 5-3 7 0" />
+        <circle cx="334.5" cy="34" r="1" fill="#1D4E89" stroke="none" />
+        <rect x="350" y="23" width="18" height="10" rx="2" />
+        <path d="M369 26v4" />
+      </g>
+      <rect x="352.5" y="25.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+
+      <rect x="8" y="46" width="374" height="58" fill="#FFFFFF" />
+      <rect x="16" y="53" width="44" height="44" rx="10" fill="#FFFFFF" />
+      <path d="M39 65 29 75l10 10M30 75h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="68" y="81" class="heading" font-size="17">gpipi</text>
+      <line x1="8" y1="103.5" x2="382" y2="103.5" stroke="#C9E2E5" />
+    </g>
+
+    <g id="phone-footer">
+      <rect x="8" y="688" width="374" height="64" fill="#F4FAFB" fill-opacity="0.98" />
+      <circle cx="195" cy="714" r="28" fill="#16679A" filter="url(#control-shadow)" />
+      <rect x="182" y="701" width="11" height="11" rx="3" fill="#3FC1C0" />
+      <rect x="197" y="701" width="11" height="11" rx="3" fill="#FFFFFF" />
+      <rect x="182" y="716" width="11" height="11" rx="3" fill="#FFFFFF" />
+      <rect x="197" y="716" width="11" height="11" rx="3" fill="#3FC1C0" />
+      <rect x="139" y="739" width="112" height="5" rx="2.5" fill="#1D4E89" fill-opacity="0.72" />
+    </g>
+
+    <g id="phone-footer-close">
+      <rect x="8" y="688" width="374" height="64" fill="#F4FAFB" />
+      <rect x="8" y="688" width="374" height="64" fill="#1D4E89" opacity="0.30" />
+      <circle cx="195" cy="714" r="28" fill="#16679A" filter="url(#control-shadow)" />
+      <path d="m186 705 18 18m0-18-18 18" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" />
+      <rect x="139" y="739" width="112" height="5" rx="2.5" fill="#1D4E89" fill-opacity="0.72" />
+    </g>
+
+    <g id="drawer-handle">
+      <rect x="177" y="10" width="36" height="4" rx="2" fill="#C9E2E5" />
+    </g>
+
+    <g id="move-icon">
+      <path d="M2 8h17m-5-5 5 5-5 5M19 18H2m5-5-5 5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g id="edit-icon">
+      <path d="m5 20 2-6L17 4l5 5-10 10-6 2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="m14 7 5 5" fill="none" stroke="currentColor" stroke-width="2" />
+    </g>
+
+    <g id="wallet-icon">
+      <rect x="2" y="5" width="21" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2" />
+      <path d="M2 9h16a4 4 0 0 1 4 4v4h-7a4 4 0 0 1 0-8h7" fill="none" stroke="currentColor" stroke-width="2" />
+      <circle cx="16" cy="13" r="1" fill="currentColor" />
+    </g>
+
+    <g id="budget-icon">
+      <rect x="3" y="3" width="18" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="2" />
+      <path d="M7 8h10M7 13h10M7 18h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </g>
+
+    <g id="activity-icon">
+      <path d="M3 12h4l3-7 5 14 3-7h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g id="shopping-icon">
+      <path d="M4 7h16l-2 14H6L4 7Zm4 0a4 4 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g id="add-icon">
+      <path d="M12 3v18M3 12h18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+
+    <g id="swap-icon">
+      <path d="M5 2v12m-3-3 3 3 3-3M11 14V2M8 5l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+  </defs>
+
+  <rect width="1380" height="1980" fill="#E7F5F7" />
+  <g class="app">
+    <text x="52" y="58" class="board-title">WALLETS &amp; MONEY MOVEMENT · MOBILE FLOW</text>
+    <text x="52" y="87" class="board-copy">Wallet balances are the primary view. Payday is a repeated top-up workflow, while reallocation is the same movement form with a tracked wallet as the source.</text>
+    <rect x="52" y="112" width="1276" height="58" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <circle cx="82" cy="141" r="13" fill="#DFF4F4" />
+    <path d="m77 141 4 4 7-9" fill="none" stroke="#16679A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="106" y="137" class="body" font-size="13" font-weight="700">Balance model</text>
+    <text x="106" y="156" class="secondary" font-size="12">Incoming movements − outgoing movements − recorded expenses. No bank sync, opening-balance requirement, monthly plan, or global ledger view.</text>
+
+    <!-- 01 Wallet list -->
+    <text x="230" y="208" class="board-label" text-anchor="middle">01 · WALLET LIST &amp; BALANCES</text>
+    <g transform="translate(35 230)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Wallets</text>
+
+      <g transform="translate(0 -22)">
+      <rect x="24" y="192" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="220" class="heading" font-size="17">Household account</text>
+      <path d="m345 214 6 6-6 6" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="42" y="236" width="96" height="24" rx="12" fill="#DFF4F4" />
+      <text x="90" y="252" class="chip" text-anchor="middle">3 BUDGET LINES</text>
+      <text x="42" y="283" class="eyebrow">BALANCE</text>
+      <text x="348" y="287" class="money">¥87,420</text>
+      <line x1="42" y1="300" x2="348" y2="300" stroke="#C9E2E5" />
+      <g transform="translate(96 310)" color="#16679A"><use href="#move-icon" /></g>
+      <text x="214" y="326" class="button-secondary">Move money</text>
+
+      <rect x="24" y="348" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="376" class="heading" font-size="17">Eating out wallet</text>
+      <path d="m345 370 6 6-6 6" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="42" y="392" width="90" height="24" rx="12" fill="#DFF4F4" />
+      <text x="87" y="408" class="chip" text-anchor="middle">1 BUDGET LINE</text>
+      <text x="42" y="439" class="eyebrow">BALANCE</text>
+      <text x="348" y="443" class="money">−¥2,300</text>
+      <line x1="42" y1="456" x2="348" y2="456" stroke="#C9E2E5" />
+      <g transform="translate(96 466)" color="#16679A"><use href="#move-icon" /></g>
+      <text x="214" y="482" class="button-secondary">Move money</text>
+
+      <rect x="24" y="504" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="532" class="heading" font-size="17">Card settlement</text>
+      <path d="m345 526 6 6-6 6" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="42" y="548" width="96" height="24" rx="12" fill="#DFF4F4" />
+      <text x="90" y="564" class="chip" text-anchor="middle">3 BUDGET LINES</text>
+      <text x="42" y="595" class="eyebrow">BALANCE</text>
+      <text x="348" y="599" class="money">¥64,000</text>
+      <line x1="42" y1="612" x2="348" y2="612" stroke="#C9E2E5" />
+      <g transform="translate(96 622)" color="#16679A"><use href="#move-icon" /></g>
+      <text x="214" y="638" class="button-secondary">Move money</text>
+      </g>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 02 Launcher -->
+    <text x="690" y="208" class="board-label" text-anchor="middle">02 · ADD VIA MAIN ACTION</text>
+    <g transform="translate(495 230)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Wallets</text>
+      <text x="24" y="170" class="secondary" font-size="12">Balances from recorded funding and spending.</text>
+      <rect x="24" y="192" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="220" class="heading" font-size="17">Household account</text>
+      <text x="348" y="278" class="money">¥87,420</text>
+      <rect x="24" y="348" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="376" class="heading" font-size="17">Eating out wallet</text>
+      <text x="348" y="434" class="money">−¥2,300</text>
+      <use href="#phone-footer" />
+
+      <rect x="8" y="8" width="374" height="680" rx="40" fill="#1D4E89" opacity="0.30" />
+
+      <g>
+        <rect x="85" y="274" width="96" height="25" rx="12.5" fill="#1D4E89" />
+        <text x="133" y="291" fill="#FFFFFF" font-size="10" font-weight="740" letter-spacing="1.1" text-anchor="middle">PAGE ACTIONS</text>
+        <line x1="189" y1="286.5" x2="305" y2="286.5" stroke="#3FC1C0" stroke-width="2" stroke-linecap="round" />
+        <rect x="85" y="309" width="220" height="50" rx="25" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="2" filter="url(#control-shadow)" />
+        <g transform="translate(105 322)" color="#16679A"><use href="#add-icon" /></g>
+        <text x="148" y="339" class="body" font-size="13" font-weight="700">Add wallet or account</text>
+
+        <rect x="85" y="382" width="91" height="25" rx="12.5" fill="#1D4E89" />
+        <text x="130.5" y="399" fill="#FFFFFF" font-size="10" font-weight="740" letter-spacing="1.1" text-anchor="middle">NAVIGATION</text>
+        <line x1="184" y1="394.5" x2="305" y2="394.5" stroke="#3FC1C0" stroke-width="2" stroke-linecap="round" />
+
+        <rect x="85" y="417" width="220" height="48" rx="24" fill="#16679A" filter="url(#control-shadow)" />
+        <g transform="translate(105 428)" color="#FFFFFF"><use href="#wallet-icon" /></g>
+        <text x="148" y="447" fill="#FFFFFF" font-size="13" font-weight="720">Wallets</text>
+        <circle cx="285" cy="441" r="4" fill="#FFFFFF" />
+
+        <rect x="85" y="473" width="220" height="48" rx="24" fill="#FFFFFF" filter="url(#control-shadow)" />
+        <g transform="translate(105 484)" color="#1D4E89"><use href="#budget-icon" /></g>
+        <text x="148" y="503" class="body" font-size="13" font-weight="680">Budgets</text>
+
+        <rect x="85" y="529" width="220" height="48" rx="24" fill="#FFFFFF" filter="url(#control-shadow)" />
+        <g transform="translate(105 540)" color="#1D4E89"><use href="#activity-icon" /></g>
+        <text x="148" y="559" class="body" font-size="13" font-weight="680">Activity</text>
+
+        <rect x="85" y="585" width="220" height="48" rx="24" fill="#FFFFFF" filter="url(#control-shadow)" />
+        <g transform="translate(105 596)" color="#1D4E89"><use href="#shopping-icon" /></g>
+        <text x="148" y="615" class="body" font-size="13" font-weight="680">Shopping list</text>
+      </g>
+      <use href="#phone-footer-close" />
+    </g>
+
+    <!-- 03 New wallet -->
+    <text x="1150" y="208" class="board-label" text-anchor="middle">03 · NEW WALLET / ACCOUNT</text>
+    <g transform="translate(955 230)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Wallets</text>
+      <rect x="24" y="192" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="220" class="heading" font-size="17">Household account</text>
+      <text x="348" y="278" class="money">¥87,420</text>
+      <use href="#phone-footer" />
+
+      <rect x="8" y="8" width="374" height="744" rx="40" fill="#1D4E89" opacity="0.30" />
+      <g filter="url(#sheet-shadow)">
+        <path d="M8 276q0-16 16-16h342q16 0 16 16v476H8Z" fill="#FFFFFF" />
+        <use href="#drawer-handle" transform="translate(0 260)" />
+        <text x="28" y="308" class="heading" font-size="20">New wallet or account</text>
+        <path d="m344 292 16 16m0-16-16 16" fill="none" stroke="#526966" stroke-width="2.2" stroke-linecap="round" />
+
+        <rect x="28" y="334" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#16679A" stroke-width="1.5" />
+        <text x="42" y="351" class="eyebrow">NAME</text>
+        <text x="42" y="379" class="body" font-size="16">Vacation wallet</text>
+
+        <rect x="28" y="405" width="334" height="74" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="422" class="eyebrow">DESCRIPTION · OPTIONAL</text>
+        <text x="42" y="449" class="secondary" font-size="13">Shared savings for trips and bookings</text>
+
+        <rect x="28" y="495" width="334" height="92" rx="10" fill="#DFF4F4" />
+        <circle cx="50" cy="521" r="10" fill="#16679A" />
+        <text x="50" y="525" fill="#FFFFFF" font-size="12" font-weight="740" text-anchor="middle">i</text>
+        <text x="68" y="519" class="body" font-size="12" font-weight="700">This wallet starts at ¥0</text>
+        <text x="68" y="541" class="secondary" font-size="11">Spending may make it negative. Record a money</text>
+        <text x="68" y="558" class="secondary" font-size="11">movement whenever you want to track funding.</text>
+        <text x="68" y="575" class="secondary" font-size="11">Connect budget lines from the Budgeting page.</text>
+
+        <rect x="28" y="607" width="334" height="48" rx="10" fill="#16679A" />
+        <text x="195" y="637" class="button">Review wallet</text>
+        <text x="195" y="687" class="button-secondary">Cancel</text>
+      </g>
+    </g>
+
+    <path d="M195 1032h990" fill="none" stroke="#C9E2E5" stroke-width="2" />
+    <circle cx="690" cy="1032" r="18" fill="#16679A" />
+    <g transform="translate(678 1020)" color="#FFFFFF"><use href="#move-icon" /></g>
+    <text x="690" y="1074" class="board-copy" text-anchor="middle">One movement form handles both payday top-ups and reallocation between tracked wallets.</text>
+
+    <!-- 04 External top-up -->
+    <text x="230" y="1130" class="board-label" text-anchor="middle">04 · TOP UP FROM EXTERNAL</text>
+    <g transform="translate(35 1152)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Wallets</text>
+      <rect x="24" y="192" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="220" class="heading" font-size="17">Household account</text>
+      <text x="348" y="278" class="money">¥87,420</text>
+      <use href="#phone-footer" />
+
+      <rect x="8" y="8" width="374" height="744" rx="40" fill="#1D4E89" opacity="0.30" />
+      <g filter="url(#sheet-shadow)">
+        <path d="M8 156q0-16 16-16h342q16 0 16 16v596H8Z" fill="#FFFFFF" />
+        <use href="#drawer-handle" transform="translate(0 140)" />
+        <text x="28" y="188" class="heading" font-size="20">Move money</text>
+        <path d="m344 172 16 16m0-16-16 16" fill="none" stroke="#526966" stroke-width="2.2" stroke-linecap="round" />
+        <text x="28" y="215" class="secondary" font-size="12">Record where tracked money comes from and goes.</text>
+
+        <rect x="28" y="235" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#16679A" stroke-width="1.5" />
+        <text x="42" y="252" class="eyebrow">FROM</text>
+        <text x="42" y="280" class="body" font-size="15">External account</text>
+        <path d="m342 258 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
+        <g role="button" aria-label="Swap From and To">
+          <circle cx="195" cy="322" r="22" fill="#16679A" filter="url(#control-shadow)" />
+          <g transform="translate(187 314)" color="#FFFFFF"><use href="#swap-icon" /></g>
+        </g>
+
+        <rect x="28" y="352" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="369" class="eyebrow">TO</text>
+        <text x="42" y="397" class="body" font-size="15">Household account</text>
+        <path d="m342 375 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
+
+        <rect x="28" y="423" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="440" class="eyebrow">AMOUNT</text>
+        <text x="42" y="468" class="body" font-size="17" font-weight="700">¥ 120,000</text>
+
+        <rect x="28" y="494" width="334" height="64" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="511" class="eyebrow">NOTE · OPTIONAL</text>
+        <text x="42" y="540" class="secondary" font-size="13">July salary · employer</text>
+
+        <rect x="28" y="574" width="334" height="64" rx="10" fill="#DFF4F4" />
+        <text x="42" y="597" class="eyebrow">BALANCE AFTER MOVEMENT</text>
+        <text x="348" y="597" class="eyebrow" text-anchor="end">UPDATED NOW</text>
+        <text x="42" y="622" class="secondary" font-size="12">¥87,420 →</text>
+        <text x="348" y="622" class="heading" font-size="18" text-anchor="end">¥207,420</text>
+
+        <rect x="28" y="654" width="334" height="48" rx="10" fill="#16679A" />
+        <text x="195" y="684" class="button">Review money movement</text>
+        <text x="195" y="731" class="button-secondary">Cancel</text>
+      </g>
+    </g>
+
+    <!-- 05 Reallocation -->
+    <text x="690" y="1130" class="board-label" text-anchor="middle">05 · REALLOCATE BETWEEN WALLETS</text>
+    <g transform="translate(495 1152)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Wallets</text>
+      <use href="#phone-footer" />
+
+      <rect x="8" y="8" width="374" height="744" rx="40" fill="#1D4E89" opacity="0.30" />
+      <g filter="url(#sheet-shadow)">
+        <path d="M8 156q0-16 16-16h342q16 0 16 16v596H8Z" fill="#FFFFFF" />
+        <use href="#drawer-handle" transform="translate(0 140)" />
+        <text x="28" y="188" class="heading" font-size="20">Move money</text>
+        <path d="m344 172 16 16m0-16-16 16" fill="none" stroke="#526966" stroke-width="2.2" stroke-linecap="round" />
+        <text x="28" y="215" class="secondary" font-size="12">Both tracked balances update from one movement.</text>
+
+        <rect x="28" y="235" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#16679A" stroke-width="1.5" />
+        <text x="42" y="252" class="eyebrow">FROM</text>
+        <text x="42" y="280" class="body" font-size="15">Household account</text>
+        <path d="m342 258 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
+        <g role="button" aria-label="Swap From and To">
+          <circle cx="195" cy="322" r="22" fill="#16679A" filter="url(#control-shadow)" />
+          <g transform="translate(187 314)" color="#FFFFFF"><use href="#swap-icon" /></g>
+        </g>
+
+        <rect x="28" y="352" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="369" class="eyebrow">TO</text>
+        <text x="42" y="397" class="body" font-size="15">Eating out wallet</text>
+        <path d="m342 375 5 5 5-5" fill="none" stroke="#526966" stroke-width="1.8" />
+
+        <rect x="28" y="423" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="440" class="eyebrow">AMOUNT</text>
+        <text x="42" y="468" class="body" font-size="17" font-weight="700">¥ 5,000</text>
+
+        <rect x="28" y="494" width="334" height="64" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="42" y="511" class="eyebrow">NOTE · OPTIONAL</text>
+        <text x="42" y="540" class="secondary" font-size="13">Move unused grocery funding</text>
+
+        <rect x="28" y="574" width="334" height="80" rx="10" fill="#DFF4F4" />
+        <text x="42" y="596" class="eyebrow">BALANCES AFTER MOVEMENT</text>
+        <text x="348" y="596" class="eyebrow" text-anchor="end">UPDATED NOW</text>
+        <text x="42" y="621" class="secondary" font-size="12">Household account</text>
+        <text x="348" y="621" class="body" font-size="12" font-weight="700" text-anchor="end">¥87,420 → ¥82,420</text>
+        <text x="42" y="642" class="secondary" font-size="12">Eating out wallet</text>
+        <text x="348" y="642" class="body" font-size="12" font-weight="700" text-anchor="end">−¥2,300 → ¥2,700</text>
+
+        <rect x="28" y="668" width="334" height="48" rx="10" fill="#16679A" />
+        <text x="195" y="698" class="button">Review money movement</text>
+        <text x="195" y="741" class="button-secondary">Cancel</text>
+      </g>
+    </g>
+
+    <!-- 06 Detail -->
+    <text x="1150" y="1130" class="board-label" text-anchor="middle">06 · WALLET DETAIL &amp; TRANSACTIONS</text>
+    <g transform="translate(955 1152)">
+      <use href="#phone-base" />
+      <text x="24" y="143" class="heading" font-size="26">Household account</text>
+      <rect x="322" y="112" width="44" height="44" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <g transform="translate(332 122)" color="#16679A"><use href="#edit-icon" /></g>
+
+      <rect x="24" y="174" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="198" class="eyebrow">BALANCE</text>
+      <text x="348" y="228" class="money">¥87,420</text>
+      <text x="42" y="252" class="secondary" font-size="11">Incoming − outgoing − expenses</text>
+      <rect x="42" y="260" width="96" height="22" rx="11" fill="#DFF4F4" />
+      <text x="90" y="275" class="chip" text-anchor="middle">3 BUDGET LINES</text>
+
+      <text x="24" y="318" class="eyebrow">ASSIGNED BUDGETS</text>
+      <rect x="24" y="331" width="105" height="28" rx="14" fill="#DFF4F4" />
+      <text x="76.5" y="349" class="chip" text-anchor="middle">MONTHLY GROCERIES</text>
+      <rect x="137" y="331" width="104" height="28" rx="14" fill="#DFF4F4" />
+      <text x="189" y="349" class="chip" text-anchor="middle">WEEKLY GROCERIES</text>
+      <rect x="249" y="331" width="84" height="28" rx="14" fill="#DFF4F4" />
+      <text x="291" y="349" class="chip" text-anchor="middle">HOUSEHOLD</text>
+
+      <text x="24" y="394" class="heading" font-size="18">Transactions</text>
+      <text x="366" y="394" class="secondary" font-size="11" text-anchor="end">Newest first</text>
+
+      <rect x="24" y="409" width="342" height="82" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="431" class="body" font-size="14">FamilyMart</text>
+      <text x="348" y="431" class="signed-negative">−¥510</text>
+      <rect x="42" y="441" width="108" height="20" rx="10" fill="#DFF4F4" />
+      <text x="96" y="455" class="chip" text-anchor="middle">WEEKLY GROCERIES</text>
+      <text x="42" y="478" class="small">28 Jul 2026</text>
+
+      <rect x="24" y="501" width="342" height="82" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="523" class="body" font-size="14">Ito Yokado</text>
+      <text x="348" y="523" class="signed-negative">−¥12,580</text>
+      <rect x="42" y="533" width="114" height="20" rx="10" fill="#DFF4F4" />
+      <text x="99" y="547" class="chip" text-anchor="middle">MONTHLY GROCERIES</text>
+      <text x="42" y="570" class="small">27 Jul 2026</text>
+
+      <rect x="24" y="593" width="342" height="82" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="615" class="body" font-size="14">External account</text>
+      <text x="348" y="615" class="signed-positive">+¥120,000</text>
+      <rect x="42" y="625" width="72" height="20" rx="10" fill="#DFF4F4" />
+      <text x="78" y="639" class="chip" text-anchor="middle">MONEY IN</text>
+      <text x="42" y="662" class="small">25 Jul 2026 · July salary · employer</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <rect x="52" y="1930" width="1276" height="1" fill="#C9E2E5" />
+    <text x="52" y="1958" class="board-copy">Visual language follows the implemented React shell: Material UI surfaces, Inter, semantic teal/blue tokens, 44 px controls, adaptive bottom drawers, card-first mobile layouts, and the fixed launcher dock.</text>
+  </g>
+</svg>

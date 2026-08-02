@@ -65,16 +65,34 @@ function shiftWeek(value, amount) {
   return dateKey(date)
 }
 
-function monthStart(value) {
+function shiftDate(value, days) {
   const date = dateFromIso(value)
-  date.setUTCDate(1)
+  date.setUTCDate(date.getUTCDate() + days)
   return dateKey(date)
 }
 
-function shiftMonth(value, amount) {
-  const date = dateFromIso(monthStart(value))
-  date.setUTCMonth(date.getUTCMonth() + amount)
-  return dateKey(date)
+function paydayForMonth(month) {
+  const payday = dateFromIso(`${month}-25`)
+  if (payday.getUTCDay() === 6) return shiftDate(dateKey(payday), -1)
+  if (payday.getUTCDay() === 0) return shiftDate(dateKey(payday), -2)
+  return dateKey(payday)
+}
+
+function paydayStart(value) {
+  const month = value.slice(0, 7)
+  const payday = paydayForMonth(month)
+  if (value >= payday) return payday
+
+  const previousMonth = dateFromIso(`${month}-01`)
+  previousMonth.setUTCMonth(previousMonth.getUTCMonth() - 1)
+  return paydayForMonth(dateKey(previousMonth).slice(0, 7))
+}
+
+function nextPaydayStart(value) {
+  const start = paydayStart(value)
+  const followingMonth = dateFromIso(`${start.slice(0, 7)}-01`)
+  followingMonth.setUTCMonth(followingMonth.getUTCMonth() + 1)
+  return paydayForMonth(dateKey(followingMonth).slice(0, 7))
 }
 
 function weekStart(value) {
@@ -100,26 +118,22 @@ function dateParts(date) {
 
 function formatPeriodWindow(period, budgetDate, spend) {
   const hasAuthoritativeWindow = Boolean(spend?.windowStart && spend?.windowEndExclusive)
-  const selected = dateFromIso(hasAuthoritativeWindow ? spend.windowStart : budgetDate)
-  if (period === 'MONTHLY') {
-    const selectedParts = dateParts(selected)
-    return `MONTHLY · ${selectedParts.month} ${selectedParts.year}`
-  }
-
-  const start = new Date(selected)
-  if (!hasAuthoritativeWindow) {
+  const start = dateFromIso(hasAuthoritativeWindow ? spend.windowStart : budgetDate)
+  if (!hasAuthoritativeWindow && period === 'WEEKLY') {
     start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7))
   }
   const end = hasAuthoritativeWindow
     ? dateFromIso(spend.windowEndExclusive)
-    : new Date(start)
-  end.setUTCDate(end.getUTCDate() + (hasAuthoritativeWindow ? -1 : 6))
+    : period === 'WEEKLY'
+      ? new Date(start)
+      : dateFromIso(nextPaydayStart(budgetDate))
+  end.setUTCDate(end.getUTCDate() + (hasAuthoritativeWindow ? -1 : period === 'WEEKLY' ? 6 : -1))
   const startParts = dateParts(start)
   const endParts = dateParts(end)
   const range = startParts.month === endParts.month
     ? `${startParts.day}–${endParts.day} ${endParts.month}`
     : `${startParts.day} ${startParts.month} – ${endParts.day} ${endParts.month}`
-  return `WEEKLY · ${range}`
+  return `${period} · ${range}`
 }
 
 function formatPeriodLabel(period, budgetDate, spend) {
@@ -600,19 +614,20 @@ function PeriodNavigator({
   spend,
 }) {
   const weekly = period === 'WEEKLY'
-  const historical = weekly
-    ? weekStart(budgetDate) !== weekStart(currentDate)
-    : monthStart(budgetDate) !== monthStart(currentDate)
-  const periodName = weekly ? 'week' : 'month'
+  const selectedBucket = weekly ? weekStart(budgetDate) : paydayStart(budgetDate)
+  const currentBucket = weekly ? weekStart(currentDate) : paydayStart(currentDate)
+  const historical = selectedBucket !== currentBucket
+  const periodName = weekly ? 'week' : 'payday period'
   const periodLabel = formatPeriodLabel(period, budgetDate, spend)
-  const crossesMonth = weekly && periodLabel.includes(' – ')
+  const hasDateRange = periodLabel.includes(' – ')
 
   function move(amount) {
     const next = weekly
       ? shiftWeek(budgetDate, amount)
-      : shiftMonth(budgetDate, amount)
-    const currentBucket = weekly ? weekStart(currentDate) : monthStart(currentDate)
-    const nextBucket = weekly ? weekStart(next) : monthStart(next)
+      : amount < 0
+        ? shiftDate(selectedBucket, -1)
+        : nextPaydayStart(selectedBucket)
+    const nextBucket = weekly ? weekStart(next) : paydayStart(next)
     onChange(nextBucket > currentBucket ? currentBucket : next)
   }
 
@@ -640,8 +655,8 @@ function PeriodNavigator({
         sx={{
           justifyContent: 'center',
           width: {
-            xs: crossesMonth ? 132 : 104,
-            sm: crossesMonth ? 140 : 116,
+            xs: hasDateRange ? 132 : 104,
+            sm: hasDateRange ? 140 : 116,
           },
           minHeight: 44,
           px: 1.25,
@@ -710,7 +725,7 @@ function BudgetPeriodSection({
 }) {
   const historical = period === 'WEEKLY'
     ? weekStart(budgetDate) !== weekStart(currentDate)
-    : monthStart(budgetDate) !== monthStart(currentDate)
+    : paydayStart(budgetDate) !== paydayStart(currentDate)
   const spendRows = spendQuery.data ?? []
   const spendByCategory = new Map(spendRows.map((row) => [row.categoryId, row]))
   const periodSpend = spendRows.find((row) => row.period === period)
@@ -778,11 +793,11 @@ function BudgetPeriodSection({
             size="small"
             variant="outlined"
             onClick={() => onBudgetDateChange(
-              period === 'WEEKLY' ? currentDate : monthStart(currentDate),
+              currentDate,
             )}
             sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
           >
-            This {period === 'WEEKLY' ? 'week' : 'month'}
+            This {period === 'WEEKLY' ? 'week' : 'payday period'}
           </Button>
         </Box>
       )}
@@ -815,7 +830,7 @@ function BudgetPeriodSection({
 export default function BudgetsPage() {
   const currentDate = useMemo(() => currentBudgetDate(), [])
   const [weeklyDate, setWeeklyDate] = useState(currentDate)
-  const [monthlyDate, setMonthlyDate] = useState(() => monthStart(currentDate))
+  const [monthlyDate, setMonthlyDate] = useState(currentDate)
   const budgets = useBudgets()
   const wallets = useWallets()
   const weeklySpend = useBudgetSpend(weeklyDate)

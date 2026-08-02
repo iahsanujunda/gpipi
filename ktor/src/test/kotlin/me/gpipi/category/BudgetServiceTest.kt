@@ -293,33 +293,33 @@ class BudgetServiceTest : PersistenceTest() {
         givenExpense(
             categoryId,
             9_000L,
-            OffsetDateTime.parse("2026-06-30T23:59:59+09:00"),
+            OffsetDateTime.parse("2026-07-23T23:59:59+09:00"),
             "Ev-before",
         )
         givenExpense(
             categoryId,
             10_000L,
-            OffsetDateTime.parse("2026-07-01T00:00:00+09:00"),
+            OffsetDateTime.parse("2026-07-24T00:00:00+09:00"),
             "Ev-start",
         )
         givenExpense(
             categoryId,
             5_000L,
-            OffsetDateTime.parse("2026-07-31T23:59:59+09:00"),
+            OffsetDateTime.parse("2026-08-24T23:59:59+09:00"),
             "Ev-inside",
         )
         givenExpense(
             categoryId,
             20_000L,
-            OffsetDateTime.parse("2026-08-01T00:00:00+09:00"),
-            "Ev-next-bucket",
+            OffsetDateTime.parse("2026-08-25T00:00:00+09:00"),
+            "Ev-end-exclusive",
         )
 
         val result = service.spendVsCap(LocalDate.of(2026, 7, 24)).single()
 
         assertEquals(categoryId.toString(), result.categoryId)
-        assertEquals("2026-07-01", result.windowStart)
-        assertEquals("2026-08-01", result.windowEndExclusive)
+        assertEquals("2026-07-24", result.windowStart)
+        assertEquals("2026-08-25", result.windowEndExclusive)
         assertEquals(15_000L, result.spent)
         assertEquals(35_000L, result.remaining)
     }
@@ -385,7 +385,7 @@ class BudgetServiceTest : PersistenceTest() {
         givenExpense(
             monthlyId,
             6_000L,
-            OffsetDateTime.parse("2026-08-01T00:00:00+09:00"),
+            OffsetDateTime.parse("2026-07-24T00:00:00+09:00"),
             "Ev-monthly-end",
         )
 
@@ -399,7 +399,7 @@ class BudgetServiceTest : PersistenceTest() {
         assertEquals("2026-07-20", resultByName.getValue("Eating Out").windowEndExclusive)
         assertEquals(8_000L, resultByName.getValue("Monthly Groceries").spent)
         assertEquals(12_000L, resultByName.getValue("Monthly Groceries").remaining)
-        assertEquals("2026-07-01", resultByName.getValue("Monthly Groceries").windowStart)
-        assertEquals("2026-08-01", resultByName.getValue("Monthly Groceries").windowEndExclusive)
+        assertEquals("2026-06-25", resultByName.getValue("Monthly Groceries").windowStart)
+        assertEquals("2026-07-24", resultByName.getValue("Monthly Groceries").windowEndExclusive)
     }
 }

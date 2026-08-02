@@ -82,7 +82,7 @@ const homeRepairs = {
 function spendRow(budget, spent) {
   const window = budget.period === 'WEEKLY'
     ? { windowStart: '2026-07-20', windowEndExclusive: '2026-07-27' }
-    : { windowStart: '2026-07-01', windowEndExclusive: '2026-08-01' }
+    : { windowStart: '2026-07-24', windowEndExclusive: '2026-08-25' }
   return {
     categoryId: budget.id,
     name: budget.name,
@@ -100,10 +100,20 @@ function shiftDate(value, days) {
   return date.toISOString().slice(0, 10)
 }
 
-function shiftMonth(value, months) {
-  const date = new Date(`${value.slice(0, 7)}-01T00:00:00Z`)
-  date.setUTCMonth(date.getUTCMonth() + months)
-  return date.toISOString().slice(0, 10)
+function paydayForMonth(month) {
+  const payday = new Date(`${month}-25T00:00:00Z`)
+  if (payday.getUTCDay() === 6) return shiftDate(payday.toISOString().slice(0, 10), -1)
+  if (payday.getUTCDay() === 0) return shiftDate(payday.toISOString().slice(0, 10), -2)
+  return payday.toISOString().slice(0, 10)
+}
+
+function paydayStart(value) {
+  const month = value.slice(0, 7)
+  const payday = paydayForMonth(month)
+  if (value >= payday) return payday
+  const previousMonth = new Date(`${month}-01T00:00:00Z`)
+  previousMonth.setUTCMonth(previousMonth.getUTCMonth() - 1)
+  return paydayForMonth(previousMonth.toISOString().slice(0, 7))
 }
 
 function mutation(overrides = {}) {
@@ -176,6 +186,24 @@ describe('BudgetsPage', () => {
     expect(screen.getByText('27 JUL – 2 AUG')).toHaveStyle({ whiteSpace: 'nowrap' })
   })
 
+  it('displays the day before an exclusive monthly boundary as the final day', () => {
+    mockUseBudgets.mockReturnValue({
+      data: [groceries],
+      isPending: false,
+      isError: false,
+    })
+    mockUseBudgetSpend.mockReturnValue({
+      data: [spendRow(groceries, 46200)],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getByText('24 JUL – 24 AUG')).toBeInTheDocument()
+    expect(screen.queryByText('24 JUL – 25 AUG')).not.toBeInTheDocument()
+  })
+
   it('moves weekly and monthly history independently and labels current-cap comparisons', async () => {
     const user = userEvent.setup()
     mockUseBudgets.mockReturnValue({
@@ -196,27 +224,29 @@ describe('BudgetsPage', () => {
     const initialWeeklyDate = mockUseBudgetSpend.mock.calls[0][0]
     const initialMonthlyDate = mockUseBudgetSpend.mock.calls[1][0]
 
+    expect(initialMonthlyDate).toBe(initialWeeklyDate)
+
     expect(screen.getByRole('button', { name: 'Next week' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Next month' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next payday period' })).toBeDisabled()
 
     await user.click(screen.getByRole('button', { name: 'Previous week' }))
 
     expect(mockUseBudgetSpend).toHaveBeenCalledWith(shiftDate(initialWeeklyDate, -7))
     expect(screen.getByRole('button', { name: 'This week' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'This month' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'This payday period' })).not.toBeInTheDocument()
     expect(screen.getAllByText('CURRENT CAP BASIS')).not.toHaveLength(0)
     expect(screen.getByText("Past spending is compared with each line's current cap."))
       .toBeInTheDocument()
     expect(screen.getByText('¥3,000 under')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Next week' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Next month' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next payday period' })).toBeDisabled()
 
-    await user.click(screen.getByRole('button', { name: 'Previous month' }))
+    await user.click(screen.getByRole('button', { name: 'Previous payday period' }))
 
-    expect(mockUseBudgetSpend).toHaveBeenCalledWith(shiftMonth(initialMonthlyDate, -1))
+    expect(mockUseBudgetSpend).toHaveBeenCalledWith(shiftDate(paydayStart(initialMonthlyDate), -1))
     expect(screen.getByRole('button', { name: 'This week' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'This month' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Next month' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'This payday period' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next payday period' })).toBeEnabled()
   })
 
   it('shows exact spend and difference while progress remains a supporting signal', () => {

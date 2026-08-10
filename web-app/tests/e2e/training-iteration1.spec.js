@@ -10,6 +10,52 @@ async function expectNoHorizontalOverflow(page) {
   })
 }
 
+function cadenceOverview(workoutNames) {
+  return {
+    program: {
+      id: '60000000-0000-0000-0000-000000000099',
+      name: 'Flexible cadence',
+      note: null,
+      startsOn: '2026-08-03',
+      active: true,
+    },
+    currentWeekNumber: 1,
+    selectedWeekNumber: 1,
+    availableWeekNumbers: [1, 2],
+    workouts: workoutNames.map((workoutName, index) => ({
+      weekId: `62000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+      workoutId: `61000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+      workoutName,
+      status: 'NOT_STARTED',
+      sessionId: null,
+      performedOn: null,
+      setCount: 0,
+      updatedAt: null,
+    })),
+  }
+}
+
+for (const workoutNames of [
+  ['Only workout'],
+  ['Day A', 'Day B', 'Day C'],
+]) {
+  test(`week overview renders a ${workoutNames.length}-workout cadence without horizontal overflow`, async ({ page }) => {
+    await page.route(/\/api\/training\?week=1$/, (route) => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify(cadenceOverview(workoutNames)),
+    }))
+
+    await page.goto('/training/weeks/1')
+
+    await expect(page.getByRole('article')).toHaveCount(workoutNames.length)
+    for (const workoutName of workoutNames) {
+      await expect(page.getByRole('heading', { name: workoutName })).toBeVisible()
+    }
+    await expect(page.getByText(`0 of ${workoutNames.length} resolved`)).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+  })
+}
+
 test('navigation opens the derived current week and preserves week history return paths', async ({ page }) => {
   await page.goto('/wallets')
   await page.getByRole('button', { name: 'Open navigation' }).click()

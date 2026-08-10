@@ -129,7 +129,7 @@ Three consequences, each of which removes work rather than adding it:
 
 **A missed week stays in the table forever, unperformed.** This is correct — it is history, and deleting it would erase the fact that a gap happened. Combined with the snapshot rule, the prescription record becomes a legible account of how the program adapted to real life, including the deloads written after time off.
 
-That last point needs one mechanism: the gym screen must move past a skipped week rather than offering it indefinitely. Skipping is **explicit and reversible**: **Skip week** sets `workout_week.skipped_at`, and **Restore week** clears it. It is never inferred from a later completion because doing the workout and entering it may happen out of order. Starting to log a skipped week automatically restores it. A week with a completed session cannot also be skipped.
+That last point needs one mechanism: the gym screen must move past a skipped week rather than offering it indefinitely. Skipping is **explicit and reversible**: **Skip week** sets `workout_week.skipped_at`, and **Restore week** clears it. It is never inferred from a later completion because doing the workout and entering it may happen out of order. Starting to log a skipped week automatically restores it. Explicitly finishing a skipped workout also restores and completes it atomically, because finishing is a direct claim that the workout was performed. A week with a completed session cannot also be skipped.
 
 ---
 
@@ -548,7 +548,7 @@ Removing a prescription deactivates it immediately rather than destroying it. It
 - [ ] A workout with no prescribed RIR column renders without an empty RIR affordance
 - [ ] The gym screen derives "current" as the lowest authored week containing any workout that is neither completed nor skipped — no stored pointer or calendar arithmetic
 - [ ] Skip and restore are explicit, reversible actions; skip is never inferred from later sessions
-- [ ] Logging a skipped week restores it automatically; a completed week cannot also be skipped
+- [ ] Logging or explicitly finishing a skipped week restores it automatically; a completed week cannot also be skipped
 - [ ] A block with one workout and a block with three both render correctly (no fixed-cadence assumption)
 - [ ] A member cannot see another member's program
 - [ ] **One week of each member's program is entered**, and the model held without a schema change

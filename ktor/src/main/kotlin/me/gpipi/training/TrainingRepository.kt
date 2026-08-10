@@ -374,6 +374,30 @@ class TrainingRepository {
             )
         }.singleOrNull() ?: return false
 
+        val previousExecution = rows(
+            """
+            select ps.reps, ps.duration_s, ps.load, ps.rir, ps.deleted_at
+            from performed_set ps
+            where ps.performed_exercise_id = ? and ps.set_number = ?
+            for update
+            """.trimIndent(),
+            listOf(uuid(exercise.id), integer(setNumber)),
+        ) { rs ->
+            SetExecutionState(
+                reps = rs.getInt("reps").takeUnless { rs.wasNull() },
+                durationSeconds = rs.getInt("duration_s").takeUnless { rs.wasNull() },
+                load = rs.getBigDecimal("load"),
+                rir = rs.getInt("rir").takeUnless { rs.wasNull() },
+                deleted = rs.getObject("deleted_at", OffsetDateTime::class.java) != null,
+            )
+        }.singleOrNull()
+        val executionChanged = previousExecution == null ||
+            previousExecution.deleted ||
+            previousExecution.reps != input.reps ||
+            previousExecution.durationSeconds != input.durationSeconds ||
+            !previousExecution.load.sameValueAs(input.load) ||
+            previousExecution.rir != input.rir
+
         execute(
             """
             insert into performed_set (
@@ -397,14 +421,21 @@ class TrainingRepository {
                 nullableText(exercise.tempo), offsetDateTime(now), offsetDateTime(now),
             ),
         )
-        execute(
-            """
-            update training_session
-            set updated_at = ?, execution_updated_at = ?
-            where id = ?
-            """.trimIndent(),
-            listOf(offsetDateTime(now), offsetDateTime(now), uuid(sessionId)),
-        )
+        if (executionChanged) {
+            execute(
+                """
+                update training_session
+                set updated_at = ?, execution_updated_at = ?
+                where id = ?
+                """.trimIndent(),
+                listOf(offsetDateTime(now), offsetDateTime(now), uuid(sessionId)),
+            )
+        } else {
+            execute(
+                """update training_session set updated_at = ? where id = ?""",
+                listOf(offsetDateTime(now), uuid(sessionId)),
+            )
+        }
         if (isSkipped(weekId)) restoreWeek(ownerUserId, weekId)
         return true
     }
@@ -473,6 +504,10 @@ class TrainingRepository {
             where id = ?
             """.trimIndent(),
             listOf(offsetDateTime(now), offsetDateTime(now), uuid(sessionId)),
+        )
+        execute(
+            """update workout_week set skipped_at = null where id = ?""",
+            listOf(uuid(weekId)),
         )
         return true
     }
@@ -838,4 +873,17 @@ class TrainingRepository {
         val rir: String?,
         val tempo: String?,
     )
+
+    private data class SetExecutionState(
+        val reps: Int?,
+        val durationSeconds: Int?,
+        val load: BigDecimal?,
+        val rir: Int?,
+        val deleted: Boolean,
+    )
+}
+
+private fun BigDecimal?.sameValueAs(other: BigDecimal?): Boolean = when {
+    this == null || other == null -> this == null && other == null
+    else -> compareTo(other) == 0
 }

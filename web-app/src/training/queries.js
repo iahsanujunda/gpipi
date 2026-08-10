@@ -128,9 +128,9 @@ export function useTrainingImportMutation(mutationFn) {
   })
 }
 
-export function useConnectGoogle() {
+export function useConnectGoogle(returnPath = '/training/program/import') {
   return useMutation({
-    mutationFn: () => apiFetch('/api/training/google/connect?returnPath=%2Ftraining%2Fprogram%2Fimport'),
+    mutationFn: () => apiFetch(`/api/training/google/connect?returnPath=${encodeURIComponent(returnPath)}`),
   })
 }
 
@@ -150,6 +150,20 @@ export function useStartTrainingImport() {
   return useTrainingImportMutation(({ programId, spreadsheetId }) => apiFetch(
     `/api/training/programs/${programId}/imports`,
     { method: 'POST', body: { spreadsheetId } },
+  ))
+}
+
+export function useStartNewProgramTrainingImport() {
+  return useTrainingImportMutation(({ spreadsheetId }) => apiFetch(
+    '/api/training/imports',
+    { method: 'POST', body: { spreadsheetId } },
+  ))
+}
+
+export function useSaveNewProgramImportDraft() {
+  return useTrainingImportMutation(({ importId, program }) => apiFetch(
+    `/api/training/imports/${importId}/program`,
+    { method: 'PUT', body: program },
   ))
 }
 

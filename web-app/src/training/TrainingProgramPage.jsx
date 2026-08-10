@@ -105,6 +105,7 @@ export default function TrainingProgramPage() {
   const create = useCreateTrainingProgram()
   const activate = useActivateTrainingProgram()
   const [error, setError] = useState(null)
+  const [manualVisible, setManualVisible] = useState(false)
   const [program, setProgram] = useState({
     name: '',
     note: '',
@@ -194,19 +195,43 @@ export default function TrainingProgramPage() {
       </Button>
 
       <Stack spacing={0.75}>
-        <Typography component="h1" variant="h4">Training program</Typography>
+        <Typography component="h1" variant="h4">{overview.data ? 'Programs' : 'Your program'}</Typography>
         <Typography color="text.secondary">
-          Human-reviewed authoring for an open-ended block. Add only the weeks your trainer has prescribed.
+          Start from the Sheet your trainer already maintains, or build a program manually.
         </Typography>
       </Stack>
 
-      {overview.data && (
+      {overview.data && manualVisible && (
         <Alert severity="info">
           {overview.data.program.name} is active. Saving this form starts another program and makes it active.
         </Alert>
       )}
 
-      {overview.data && (
+      {!overview.data && !manualVisible && (
+        <Stack spacing={2.5}>
+          <Paper component="section" variant="outlined" sx={{ p: { xs: 2.25, sm: 3 }, bgcolor: 'highlight.main', borderColor: 'secondary.main' }}>
+            <Stack spacing={2} sx={{ alignItems: 'flex-start' }}>
+              <Box sx={{ width: 52, height: 52, borderRadius: '50%', bgcolor: 'background.paper', color: 'primary.main', display: 'grid', placeItems: 'center' }}>
+                <DriveIcon />
+              </Box>
+              <Stack spacing={0.5}>
+                <Typography component="h2" variant="h6">Import from Google Sheet</Typography>
+                <Typography color="text.secondary" variant="body2">
+                  Choose one trainer-authored week, review every movement, then create the program.
+                </Typography>
+              </Stack>
+              <Button component={Link} startIcon={<DriveIcon />} to="/training/program/import/new" variant="contained">
+                Start from a Sheet
+              </Button>
+            </Stack>
+          </Paper>
+          <Button onClick={() => setManualVisible(true)} startIcon={<AddIcon />} sx={{ alignSelf: 'flex-start' }} variant="outlined">
+            Create manually
+          </Button>
+        </Stack>
+      )}
+
+      {overview.data && !manualVisible && (
         <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}>
             <Stack spacing={0.5}>
@@ -216,7 +241,7 @@ export default function TrainingProgramPage() {
               </Typography>
             </Stack>
             <Button component={Link} startIcon={<DriveIcon />} to="/training/program/import" variant="outlined">
-              Import one week
+              Import another week
             </Button>
           </Stack>
         </Paper>
@@ -261,6 +286,33 @@ export default function TrainingProgramPage() {
         </Paper>
       )}
 
+      {overview.data && !manualVisible && (
+        <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 2.5 }, bgcolor: 'highlight.main', borderColor: 'secondary.main' }}>
+          <Stack spacing={2}>
+            <Stack spacing={0.5}>
+              <Typography component="h2" variant="h6">Start another program</Typography>
+              <Typography color="text.secondary" variant="body2">
+                The current program remains active until the new one is fully reviewed and applied.
+              </Typography>
+            </Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+              <Button component={Link} startIcon={<DriveIcon />} to="/training/program/import/new" variant="contained">
+                Import new program from Sheet
+              </Button>
+              <Button onClick={() => setManualVisible(true)} startIcon={<AddIcon />} variant="outlined">
+                Create manually
+              </Button>
+            </Stack>
+          </Stack>
+        </Paper>
+      )}
+
+      {manualVisible && (
+        <>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}>
+            <Typography component="h2" variant="h5">Create manually</Typography>
+            <Button onClick={() => setManualVisible(false)}>Back to program options</Button>
+          </Stack>
       <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
         <Stack spacing={2}>
           <Typography component="h2" variant="h6">Program details</Typography>
@@ -506,6 +558,8 @@ export default function TrainingProgramPage() {
           </Button>
         </Stack>
       </Paper>
+        </>
+      )}
     </Stack>
   )
 }

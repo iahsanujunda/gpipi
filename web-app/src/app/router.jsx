@@ -37,6 +37,7 @@ export const routes = [
           { path: 'training/program', element: <TrainingProgramPage /> },
           { path: 'training/program/import', element: <TrainingImportPage /> },
           { path: 'training/program/import/:importId', element: <TrainingImportPage /> },
+          { path: 'training/program/import/new', element: <TrainingImportPage newProgram /> },
         ],
       },
     ],

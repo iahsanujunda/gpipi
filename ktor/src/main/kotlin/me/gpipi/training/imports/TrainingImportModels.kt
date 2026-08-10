@@ -1,13 +1,19 @@
 package me.gpipi.training.imports
 
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.serialization.Serializable
 
 data class TrainingImportHeader(
     val id: UUID,
-    val programId: UUID,
+    val ownerUserId: String,
+    val targetType: String,
+    val programId: UUID?,
     val programName: String,
+    val newProgramNote: String?,
+    val newProgramStartsOn: LocalDate?,
+    val newProgramConfirmedAt: OffsetDateTime?,
     val spreadsheetId: String,
     val spreadsheetTitle: String,
     val selectedWeekNumber: Int?,
@@ -60,6 +66,13 @@ data class LinkedTrainingSheet(val spreadsheetId: String, val spreadsheetTitle: 
 
 @Serializable
 data class StartTrainingImportRequest(val spreadsheetId: String)
+
+@Serializable
+data class SaveNewProgramDraftRequest(
+    val name: String,
+    val note: String? = null,
+    val startsOn: String? = null,
+)
 
 @Serializable
 data class ChooseTrainingWeekRequest(val weekNumber: Int)
@@ -141,6 +154,8 @@ data class StartTrainingImportResponse(
     val spreadsheetTitle: String,
     val availableWeekNumbers: List<Int>,
     val replacesLinkedSheet: Boolean,
+    val targetType: String,
+    val suggestedProgramName: String? = null,
 )
 
 
@@ -170,8 +185,11 @@ data class TrainingRangeProposalResponse(
 @Serializable
 data class TrainingImportResponse(
     val id: String,
-    val programId: String,
+    val targetType: String,
+    val programId: String?,
     val programName: String,
+    val programNote: String? = null,
+    val programStartsOn: String? = null,
     val spreadsheetTitle: String,
     val selectedWeekNumber: Int?,
     val state: String,

@@ -1,0 +1,403 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="2760" viewBox="0 0 1380 2760" role="img" aria-labelledby="title description">
+  <title id="title">Phase 5 iteration 2 new program from Google Sheet flow</title>
+  <desc id="description">Nine mobile-first views show import as the primary empty-state action, selecting a trainer Sheet, naming a not-yet-created program, choosing exactly one week, confirming new workouts, reviewing prescriptions, confirming activation, opening the applied week, and returning to program settings.</desc>
+
+  <defs>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity=".16" />
+    </filter>
+    <filter id="control-shadow" x="-25%" y="-30%" width="150%" height="175%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1D4E89" flood-opacity=".22" />
+    </filter>
+    <style>
+      .app { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .board-title { fill: #1D4E89; font-size: 28px; font-weight: 760; letter-spacing: -.6px; }
+      .board-copy { fill: #526966; font-size: 14px; }
+      .board-label { fill: #1D4E89; font-size: 12px; font-weight: 760; letter-spacing: 1.2px; }
+      .heading { fill: #1D4E89; font-weight: 720; letter-spacing: -.3px; }
+      .body { fill: #17312E; }
+      .secondary { fill: #526966; }
+      .eyebrow { fill: #526966; font-size: 9px; font-weight: 750; letter-spacing: .75px; }
+      .chip { fill: #526966; font-size: 9px; font-weight: 720; letter-spacing: .45px; }
+      .button { fill: #FFFFFF; font-size: 12px; font-weight: 720; text-anchor: middle; }
+      .button-secondary { fill: #16679A; font-size: 12px; font-weight: 720; text-anchor: middle; }
+      .tiny { fill: #526966; font-size: 9.5px; }
+    </style>
+
+    <g id="phone-base">
+      <rect width="390" height="760" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+      <rect x="8" y="8" width="374" height="744" rx="40" fill="#F4FAFB" />
+      <rect x="8" y="8" width="374" height="38" rx="40" fill="#FFFFFF" />
+      <rect x="8" y="32" width="374" height="14" fill="#FFFFFF" />
+      <text x="28" y="33" class="heading" font-size="13">9:41</text>
+      <g fill="none" stroke="#1D4E89" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M328 28c4-5 9-5 13 0" />
+        <path d="M331 31c2-3 5-3 7 0" />
+        <circle cx="334.5" cy="34" r="1" fill="#1D4E89" stroke="none" />
+        <rect x="350" y="23" width="18" height="10" rx="2" />
+        <path d="M369 26v4" />
+      </g>
+      <rect x="352.5" y="25.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+      <rect x="8" y="46" width="374" height="58" fill="#FFFFFF" />
+      <rect x="16" y="53" width="44" height="44" rx="10" fill="#FFFFFF" />
+      <path d="M39 65 29 75l10 10M30 75h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="68" y="81" class="heading" font-size="17">gpipi</text>
+      <line x1="8" y1="103.5" x2="382" y2="103.5" stroke="#C9E2E5" />
+      <rect x="146" y="17" width="98" height="20" rx="10" fill="#1D4E89" />
+    </g>
+
+    <g id="phone-footer">
+      <rect x="8" y="688" width="374" height="64" fill="#F4FAFB" fill-opacity=".98" />
+      <line x1="8" y1="688" x2="382" y2="688" stroke="#D9E9EB" />
+      <circle cx="195" cy="714" r="28" fill="#16679A" filter="url(#control-shadow)" />
+      <rect x="182" y="701" width="11" height="11" rx="3" fill="#3FC1C0" />
+      <rect x="197" y="701" width="11" height="11" rx="3" fill="#FFFFFF" />
+      <rect x="182" y="716" width="11" height="11" rx="3" fill="#FFFFFF" />
+      <rect x="197" y="716" width="11" height="11" rx="3" fill="#3FC1C0" />
+      <rect x="139" y="739" width="112" height="5" rx="2.5" fill="#1D4E89" fill-opacity=".72" />
+    </g>
+
+    <g id="sheet-icon">
+      <rect x="2" y="1" width="18" height="22" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <path d="M6 7h10M6 12h10M6 17h10M10 7v10" fill="none" stroke="currentColor" stroke-width="1.4" />
+    </g>
+    <g id="drive-icon">
+      <path d="m11 2 5 9H6L11 2Zm5 9 5 9H11l5-9ZM6 11l5 9H1l5-9Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+    </g>
+    <g id="check-icon">
+      <path d="m2 10 5 5L18 3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    <g id="edit-icon">
+      <path d="m3 19 2-6L15 3l5 5-10 10-7 1Zm10-13 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+    </g>
+    <g id="warning-icon">
+      <path d="M11 2 21 20H1L11 2Zm0 6v5m0 3v.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    <g id="plus-icon">
+      <path d="M11 3v16M3 11h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </g>
+  </defs>
+
+  <rect width="1380" height="2760" fill="#E7F5F7" />
+  <g class="app">
+    <text x="52" y="58" class="board-title">TRAINING · NEW PROGRAM FROM SHEET</text>
+    <text x="52" y="87" class="board-copy">Import is a first-class way to start a program. The Sheet proposes the program identity and one chosen week; no training-domain row exists until the member confirms Apply.</text>
+
+    <g transform="translate(52 112)">
+      <rect width="1276" height="64" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="31" cy="32" r="13" fill="#DFF4F4" /><text x="31" y="36" class="heading" font-size="10" text-anchor="middle">1</text>
+      <text x="52" y="28" class="body" font-size="11.5" font-weight="700">Before Apply</text><text x="52" y="46" class="secondary" font-size="9.5">Import draft only</text>
+      <path d="M214 32h76" stroke="#C9E2E5" stroke-width="2" /><path d="m284 26 7 6-7 6" fill="none" stroke="#C9E2E5" stroke-width="2" />
+      <circle cx="321" cy="32" r="13" fill="#DFF4F4" /><text x="321" y="36" class="heading" font-size="10" text-anchor="middle">2</text>
+      <text x="342" y="28" class="body" font-size="11.5" font-weight="700">Apply transaction</text><text x="342" y="46" class="secondary" font-size="9.5">Create program + selected week</text>
+      <path d="M566 32h76" stroke="#C9E2E5" stroke-width="2" /><path d="m636 26 7 6-7 6" fill="none" stroke="#C9E2E5" stroke-width="2" />
+      <circle cx="673" cy="32" r="13" fill="#16679A" /><g transform="translate(666 25) scale(.64)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="696" y="28" class="body" font-size="11.5" font-weight="700">After Apply</text><text x="696" y="46" class="secondary" font-size="9.5">New program active · prior history retained</text>
+      <rect x="1042" y="14" width="210" height="36" rx="18" fill="#DFF4F4" />
+      <text x="1147" y="36" class="heading" font-size="10.5" text-anchor="middle">ONE WEEK · HUMAN REVIEWED</text>
+    </g>
+
+    <text x="230" y="214" class="board-label" text-anchor="middle">01 · EMPTY PROGRAM SETTINGS</text>
+    <text x="690" y="214" class="board-label" text-anchor="middle">02 · START NEW PROGRAM IMPORT</text>
+    <text x="1150" y="214" class="board-label" text-anchor="middle">03 · NAME THE PROGRAM DRAFT</text>
+
+    <!-- 01 Empty program settings -->
+    <g transform="translate(35 236)">
+      <use href="#phone-base" />
+      <text x="24" y="142" class="eyebrow">TRAINING · PROGRAM SETTINGS</text>
+      <text x="24" y="176" class="heading" font-size="27">Your program</text>
+      <text x="24" y="201" class="secondary" font-size="11">Start from the Sheet your trainer already maintains,</text>
+      <text x="24" y="217" class="secondary" font-size="11">or build a program manually.</text>
+
+      <rect x="24" y="245" width="342" height="235" rx="14" fill="#DFF4F4" stroke="#3FC1C0" stroke-width="1.5" />
+      <circle cx="62" cy="284" r="22" fill="#FFFFFF" />
+      <g transform="translate(51 272)" color="#16679A"><use href="#sheet-icon" /></g>
+      <rect x="286" y="267" width="62" height="24" rx="12" fill="#16679A" />
+      <text x="317" y="283" fill="#FFFFFF" font-size="8.5" font-weight="750" text-anchor="middle">PRIMARY</text>
+      <text x="42" y="336" class="heading" font-size="19">Import from Google Sheet</text>
+      <text x="42" y="362" class="body" font-size="11">Choose one trainer-authored week, review every</text>
+      <text x="42" y="379" class="body" font-size="11">movement, then create the program.</text>
+      <rect x="42" y="412" width="306" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="441" class="button">Start from a Sheet</text>
+
+      <text x="195" y="513" class="eyebrow" text-anchor="middle">OR</text>
+      <rect x="24" y="535" width="342" height="92" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="55" cy="581" r="17" fill="#F4FAFB" /><g transform="translate(45 571) scale(.9)" color="#526966"><use href="#plus-icon" /></g>
+      <text x="82" y="571" class="body" font-size="12.5" font-weight="700">Create manually</text>
+      <text x="82" y="592" class="secondary" font-size="9.5">Enter workouts and prescriptions yourself.</text>
+      <path d="m335 575 7 7-7 7" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 02 Start import -->
+    <g transform="translate(495 236)">
+      <use href="#phone-base" />
+      <text x="24" y="137" class="eyebrow">NEW PROGRAM · IMPORT DRAFT</text>
+      <text x="24" y="170" class="heading" font-size="25">Choose the trainer’s Sheet</text>
+      <rect x="280" y="125" width="86" height="24" rx="12" fill="#FFF7E6" />
+      <text x="323" y="141" fill="#7A5200" font-size="8.5" font-weight="750" text-anchor="middle">NOT CREATED</text>
+
+      <g transform="translate(24 200)">
+        <circle cx="9" cy="9" r="9" fill="#16679A" /><text x="9" y="12" fill="#FFFFFF" font-size="7" font-weight="750" text-anchor="middle">1</text>
+        <line x1="18" y1="9" x2="87" y2="9" stroke="#C9E2E5" stroke-width="2" />
+        <circle cx="97" cy="9" r="9" fill="#FFFFFF" stroke="#C9E2E5" /><text x="97" y="12" class="secondary" font-size="7" font-weight="750" text-anchor="middle">2</text>
+        <line x1="106" y1="9" x2="175" y2="9" stroke="#C9E2E5" stroke-width="2" />
+        <circle cx="185" cy="9" r="9" fill="#FFFFFF" stroke="#C9E2E5" /><text x="185" y="12" class="secondary" font-size="7" font-weight="750" text-anchor="middle">3</text>
+        <line x1="194" y1="9" x2="263" y2="9" stroke="#C9E2E5" stroke-width="2" />
+        <circle cx="273" cy="9" r="9" fill="#FFFFFF" stroke="#C9E2E5" /><text x="273" y="12" class="secondary" font-size="7" font-weight="750" text-anchor="middle">4</text>
+        <text x="9" y="32" class="eyebrow" text-anchor="middle">SHEET</text><text x="97" y="32" class="eyebrow" text-anchor="middle">PROGRAM</text><text x="185" y="32" class="eyebrow" text-anchor="middle">WEEK</text><text x="273" y="32" class="eyebrow" text-anchor="middle">REVIEW</text>
+      </g>
+
+      <rect x="24" y="260" width="342" height="86" rx="11" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="58" cy="303" r="20" fill="#DFF4F4" /><g transform="translate(47 291)" color="#16679A"><use href="#drive-icon" /></g>
+      <text x="88" y="294" class="body" font-size="12" font-weight="700">Google connected</text>
+      <text x="88" y="315" class="secondary" font-size="9.5">junda@gmail.com</text>
+      <text x="88" y="332" fill="#16679A" font-size="9" font-weight="700">Disconnect</text>
+
+      <rect x="24" y="371" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
+      <circle cx="195" cy="413" r="24" fill="#DFF4F4" /><g transform="translate(184 401)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="195" y="458" class="heading" font-size="15" text-anchor="middle">Select one spreadsheet</text>
+      <text x="195" y="479" class="secondary" font-size="9.5" text-anchor="middle">Google Picker controls file access.</text>
+      <rect x="42" y="527" width="306" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="556" class="button">Choose Google Sheet</text>
+
+      <rect x="24" y="600" width="342" height="58" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="42" y="624" class="body" font-size="10" font-weight="700">Safe to leave</text>
+      <text x="42" y="642" class="secondary" font-size="9">No program, workout, or week exists yet.</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 03 Name program -->
+    <g transform="translate(955 236)">
+      <use href="#phone-base" />
+      <text x="24" y="137" class="eyebrow">SOURCE · JUNDA – M2</text>
+      <text x="24" y="170" class="heading" font-size="25">Name this program</text>
+      <rect x="280" y="125" width="86" height="24" rx="12" fill="#FFF7E6" />
+      <text x="323" y="141" fill="#7A5200" font-size="8.5" font-weight="750" text-anchor="middle">DRAFT ONLY</text>
+
+      <rect x="24" y="195" width="342" height="68" rx="10" fill="#DFF4F4" />
+      <g transform="translate(42 216)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="76" y="218" class="heading" font-size="13">JUNDA – M2</text>
+      <text x="76" y="239" class="secondary" font-size="9.5">Selected from Google Drive</text>
+      <text x="348" y="229" fill="#16679A" font-size="9" font-weight="700" text-anchor="end">Change</text>
+
+      <text x="24" y="300" class="eyebrow">PROGRAM NAME</text>
+      <rect x="24" y="314" width="342" height="52" rx="9" fill="#FFFFFF" stroke="#16679A" stroke-width="1.5" />
+      <text x="42" y="346" class="body" font-size="13">M2</text>
+      <text x="24" y="385" class="secondary" font-size="9">Suggested from the Sheet title. Edit before applying.</text>
+
+      <text x="24" y="420" class="eyebrow">START DATE · OPTIONAL</text>
+      <rect x="24" y="434" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="465" class="secondary" font-size="11">Choose a date</text>
+
+      <text x="24" y="520" class="eyebrow">NOTE · OPTIONAL</text>
+      <rect x="24" y="534" width="342" height="62" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="561" class="secondary" font-size="10.5">Pregnancy strength block</text>
+
+      <rect x="24" y="620" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="649" class="button">Continue to week selection</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <text x="230" y="1044" class="board-label" text-anchor="middle">04 · CHOOSE EXACTLY ONE WEEK</text>
+    <text x="690" y="1044" class="board-label" text-anchor="middle">05 · CONFIRM NEW WORKOUTS + SCOPE</text>
+    <text x="1150" y="1044" class="board-label" text-anchor="middle">06 · REVIEW BEFORE ANY DOMAIN INSERT</text>
+
+    <!-- 04 Choose week -->
+    <g transform="translate(35 1066)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">M2 DRAFT · JUNDA – M2</text>
+      <text x="24" y="167" class="heading" font-size="25">Choose one week</text>
+      <rect x="24" y="194" width="342" height="66" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <g transform="translate(42 214)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="77" y="219" class="heading" font-size="13">6 week labels found</text>
+      <text x="77" y="240" class="secondary" font-size="9.5">Nothing has been extracted yet</text>
+
+      <text x="24" y="300" class="eyebrow">WEEK TO IMPORT</text>
+      <g>
+        <rect x="24" y="316" width="100" height="58" rx="10" fill="#DFF4F4" stroke="#16679A" stroke-width="2" /><text x="74" y="351" class="heading" font-size="14" text-anchor="middle">1</text>
+        <g transform="translate(98 328) scale(.54)" color="#16679A"><use href="#check-icon" /></g>
+        <rect x="135" y="316" width="100" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="185" y="351" class="body" font-size="14" font-weight="700" text-anchor="middle">2</text>
+        <rect x="246" y="316" width="120" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="306" y="351" class="body" font-size="14" font-weight="700" text-anchor="middle">3</text>
+        <rect x="24" y="386" width="100" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="74" y="421" class="body" font-size="14" font-weight="700" text-anchor="middle">4</text>
+        <rect x="135" y="386" width="100" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="185" y="421" class="body" font-size="14" font-weight="700" text-anchor="middle">5</text>
+        <rect x="246" y="386" width="120" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="306" y="421" class="body" font-size="14" font-weight="700" text-anchor="middle">6</text>
+      </g>
+
+      <rect x="24" y="478" width="342" height="104" rx="11" fill="#DFF4F4" />
+      <text x="42" y="505" class="heading" font-size="12">M2 will begin with Week 1 only</text>
+      <text x="42" y="528" class="secondary" font-size="9.5">Weeks 2–6 stay only in Google Sheets.</text>
+      <text x="42" y="547" class="secondary" font-size="9.5">No placeholder weeks or execution values.</text>
+      <text x="42" y="566" class="secondary" font-size="9.5">You can import another week later.</text>
+
+      <rect x="24" y="612" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="641" class="button">Continue with Week 1</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 05 Confirm new workouts -->
+    <g transform="translate(495 1066)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">M2 DRAFT · WEEK 1</text>
+      <text x="24" y="167" class="heading" font-size="24">Confirm this week</text>
+      <text x="24" y="190" class="secondary" font-size="10">Every tab is explicitly included or excluded.</text>
+
+      <rect x="24" y="218" width="342" height="118" rx="11" fill="#FFFFFF" stroke="#3FC1C0" />
+      <circle cx="44" cy="241" r="9" fill="#16679A" /><g transform="translate(39 236) scale(.47)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="62" y="246" class="heading" font-size="14">Full Body 1</text>
+      <rect x="249" y="230" width="99" height="24" rx="12" fill="#DFF4F4" /><text x="298" y="246" class="chip" text-anchor="middle">NEW WORKOUT</text>
+      <text x="42" y="278" class="secondary" font-size="10">Create workout “Full Body 1”</text>
+      <text x="42" y="298" class="secondary" font-size="10">Rows 18–37 · execution begins K</text>
+      <text x="42" y="319" fill="#16679A" font-size="9.5" font-weight="700">Edit mapping and boundary</text>
+
+      <rect x="24" y="350" width="342" height="118" rx="11" fill="#FFFFFF" stroke="#3FC1C0" />
+      <circle cx="44" cy="373" r="9" fill="#16679A" /><g transform="translate(39 368) scale(.47)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="62" y="378" class="heading" font-size="14">Full Body 2</text>
+      <rect x="249" y="362" width="99" height="24" rx="12" fill="#DFF4F4" /><text x="298" y="378" class="chip" text-anchor="middle">NEW WORKOUT</text>
+      <text x="42" y="410" class="secondary" font-size="10">Create workout “Full Body 2”</text>
+      <text x="42" y="430" class="secondary" font-size="10">Rows 17–34 · execution begins J</text>
+      <text x="42" y="451" fill="#16679A" font-size="9.5" font-weight="700">Edit mapping and boundary</text>
+
+      <rect x="24" y="482" width="342" height="66" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="42" y="507" class="body" font-size="10.5" font-weight="700">Warming Up · excluded</text>
+      <text x="42" y="528" class="secondary" font-size="9.5">No workout or Week 1 row will be created.</text>
+
+      <rect x="24" y="578" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="607" class="button">Extract these Week 1 ranges</text>
+      <text x="195" y="651" class="secondary" font-size="9" text-anchor="middle">Execution cells are cleared before extraction.</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 06 Review -->
+    <g transform="translate(955 1066)">
+      <use href="#phone-base" />
+      <text x="24" y="132" class="eyebrow">M2 · WEEK 1 · REVIEW</text>
+      <text x="24" y="163" class="heading" font-size="24">Review the new program</text>
+      <rect x="24" y="184" width="342" height="72" rx="10" fill="#DFF4F4" />
+      <text x="42" y="209" class="heading" font-size="12">Still an import draft</text>
+      <text x="42" y="230" class="secondary" font-size="9.5">2 new workouts · 13 movements · Week 1 only</text>
+      <text x="42" y="246" class="secondary" font-size="9">No program row exists before Apply.</text>
+
+      <text x="24" y="290" class="heading" font-size="15">Full Body 1</text>
+      <text x="366" y="290" class="secondary" font-size="9.5" text-anchor="end">7 of 7 resolved</text>
+      <rect x="24" y="306" width="342" height="106" rx="11" fill="#FFFFFF" stroke="#3FC1C0" />
+      <text x="42" y="335" class="body" font-size="12" font-weight="700">Goblet squat</text>
+      <text x="42" y="356" class="secondary" font-size="9.5">Matched · REPS · 3 sets · 10 reps</text>
+      <circle cx="336" cy="350" r="12" fill="#DFF4F4" /><g transform="translate(329 343) scale(.65)" color="#16679A"><use href="#check-icon" /></g>
+      <line x1="42" y1="374" x2="348" y2="374" stroke="#E2EEF0" />
+      <text x="42" y="397" class="body" font-size="11.5" font-weight="700">Half-kneeling cable row</text>
+      <text x="348" y="397" fill="#16679A" font-size="9.5" font-weight="700" text-anchor="end">Review details</text>
+
+      <text x="24" y="449" class="heading" font-size="15">Full Body 2</text>
+      <text x="366" y="449" class="secondary" font-size="9.5" text-anchor="end">6 of 6 resolved</text>
+      <rect x="24" y="465" width="342" height="92" rx="11" fill="#FFFFFF" stroke="#3FC1C0" />
+      <text x="42" y="495" class="body" font-size="12" font-weight="700">Incline push up</text>
+      <text x="42" y="516" class="secondary" font-size="9.5">Matched · REPS · 3 sets · 8 reps</text>
+      <circle cx="336" cy="508" r="12" fill="#DFF4F4" /><g transform="translate(329 501) scale(.65)" color="#16679A"><use href="#check-icon" /></g>
+      <text x="42" y="542" fill="#16679A" font-size="9.5" font-weight="700">Review all 6 movements</text>
+
+      <rect x="24" y="586" width="342" height="50" rx="9" fill="#16679A" />
+      <text x="195" y="616" class="button">Create program &amp; apply Week 1</text>
+      <text x="195" y="658" class="secondary" font-size="8.8" text-anchor="middle">This opens a final activation confirmation.</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <text x="230" y="1874" class="board-label" text-anchor="middle">07 · CONFIRM CREATE + ACTIVATE</text>
+    <text x="690" y="1874" class="board-label" text-anchor="middle">08 · APPLIED · IMPORTED WEEK IS CURRENT</text>
+    <text x="1150" y="1874" class="board-label" text-anchor="middle">09 · PROGRAM SETTINGS AFTER APPLY</text>
+
+    <!-- 07 Confirmation -->
+    <g transform="translate(35 1896)">
+      <use href="#phone-base" />
+      <rect x="8" y="104" width="374" height="584" fill="#17312E" fill-opacity=".2" />
+      <rect x="24" y="212" width="342" height="408" rx="16" fill="#FFFFFF" />
+      <circle cx="195" cy="258" r="27" fill="#DFF4F4" />
+      <g transform="translate(184 246)" color="#16679A"><use href="#check-icon" /></g>
+      <text x="195" y="309" class="heading" font-size="21" text-anchor="middle">Create M2?</text>
+      <text x="195" y="335" class="secondary" font-size="10.5" text-anchor="middle">This is the first training-domain write.</text>
+
+      <rect x="42" y="363" width="306" height="104" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="60" y="389" class="eyebrow">ONE TRANSACTION</text>
+      <circle cx="63" cy="415" r="7" fill="#3FC1C0" /><text x="79" y="419" class="body" font-size="10.5">Create and activate program M2</text>
+      <circle cx="63" cy="442" r="7" fill="#3FC1C0" /><text x="79" y="446" class="body" font-size="10.5">Apply only reviewed Week 1</text>
+
+      <rect x="42" y="480" width="306" height="58" rx="10" fill="#FFF7E6" />
+      <text x="60" y="504" fill="#7A5200" font-size="10" font-weight="700">If another program is active</text>
+      <text x="60" y="523" fill="#7A5200" font-size="9">It becomes inactive; all history remains available.</text>
+
+      <rect x="42" y="554" width="96" height="46" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="90" y="582" class="secondary" font-size="10.5" font-weight="700" text-anchor="middle">Back</text>
+      <rect x="150" y="554" width="198" height="46" rx="9" fill="#16679A" />
+      <text x="249" y="582" class="button" font-size="10.5">Create &amp; make active</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 08 Applied -->
+    <g transform="translate(495 1896)">
+      <use href="#phone-base" />
+      <rect x="24" y="128" width="342" height="62" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+      <circle cx="48" cy="159" r="12" fill="#16679A" /><g transform="translate(41 152) scale(.65)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="70" y="154" class="heading" font-size="11.5">M2 created from JUNDA – M2</text>
+      <text x="70" y="174" class="secondary" font-size="9">Week 1 is active · execution remains empty</text>
+
+      <text x="24" y="230" class="eyebrow">CURRENT · WEEK 1</text>
+      <text x="24" y="266" class="heading" font-size="29">M2</text>
+      <rect x="298" y="240" width="68" height="26" rx="13" fill="#DFF4F4" />
+      <text x="332" y="257" class="chip" text-anchor="middle">ACTIVE</text>
+      <text x="24" y="293" class="secondary" font-size="10.5">Pregnancy strength block</text>
+
+      <text x="24" y="337" class="heading" font-size="16">Week 1 workouts</text>
+      <text x="366" y="337" class="secondary" font-size="9.5" text-anchor="end">0 of 2 resolved</text>
+      <rect x="24" y="353" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
+      <rect x="42" y="371" width="92" height="24" rx="12" fill="#F4FAFB" /><text x="88" y="387" class="chip" text-anchor="middle">NOT STARTED</text>
+      <text x="42" y="426" class="heading" font-size="17">Full Body 1</text>
+      <text x="42" y="448" class="secondary" font-size="9.5">7 prescriptions · execution empty</text>
+      <rect x="278" y="397" width="70" height="44" rx="9" fill="#16679A" /><text x="313" y="424" class="button" font-size="10.5">Open</text>
+
+      <rect x="24" y="479" width="342" height="108" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="42" y="497" width="92" height="24" rx="12" fill="#F4FAFB" /><text x="88" y="513" class="chip" text-anchor="middle">NOT STARTED</text>
+      <text x="42" y="552" class="heading" font-size="17">Full Body 2</text>
+      <text x="42" y="574" class="secondary" font-size="9.5">6 prescriptions · execution empty</text>
+      <rect x="278" y="523" width="70" height="44" rx="9" fill="#FFFFFF" stroke="#16679A" /><text x="313" y="550" class="button-secondary" font-size="10.5">Open</text>
+
+      <text x="24" y="629" fill="#16679A" font-size="10.5" font-weight="700">View import details</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 09 Program settings after apply -->
+    <g transform="translate(955 1896)">
+      <use href="#phone-base" />
+      <text x="24" y="137" class="eyebrow">TRAINING · PROGRAM SETTINGS</text>
+      <text x="24" y="170" class="heading" font-size="25">Programs</text>
+
+      <rect x="24" y="198" width="342" height="158" rx="12" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="1.5" />
+      <text x="42" y="230" class="heading" font-size="19">M2</text>
+      <rect x="280" y="212" width="68" height="24" rx="12" fill="#DFF4F4" /><text x="314" y="228" class="chip" text-anchor="middle">ACTIVE</text>
+      <text x="42" y="255" class="secondary" font-size="9.5">JUNDA – M2 · Week 1 imported</text>
+      <text x="42" y="275" class="secondary" font-size="9.5">Pregnancy strength block</text>
+      <rect x="42" y="294" width="190" height="44" rx="9" fill="#16679A" /><text x="137" y="321" class="button" font-size="10.5">Import another week</text>
+      <text x="330" y="321" fill="#16679A" font-size="9.5" font-weight="700" text-anchor="end">Manage</text>
+
+      <rect x="24" y="372" width="342" height="83" rx="11" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="404" class="body" font-size="14" font-weight="700">M1</text>
+      <text x="348" y="404" class="chip" text-anchor="end">INACTIVE</text>
+      <text x="42" y="428" class="secondary" font-size="9.5">History retained · browse past weeks</text>
+
+      <text x="24" y="500" class="eyebrow">START ANOTHER PROGRAM</text>
+      <rect x="24" y="517" width="342" height="72" rx="11" fill="#DFF4F4" stroke="#3FC1C0" />
+      <g transform="translate(42 541)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="78" y="542" class="heading" font-size="12.5">Import new program from Sheet</text>
+      <text x="78" y="562" class="secondary" font-size="9">Creates nothing until reviewed and applied.</text>
+      <path d="m337 545 7 7-7 7" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+
+      <rect x="24" y="601" width="342" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <g transform="translate(43 620) scale(.8)" color="#526966"><use href="#plus-icon" /></g>
+      <text x="78" y="636" class="body" font-size="11" font-weight="700">Create manually</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <line x1="52" y1="2694" x2="1328" y2="2694" stroke="#C9E2E5" />
+    <text x="690" y="2724" class="secondary" font-size="11.5" text-anchor="middle">The current one-week extraction and review screens remain reusable. This addition changes the target from “existing active program only” to an explicit existing-or-new program choice.</text>
+    <text x="690" y="2745" class="secondary" font-size="10" text-anchor="middle">Manual authoring remains available, but it no longer blocks the natural first use: turning the trainer’s existing Sheet into the first active program.</text>
+  </g>
+</svg>

@@ -1,5 +1,6 @@
 package me.gpipi.training.imports
 
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.serialization.encodeToString
@@ -12,6 +13,7 @@ import org.jetbrains.exposed.v1.core.TextColumnType
 import org.jetbrains.exposed.v1.core.java.UUIDColumnType
 import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.javatime.JavaOffsetDateTimeColumnType
+import org.jetbrains.exposed.v1.javatime.JavaLocalDateColumnType
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 
 class TrainingImportRepository {
@@ -50,7 +52,7 @@ class TrainingImportRepository {
         now: OffsetDateTime,
     ): UUID {
         val importId = createReadingImport(ownerUserId, programId, spreadsheetId, now)
-        completeDiscovery(importId, spreadsheetTitle, tabs, now)
+        completeDiscovery(importId, spreadsheetTitle, null, tabs, now)
         return importId
     }
 
@@ -64,27 +66,49 @@ class TrainingImportRepository {
         return insertId(
             """
             insert into training_import (
-                program_id, spreadsheet_id, spreadsheet_title, state, created_at, updated_at
-            ) values (?, ?, 'Reading selected Google Sheet', 'READING', ?, ?)
+                owner_user_id, target_type, program_id, spreadsheet_id,
+                spreadsheet_title, state, created_at, updated_at
+            ) values (?, 'EXISTING_PROGRAM', ?, ?, 'Reading selected Google Sheet', 'READING', ?, ?)
             returning id
             """.trimIndent(),
-            listOf(uuid(programId), text(spreadsheetId), timestamp(now), timestamp(now)),
+            listOf(text(ownerUserId), uuid(programId), text(spreadsheetId), timestamp(now), timestamp(now)),
         )
     }
+
+    fun createReadingNewProgramImport(
+        ownerUserId: String,
+        spreadsheetId: String,
+        now: OffsetDateTime,
+    ): UUID = insertId(
+        """
+        insert into training_import (
+            owner_user_id, target_type, program_id, spreadsheet_id,
+            spreadsheet_title, state, created_at, updated_at
+        ) values (?, 'NEW_PROGRAM', null, ?, 'Reading selected Google Sheet', 'READING', ?, ?)
+        returning id
+        """.trimIndent(),
+        listOf(text(ownerUserId), text(spreadsheetId), timestamp(now), timestamp(now)),
+    )
 
     fun completeDiscovery(
         importId: UUID,
         spreadsheetTitle: String,
+        suggestedProgramName: String?,
         tabs: List<me.gpipi.training.google.SheetTabGrid>,
         now: OffsetDateTime,
     ) {
         execute(
             """
             update training_import
-            set spreadsheet_title = ?, state = 'NEEDS_MAPPING', error_detail = null, updated_at = ?
+            set spreadsheet_title = ?,
+                new_program_name = case
+                    when target_type = 'NEW_PROGRAM' then coalesce(new_program_name, ?)
+                    else new_program_name
+                end,
+                state = 'NEEDS_MAPPING', error_detail = null, updated_at = ?
             where id = ? and state = 'READING'
             """.trimIndent(),
-            listOf(text(spreadsheetTitle), timestamp(now), uuid(importId)),
+            listOf(text(spreadsheetTitle), nullableText(suggestedProgramName), timestamp(now), uuid(importId)),
         )
         tabs.forEach { tab ->
             execute(
@@ -98,22 +122,52 @@ class TrainingImportRepository {
         }
     }
 
+    fun saveNewProgramDraft(
+        importId: UUID,
+        name: String,
+        note: String?,
+        startsOn: LocalDate?,
+        now: OffsetDateTime,
+    ) {
+        execute(
+            """
+            update training_import
+            set new_program_name = ?, new_program_note = ?, new_program_starts_on = ?,
+                new_program_confirmed_at = ?, updated_at = ?
+            where id = ? and target_type = 'NEW_PROGRAM'
+              and state not in ('APPLIED', 'CANCELLED')
+            """.trimIndent(),
+            listOf(
+                text(name), nullableText(note), nullableDate(startsOn), timestamp(now),
+                timestamp(now), uuid(importId),
+            ),
+        )
+    }
+
     fun header(ownerUserId: String, importId: UUID, lock: Boolean = false): TrainingImportHeader? = rows(
         """
-        select ti.id, ti.program_id, p.name as program_name, ti.spreadsheet_id,
+        select ti.id, ti.owner_user_id, ti.target_type, ti.program_id,
+               coalesce(p.name, ti.new_program_name, ti.spreadsheet_title) as program_name,
+               ti.new_program_note, ti.new_program_starts_on, ti.new_program_confirmed_at,
+               ti.spreadsheet_id,
                ti.spreadsheet_title, ti.selected_week_number, ti.state, ti.error_detail,
                ti.created_at
         from training_import ti
-        join program p on p.id = ti.program_id
-        where ti.id = ? and p.owner_user_id = ?
-        ${if (lock) "for update" else ""}
+        left join program p on p.id = ti.program_id
+        where ti.id = ? and ti.owner_user_id = ?
+        ${if (lock) "for update of ti" else ""}
         """.trimIndent(),
         listOf(uuid(importId), text(ownerUserId)),
     ) { rs ->
         TrainingImportHeader(
             id = rs.getObject("id", UUID::class.java),
+            ownerUserId = rs.getString("owner_user_id"),
+            targetType = rs.getString("target_type"),
             programId = rs.getObject("program_id", UUID::class.java),
             programName = rs.getString("program_name"),
+            newProgramNote = rs.getString("new_program_note"),
+            newProgramStartsOn = rs.getObject("new_program_starts_on", LocalDate::class.java),
+            newProgramConfirmedAt = rs.getObject("new_program_confirmed_at", OffsetDateTime::class.java),
             spreadsheetId = rs.getString("spreadsheet_id"),
             spreadsheetTitle = rs.getString("spreadsheet_title"),
             selectedWeekNumber = rs.getInt("selected_week_number").takeUnless { rs.wasNull() },
@@ -382,10 +436,34 @@ class TrainingImportRepository {
         require(locked.state == "REVIEW") { "Only a reviewed import can be applied." }
         val selectedWeek = checkNotNull(locked.selectedWeekNumber)
         require(workouts.isNotEmpty()) { "The import has no included workout." }
+        val programId = if (locked.targetType == "NEW_PROGRAM") {
+            execute(
+                "update program set active = false, updated_at = ? where owner_user_id = ? and active = true",
+                listOf(timestamp(now), text(ownerUserId)),
+            )
+            val createdId = rows(
+                """
+                insert into program (owner_user_id, name, note, starts_on, active, created_at, updated_at)
+                values (?, ?, ?, ?, true, ?, ?)
+                returning id
+                """.trimIndent(),
+                listOf(
+                    text(ownerUserId), text(locked.programName), nullableText(locked.newProgramNote),
+                    nullableDate(locked.newProgramStartsOn), timestamp(now), timestamp(now),
+                ),
+            ) { it.getObject("id", UUID::class.java) }.single()
+            execute(
+                "update training_import set program_id = ?, updated_at = ? where id = ?",
+                listOf(uuid(createdId), timestamp(now), uuid(locked.id)),
+            )
+            createdId
+        } else {
+            checkNotNull(locked.programId) { "The target program is missing." }
+        }
 
         val currentLink = rows(
             "select id, spreadsheet_id from sheet_link where program_id = ? and replaced_at is null for update",
-            listOf(uuid(locked.programId)),
+            listOf(uuid(programId)),
         ) { it.getObject("id", UUID::class.java) to it.getString("spreadsheet_id") }.singleOrNull()
         val sheetLinkId = if (currentLink?.second == locked.spreadsheetId) {
             execute(
@@ -412,7 +490,7 @@ class TrainingImportRepository {
                 returning id
                 """.trimIndent(),
                 listOf(
-                    uuid(locked.programId), text(locked.spreadsheetId), text(locked.spreadsheetTitle),
+                    uuid(programId), text(locked.spreadsheetId), text(locked.spreadsheetTitle),
                     text(ownerUserId), timestamp(now), timestamp(now),
                 ),
             ) { it.getObject("id", UUID::class.java) }.single()
@@ -420,7 +498,7 @@ class TrainingImportRepository {
 
         workouts.forEach { imported ->
             val workoutId = imported.tab.targetWorkoutId ?: findOrCreateWorkout(
-                programId = locked.programId,
+                programId = programId,
                 name = checkNotNull(imported.tab.newWorkoutName),
             ).also { createdId ->
                 execute(
@@ -689,6 +767,7 @@ class TrainingImportRepository {
     private fun long(value: Long) = LongColumnType() to value
     private fun bool(value: Boolean) = BooleanColumnType() to value
     private fun timestamp(value: OffsetDateTime) = JavaOffsetDateTimeColumnType() to value
+    private fun nullableDate(value: LocalDate?) = JavaLocalDateColumnType() to value
 }
 
 data class ResolvedTabMapping(

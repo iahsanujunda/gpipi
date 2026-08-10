@@ -1790,7 +1790,8 @@
             },
             {
               "name": "program_id",
-              "type": "uuid"
+              "type": "uuid",
+              "nullable": true
             },
             {
               "name": "spreadsheet_id",
@@ -1828,6 +1829,35 @@
               "name": "applied_at",
               "type": "pg_catalog.timestamptz",
               "nullable": true
+            },
+            {
+              "name": "owner_user_id",
+              "type": "text"
+            },
+            {
+              "name": "target_type",
+              "type": "text",
+              "defaultExpr": "'EXISTING_PROGRAM'::text"
+            },
+            {
+              "name": "new_program_name",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "new_program_note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "new_program_starts_on",
+              "type": "pg_catalog.date",
+              "nullable": true
+            },
+            {
+              "name": "new_program_confirmed_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
             }
           ],
           "primaryKey": {
@@ -1850,6 +1880,15 @@
           ],
           "checkConstraints": [
             {
+              "name": "training_import_existing_target_valid"
+            },
+            {
+              "name": "training_import_new_program_name_not_blank"
+            },
+            {
+              "name": "training_import_owner_not_blank"
+            },
+            {
               "name": "training_import_selected_week_positive"
             },
             {
@@ -1857,6 +1896,9 @@
             },
             {
               "name": "training_import_state_valid"
+            },
+            {
+              "name": "training_import_target_type_valid"
             },
             {
               "name": "training_import_title_not_blank"

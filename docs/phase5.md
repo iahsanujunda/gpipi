@@ -559,7 +559,10 @@ Removing a prescription deactivates it immediately rather than destroying it. It
 
 Select the trainer's Google Sheet, choose exactly one authored week, extract that week into a reviewable draft, and record where every selected cell came from. Other weeks in the sheet remain untouched and absent from app storage.
 
-Approved UI reference: [one-week Google Sheet import states](mockups/training-iteration2-import-views.svg).
+Approved UI references:
+
+- [One-week Google Sheet import states](mockups/training-iteration2-import-views.svg)
+- [New-program Google Sheet import states](mockups/training-iteration2-new-program-import-views.svg)
 
 ### 2.1 Why this is tractable now, and was not before
 
@@ -589,11 +592,12 @@ create table google_credential (
 );
 ```
 
-### 2.3 Two entry points, both manual
+### 2.3 Explicit entry points, all manual
 
 | Action | What it does |
 |---|---|
-| **Select file** | Opens the Picker, discovers available week labels/ranges, and starts a persisted import for one member-selected week in the active program |
+| **Import new program** | Opens the Picker without requiring an existing program, then reviews a proposed program name/start/note and imports one member-selected week. No program is created until final Apply |
+| **Import another week** | Opens the Picker, discovers available week labels/ranges, and starts a persisted import for one member-selected week in the active program |
 | **Sync** | Asks for one week, then re-extracts only that week from the already-linked spreadsheet |
 
 Nothing else triggers a read. There is no background poll, no refresh on page load, and no sync on a timer. The trainer edits their sheet on their own schedule; a member decides when to pull those edits in, having usually just been told about them.
@@ -602,7 +606,9 @@ Nothing else triggers a read. There is no background poll, no refresh on page lo
 
 Unselected weeks do not become app history. If one is needed later, the member explicitly starts another import and chooses that week. Syncing an already imported week updates only that week. Importing a previously absent week lower than the current week is allowed only with an explicit warning that the existing derived-current rule will surface it as current; the import never marks unrelated weeks completed or skipped to hide that consequence.
 
-`sheet_link` is unique per program. **Select file** on an already-linked program replaces the link only after a warning and a new review; it does not silently retarget existing provenance.
+`sheet_link` is unique per program. Selecting a different file for an already-linked program replaces the link only after a warning and a new review; it does not silently retarget existing provenance.
+
+For a new-program import, program metadata belongs to the import draft, not the training domain. The member explicitly confirms the name, optional start date, and optional note before choosing a week. Choosing a Sheet, confirming metadata, mapping tabs, extracting, reviewing, refreshing, failing, or cancelling creates no `program`, `workout`, `workout_week`, or prescription rows. Final Apply creates the program and its selected week in one transaction, makes it the sole active program, and deactivates the previous active program without deleting its history. A cancelled draft can be discarded without changing either program.
 
 ### 2.4 Reading the sheet
 
@@ -636,9 +642,15 @@ READING → NEEDS_MAPPING → EXTRACTING → REVIEW → APPLIED
 
 ```sql
 create table training_import (
-    id             uuid primary key default gen_random_uuid(),
-    program_id     uuid not null references program(id) on delete cascade,
-    spreadsheet_id text not null,
+    id                    uuid primary key default gen_random_uuid(),
+    owner_user_id         text not null,
+    target_type           text not null default 'EXISTING_PROGRAM',
+    program_id            uuid references program(id) on delete cascade,
+    new_program_name      text,
+    new_program_note      text,
+    new_program_starts_on date,
+    new_program_confirmed_at timestamptz,
+    spreadsheet_id        text not null,
     selected_week_number integer, -- null until the member completes step 1
     state          text not null,
     error_detail   text,
@@ -649,6 +661,9 @@ create table training_import (
         'READING', 'NEEDS_MAPPING', 'EXTRACTING', 'REVIEW',
         'APPLIED', 'FAILED', 'CANCELLED'
     )),
+    check (target_type in ('EXISTING_PROGRAM', 'NEW_PROGRAM')),
+    check (target_type <> 'EXISTING_PROGRAM' or program_id is not null),
+    check (new_program_name is null or btrim(new_program_name) <> ''),
     check (selected_week_number is null or selected_week_number >= 1)
 );
 
@@ -968,7 +983,7 @@ The spreadsheet ID plus numeric `google_sheet_id` form the stable remote identit
 
 Extraction produces a **draft for the one chosen week**, never a saved week. Nothing reaches `prescription` until a member confirms.
 
-**Every import insert is human-reviewed.** LLM output cannot directly create a program, workout, week, group, prescription, or exercise. For the chosen week, the member can keep or edit every extracted field and exclude an absent workout or movement. For each included movement, they must match an existing exercise or deliberately create a new exercise. The final **Apply** action is the only transition from import draft to domain tables; direct member logging is already an explicit human action and does not require a second confirmation screen.
+**Every import insert is human-reviewed.** LLM output cannot directly create a program, workout, week, group, prescription, or exercise. A new-program import first requires explicit review of program metadata. For the chosen week, the member can keep or edit every extracted field and exclude an absent workout or movement. For each included movement, they must match an existing exercise or deliberately create a new exercise. The final **Apply** action is the only transition from import draft to domain tables; on the new-program path it atomically creates and activates the program as part of that same transition. Direct member logging is already an explicit human action and does not require a second confirmation screen.
 
 This matters because most syncs are small. The common case is a conversation with the trainer followed by one adjusted exercise in one workout of the current week — the other seven weeks are unrelated and must never enter the draft or Apply transaction.
 
@@ -1054,6 +1069,10 @@ Only the final Apply transaction changes domain tables, confirmed aliases, and p
 - [ ] Group labels captured verbatim; `kind` correct for supersets and finishers
 - [ ] Import lifecycle persists `READING → NEEDS_MAPPING → EXTRACTING → REVIEW → APPLIED`, with recoverable `FAILED` and terminal `CANCELLED`
 - [ ] A browser refresh loses no completed mapping, extraction, or review decisions
+- [ ] With no active program, Program settings presents **Import from Google Sheet** as the primary action while manual creation remains available
+- [ ] A new-program import requires reviewed program name/start/note, and creates no training-domain rows before final confirmation and Apply
+- [ ] Cancelling a new-program import leaves the current active program and all training-domain rows unchanged
+- [ ] Applying a new-program import creates its program, selected-week workouts, and prescriptions atomically; it becomes the sole active program and the prior program remains accessible as inactive history
 - [ ] `sheet_link`, `sheet_week_link`, and `sheet_prescription_link` capture stable numeric tab ID, display title, week range, execution boundary/header, exact movement/source cells, per-set destination cells, and redacted source snapshot/hash
 - [ ] **Select file** and **Sync** are the only ways a read happens — no poll, no timer, no read on page load
 - [ ] Re-linking a program to a different spreadsheet warns first and does not silently retarget old provenance

@@ -5,11 +5,12 @@ This is the operator checklist for Phase 5 Iteration 2. It covers the changes th
 The import is intentionally narrow:
 
 - Google Picker gives the app one spreadsheet ID selected by the member.
+- The member either targets the active program or reviews the name, start date, and note for a new program.
 - The member chooses exactly one week and confirms its workout ranges.
 - Ktor reads only those confirmed ranges for extraction.
 - Execution values under `Eksekusi` or `Realisasi` are removed before the model request and are never used to prefill training execution.
 - Model output remains a draft until every movement and execution type is reviewed and **Apply** is pressed.
-- Apply writes prescriptions and provenance to PostgreSQL. It does not create a training session, performed exercise, or performed set.
+- Apply writes prescriptions and provenance to PostgreSQL. For a new-program import, that same transaction also creates and activates the reviewed program; the previous active program becomes inactive and remains available as history. Apply never creates a training session, performed exercise, or performed set.
 
 The detailed data and safety contract remains in [phase5.md](phase5.md#iteration-2--drive-connected-block-import).
 
@@ -176,6 +177,8 @@ Use a copy of the trainer Sheet first:
 12. Return to an older authored week and back to the current week to prove normal Iteration 1 navigation is unchanged.
 
 For a database-level check, the selected import should have `training_import.state = 'APPLIED'`, one selected-week row per included workout tab, and provenance in `sheet_week_link` and `sheet_prescription_link`. Applying an import must not add rows to `training_session`, `performed_exercise`, or `performed_set`.
+
+Also prove the new-program path with a disposable Sheet: begin from **Training → Program settings → Import from Google Sheet**, review the proposed program metadata, and verify no `program` row exists for that draft before final Apply. Cancel one draft and verify it changes no program rows. Apply a second draft and verify the new program is the only active program, the previous program is retained as inactive history, and only the selected week was imported.
 
 ## 8. Troubleshooting
 

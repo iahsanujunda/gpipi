@@ -129,8 +129,12 @@ test('blank execution, stable slot repair, finish, and completed edits work in t
 test('manual authoring copy-forwards a reviewed week without assuming a block length', async ({ page }) => {
   await page.goto('/training/program')
 
-  await expect(page.getByRole('heading', { name: 'Training program' })).toBeVisible()
-  await expect(page.getByText(/Human-reviewed authoring/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Programs', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Start another program' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Import new program from Sheet' })).toBeVisible()
+  await expect(page.getByLabel('Program name')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Create manually' }).click()
+  await expect(page.getByRole('heading', { name: 'Create manually' })).toBeVisible()
   await page.getByLabel('Program name').fill('M2')
   await page.getByLabel('Exercise — select or create').click()
   await page.getByRole('option', { name: 'Create a new exercise…' }).click()

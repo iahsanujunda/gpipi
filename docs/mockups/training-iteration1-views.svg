@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="3630" viewBox="0 0 1380 3630" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="4500" viewBox="0 0 1380 4500" role="img" aria-labelledby="title description">
   <title id="title">Phase 5 iteration 1 training interface states</title>
-  <desc id="description">Eight mobile views and one desktop authoring view cover current- and past-week overviews, workout logging, stable set-slot repair, completed history, explicit week skipping and restoring, reps-per-side and duration inputs, program management, and open-ended manual week authoring.</desc>
+  <desc id="description">Training interaction states cover week navigation, workout logging, stable set repair, completed history, lifecycle controls, a concise no-program entry through the navigation action, program-only manual creation, and a separate add-week authoring page.</desc>
 
   <defs>
     <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
@@ -375,7 +375,7 @@
     <line x1="52" y1="1022" x2="1328" y2="1022" stroke="#C9E2E5" />
     <text x="230" y="1064" class="board-label" text-anchor="middle">06 · WEEK LIFECYCLE DRAWER</text>
     <text x="690" y="1064" class="board-label" text-anchor="middle">07 · EXECUTION INPUT TYPES</text>
-    <text x="1150" y="1064" class="board-label" text-anchor="middle">08 · ACTIVE PROGRAM</text>
+    <text x="1150" y="1064" class="board-label" text-anchor="middle">08 · ACTIVE PROGRAM · NO WEEKS</text>
 
     <!-- 06 Week drawer -->
     <g transform="translate(35 1086)">
@@ -465,46 +465,27 @@
       <use href="#phone-footer" />
     </g>
 
-    <!-- 08 Active program overview -->
+    <!-- 08 Newly created active program -->
     <g transform="translate(955 1086)">
       <use href="#phone-base" />
-      <text x="24" y="145" class="heading" font-size="30">Training program</text>
-      <rect x="24" y="169" width="342" height="102" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="42" y="198" class="heading" font-size="18">M1</text>
-      <rect x="88" y="181" width="70" height="24" rx="12" fill="#DFF4F4" />
-      <circle cx="101" cy="193" r="3.5" fill="#16679A" />
-      <text x="112" y="197" class="chip">ACTIVE</text>
-      <text x="42" y="222" class="secondary" font-size="11">Open-ended block · no expected week total</text>
-      <rect x="42" y="235" width="112" height="28" rx="8" fill="#FFFFFF" stroke="#16679A" />
-      <text x="98" y="253" class="button-secondary" font-size="10.5">Program details</text>
+      <text x="24" y="145" class="heading" font-size="30">M2</text>
+      <rect x="81" y="122" width="70" height="24" rx="12" fill="#DFF4F4" />
+      <circle cx="94" cy="134" r="3.5" fill="#16679A" />
+      <text x="105" y="138" class="chip">ACTIVE</text>
+      <text x="24" y="182" class="secondary" font-size="11">Pregnancy strength block</text>
 
-      <text x="24" y="304" class="heading" font-size="15">Workouts</text>
-      <rect x="24" y="320" width="342" height="132" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="42" y="349" class="heading" font-size="17">Full Body 1</text>
-      <text x="42" y="371" class="secondary" font-size="10.5">Weeks authored: 1, 2, 3, 4, 5</text>
-      <rect x="42" y="388" width="100" height="34" rx="8" fill="#FFFFFF" stroke="#16679A" />
-      <text x="92" y="410" class="button-secondary">Open weeks</text>
-      <rect x="152" y="388" width="100" height="34" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="202" y="410" class="secondary" font-size="10.5" font-weight="700" text-anchor="middle">Add week</text>
-      <path d="m342 347 6 6-6 6" fill="none" stroke="#526966" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      <line x1="24" y1="216" x2="366" y2="216" stroke="#C9E2E5" />
+      <text x="24" y="254" class="heading" font-size="17">Weeks</text>
+      <text x="24" y="288" class="secondary" font-size="12">No weeks yet</text>
+      <rect x="24" y="320" width="342" height="50" rx="9" fill="#16679A" />
+      <text x="195" y="350" class="button">Add Week</text>
 
-      <rect x="24" y="466" width="342" height="132" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="42" y="495" class="heading" font-size="17">Full Body 2</text>
-      <text x="42" y="517" class="secondary" font-size="10.5">Weeks authored: 1, 2, 3, 4</text>
-      <rect x="42" y="534" width="100" height="34" rx="8" fill="#FFFFFF" stroke="#16679A" />
-      <text x="92" y="556" class="button-secondary">Open weeks</text>
-      <rect x="152" y="534" width="100" height="34" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="202" y="556" class="secondary" font-size="10.5" font-weight="700" text-anchor="middle">Add week</text>
-      <path d="m342 493 6 6-6 6" fill="none" stroke="#526966" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-
-      <rect x="24" y="616" width="342" height="48" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="42" y="645" class="secondary" font-size="11">Cadence change?</text>
-      <text x="348" y="645" fill="#16679A" font-size="11" font-weight="700" text-anchor="end">Start another program</text>
+      <text x="24" y="632" fill="#16679A" font-size="11" font-weight="700">Edit program</text>
       <use href="#phone-footer" />
     </g>
 
     <line x1="52" y1="1882" x2="1328" y2="1882" stroke="#C9E2E5" />
-    <text x="690" y="1925" class="board-label" text-anchor="middle">09 · OPEN-ENDED MANUAL AUTHORING · DESKTOP ENHANCEMENT</text>
+    <text x="690" y="1925" class="board-label" text-anchor="middle">09 · ADD WEEK · SEPARATE AUTHORING PAGE · DESKTOP ENHANCEMENT</text>
 
     <!-- Desktop authoring -->
     <g transform="translate(52 1950)" filter="url(#panel-shadow)">
@@ -518,42 +499,32 @@
       <g transform="translate(30 96)">
         <rect width="246" height="610" rx="14" fill="#FFFFFF" stroke="#C9E2E5" />
         <text x="22" y="38" class="eyebrow">ACTIVE PROGRAM</text>
-        <text x="22" y="69" class="heading" font-size="24">M1</text>
+        <text x="22" y="69" class="heading" font-size="24">M2</text>
         <rect x="163" y="47" width="61" height="24" rx="12" fill="#DFF4F4" />
         <circle cx="176" cy="59" r="3.5" fill="#16679A" />
         <text x="188" y="63" class="chip">ACTIVE</text>
-        <text x="22" y="91" class="secondary" font-size="11">Weeks grow as the trainer authors them.</text>
+        <text x="22" y="91" class="secondary" font-size="11">No weeks yet</text>
         <line x1="22" y1="112" x2="224" y2="112" stroke="#E2EEF0" />
-        <text x="22" y="142" class="heading" font-size="14">Workouts</text>
+        <text x="22" y="142" class="heading" font-size="14">Week 1 workouts</text>
         <rect x="14" y="157" width="218" height="56" rx="9" fill="#DFF4F4" stroke="#3FC1C0" />
         <text x="30" y="183" class="heading" font-size="13">Full Body 1</text>
-        <text x="30" y="200" class="secondary" font-size="10">Weeks 1–5 authored</text>
-        <rect x="14" y="221" width="218" height="56" rx="9" fill="#FFFFFF" />
-        <text x="30" y="247" class="body" font-size="13" font-weight="650">Full Body 2</text>
-        <text x="30" y="264" class="secondary" font-size="10">Weeks 1–4 authored</text>
-        <rect x="14" y="285" width="218" height="56" rx="9" fill="#FFFFFF" />
-        <text x="30" y="311" class="body" font-size="13" font-weight="650">Full Body 3</text>
-        <text x="30" y="328" class="secondary" font-size="10">Weeks 1–3 authored</text>
+        <text x="30" y="200" class="secondary" font-size="10">Draft</text>
         <rect x="22" y="364" width="202" height="42" rx="9" fill="#FFFFFF" stroke="#16679A" />
         <text x="123" y="390" class="button-secondary">Add workout</text>
         <line x1="22" y1="438" x2="224" y2="438" stroke="#E2EEF0" />
-        <text x="22" y="467" class="secondary" font-size="11">A cadence change starts a new program.</text>
-        <rect x="22" y="486" width="202" height="42" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="123" y="512" class="secondary" font-size="11" font-weight="700" text-anchor="middle">Start another program</text>
-        <text x="22" y="574" fill="#B42318" font-size="11" font-weight="700">Deactivate M1</text>
+        <text x="22" y="467" class="secondary" font-size="11">Add workouts only to this week draft.</text>
       </g>
 
       <g transform="translate(306 92)">
-        <text x="0" y="35" class="eyebrow">FULL BODY 1</text>
-        <text x="0" y="70" class="heading" font-size="28">Week 4</text>
-        <text x="0" y="94" class="secondary" font-size="12">Authored sequence · not tied to a calendar week</text>
+        <text x="0" y="35" class="eyebrow">M2</text>
+        <text x="0" y="70" class="heading" font-size="28">Add Week</text>
+        <text x="0" y="94" class="secondary" font-size="12">Full Body 1</text>
 
-        <rect x="554" y="17" width="150" height="44" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <path d="M575 34v12m-6-6h12" fill="none" stroke="#16679A" stroke-width="1.8" stroke-linecap="round" />
-        <text x="638" y="44" class="button-secondary">Add blank week</text>
+        <rect x="554" y="17" width="150" height="44" rx="9" fill="#FFFFFF" stroke="#16679A" />
+        <text x="572" y="34" class="eyebrow">WEEK NUMBER</text>
+        <text x="572" y="51" class="body" font-size="12" font-weight="700">1</text>
         <rect x="716" y="17" width="198" height="44" rx="9" fill="#16679A" />
-        <path d="M739 32h13v13h-13zM744 27h13v13" fill="none" stroke="#FFFFFF" stroke-width="1.6" stroke-linejoin="round" />
-        <text x="825" y="44" class="button">Duplicate Week 3</text>
+        <text x="815" y="44" class="button">Save Week 1</text>
 
         <rect x="0" y="120" width="922" height="212" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
         <g transform="translate(0 120)">
@@ -601,7 +572,80 @@
       </g>
     </g>
 
-    <text x="690" y="2743" class="secondary" font-size="12" text-anchor="middle">Mobile remains the gym surface. Desktop expands repetitive authoring without changing the underlying interaction rules.</text>
+    <text x="690" y="2743" class="secondary" font-size="12" text-anchor="middle">Creating a program stores only program details. Workouts and prescriptions begin on the separate Add Week page.</text>
+
+    <line x1="52" y1="2782" x2="1328" y2="2782" stroke="#C9E2E5" />
+    <text x="230" y="2824" class="board-label" text-anchor="middle">10 · NO ACTIVE PROGRAM · NAV ACTION</text>
+    <text x="690" y="2824" class="board-label" text-anchor="middle">11 · CREATE PROGRAM</text>
+    <text x="1150" y="2824" class="board-label" text-anchor="middle">12 · MANUAL PROGRAM DETAILS DRAWER</text>
+
+    <!-- 10 Empty Training page with navigation action -->
+    <g transform="translate(35 2846)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Training</text>
+      <text x="24" y="194" class="heading" font-size="19">No Active Program</text>
+      <rect x="8" y="104" width="374" height="584" fill="#1D4E89" opacity=".62" />
+
+      <text x="85" y="356" fill="#FFFFFF" font-size="9" font-weight="750" letter-spacing="1.2">PAGE ACTIONS</text>
+      <line x1="85" y1="368" x2="305" y2="368" stroke="#3FC1C0" stroke-width="3" />
+      <rect x="85" y="382" width="220" height="50" rx="25" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="2" filter="url(#control-shadow)" />
+      <path d="M112 399v16m-8-8h16" fill="none" stroke="#16679A" stroke-width="2.2" stroke-linecap="round" />
+      <text x="139" y="413" class="heading" font-size="14">Create Program</text>
+
+      <text x="85" y="474" fill="#FFFFFF" font-size="9" font-weight="750" letter-spacing="1.2">NAVIGATION</text>
+      <line x1="85" y1="486" x2="305" y2="486" stroke="#3FC1C0" stroke-width="3" />
+      <rect x="85" y="500" width="220" height="48" rx="24" fill="#16679A" filter="url(#control-shadow)" />
+      <text x="139" y="530" fill="#FFFFFF" font-size="14" font-weight="700">Training</text>
+      <rect x="85" y="558" width="220" height="48" rx="24" fill="#FFFFFF" filter="url(#control-shadow)" />
+      <text x="139" y="588" class="heading" font-size="14">Activity</text>
+
+      <rect x="8" y="688" width="374" height="64" fill="#1D4E89" fill-opacity=".24" />
+      <circle cx="195" cy="714" r="28" fill="#16679A" filter="url(#control-shadow)" />
+      <path d="m185 704 20 20m0-20-20 20" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+      <rect x="139" y="739" width="112" height="5" rx="2.5" fill="#FFFFFF" fill-opacity=".72" />
+    </g>
+
+    <!-- 11 Concise create program page -->
+    <g transform="translate(495 2846)">
+      <use href="#phone-base" />
+      <text x="24" y="170" class="heading" font-size="28">Create Program</text>
+      <rect x="24" y="214" width="342" height="50" rx="9" fill="#16679A" />
+      <text x="195" y="244" class="button">Import from Google Sheet</text>
+      <rect x="24" y="280" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
+      <text x="195" y="310" class="button-secondary">Create manually</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 12 Program-only manual creation drawer -->
+    <g transform="translate(955 2846)">
+      <use href="#phone-base" />
+      <text x="24" y="170" class="heading" font-size="28">Create Program</text>
+      <rect x="24" y="214" width="342" height="50" rx="9" fill="#16679A" />
+      <text x="195" y="244" class="button">Import from Google Sheet</text>
+      <rect x="24" y="280" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
+      <text x="195" y="310" class="button-secondary">Create manually</text>
+      <rect x="8" y="104" width="374" height="584" fill="#1D4E89" opacity=".30" />
+
+      <g transform="translate(0 246)" filter="url(#sheet-shadow)">
+        <path d="M8 18q0-18 18-18h338q18 0 18 18v506H8Z" fill="#FFFFFF" />
+        <use href="#drawer-handle" />
+        <text x="28" y="55" class="heading" font-size="20">Create manually</text>
+        <path d="m344 38 16 16m0-16-16 16" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" />
+        <line x1="8" y1="88" x2="382" y2="88" stroke="#C9E2E5" />
+
+        <text x="28" y="122" class="eyebrow">PROGRAM NAME</text>
+        <rect x="28" y="136" width="334" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
+        <text x="44" y="167" class="body" font-size="12.5">M2</text>
+        <text x="28" y="222" class="eyebrow">START DATE · OPTIONAL</text>
+        <rect x="28" y="236" width="334" height="50" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="44" y="267" class="secondary" font-size="11">11 Aug 2026</text>
+        <text x="28" y="322" class="eyebrow">NOTE · OPTIONAL</text>
+        <rect x="28" y="336" width="334" height="66" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="44" y="365" class="secondary" font-size="10.5">Pregnancy strength block</text>
+        <rect x="28" y="432" width="334" height="48" rx="9" fill="#16679A" />
+        <text x="195" y="461" class="button">Create Program</text>
+      </g>
+    </g>
     </g>
   </g>
 </svg>

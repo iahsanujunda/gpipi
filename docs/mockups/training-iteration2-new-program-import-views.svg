@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1380" height="2760" viewBox="0 0 1380 2760" role="img" aria-labelledby="title description">
   <title id="title">Phase 5 iteration 2 new program from Google Sheet flow</title>
-  <desc id="description">Nine mobile-first views show import as the primary empty-state action, selecting a trainer Sheet, naming a not-yet-created program, choosing exactly one week, confirming new workouts, reviewing prescriptions, confirming activation, opening the applied week, and returning to program settings.</desc>
+  <desc id="description">Nine mobile-first views show a terse Create Program page, an immediately opened Google file picker, program details, one-week selection and review, activation confirmation, the applied week, and program settings.</desc>
 
   <defs>
     <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
@@ -97,94 +97,56 @@
       <text x="1147" y="36" class="heading" font-size="10.5" text-anchor="middle">ONE WEEK · HUMAN REVIEWED</text>
     </g>
 
-    <text x="230" y="214" class="board-label" text-anchor="middle">01 · EMPTY PROGRAM SETTINGS</text>
-    <text x="690" y="214" class="board-label" text-anchor="middle">02 · START NEW PROGRAM IMPORT</text>
-    <text x="1150" y="214" class="board-label" text-anchor="middle">03 · NAME THE PROGRAM DRAFT</text>
+    <text x="230" y="214" class="board-label" text-anchor="middle">01 · CREATE PROGRAM</text>
+    <text x="690" y="214" class="board-label" text-anchor="middle">02 · GOOGLE FILE PICKER OPENS</text>
+    <text x="1150" y="214" class="board-label" text-anchor="middle">03 · PROGRAM DETAILS</text>
 
-    <!-- 01 Empty program settings -->
+    <!-- 01 Create program -->
     <g transform="translate(35 236)">
       <use href="#phone-base" />
-      <text x="24" y="142" class="eyebrow">TRAINING · PROGRAM SETTINGS</text>
-      <text x="24" y="176" class="heading" font-size="27">Your program</text>
-      <text x="24" y="201" class="secondary" font-size="11">Start from the Sheet your trainer already maintains,</text>
-      <text x="24" y="217" class="secondary" font-size="11">or build a program manually.</text>
-
-      <rect x="24" y="245" width="342" height="235" rx="14" fill="#DFF4F4" stroke="#3FC1C0" stroke-width="1.5" />
-      <circle cx="62" cy="284" r="22" fill="#FFFFFF" />
-      <g transform="translate(51 272)" color="#16679A"><use href="#sheet-icon" /></g>
-      <rect x="286" y="267" width="62" height="24" rx="12" fill="#16679A" />
-      <text x="317" y="283" fill="#FFFFFF" font-size="8.5" font-weight="750" text-anchor="middle">PRIMARY</text>
-      <text x="42" y="336" class="heading" font-size="19">Import from Google Sheet</text>
-      <text x="42" y="362" class="body" font-size="11">Choose one trainer-authored week, review every</text>
-      <text x="42" y="379" class="body" font-size="11">movement, then create the program.</text>
-      <rect x="42" y="412" width="306" height="48" rx="9" fill="#16679A" />
-      <text x="195" y="441" class="button">Start from a Sheet</text>
-
-      <text x="195" y="513" class="eyebrow" text-anchor="middle">OR</text>
-      <rect x="24" y="535" width="342" height="92" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <circle cx="55" cy="581" r="17" fill="#F4FAFB" /><g transform="translate(45 571) scale(.9)" color="#526966"><use href="#plus-icon" /></g>
-      <text x="82" y="571" class="body" font-size="12.5" font-weight="700">Create manually</text>
-      <text x="82" y="592" class="secondary" font-size="9.5">Enter workouts and prescriptions yourself.</text>
-      <path d="m335 575 7 7-7 7" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="24" y="170" class="heading" font-size="28">Create Program</text>
+      <rect x="24" y="214" width="342" height="50" rx="9" fill="#16679A" />
+      <text x="195" y="244" class="button">Import from Google Sheet</text>
+      <rect x="24" y="280" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
+      <text x="195" y="310" class="button-secondary">Create manually</text>
       <use href="#phone-footer" />
     </g>
 
-    <!-- 02 Start import -->
+    <!-- 02 Google file picker -->
     <g transform="translate(495 236)">
       <use href="#phone-base" />
-      <text x="24" y="137" class="eyebrow">NEW PROGRAM · IMPORT DRAFT</text>
-      <text x="24" y="170" class="heading" font-size="25">Choose the trainer’s Sheet</text>
-      <rect x="280" y="125" width="86" height="24" rx="12" fill="#FFF7E6" />
-      <text x="323" y="141" fill="#7A5200" font-size="8.5" font-weight="750" text-anchor="middle">NOT CREATED</text>
-
-      <g transform="translate(24 200)">
-        <circle cx="9" cy="9" r="9" fill="#16679A" /><text x="9" y="12" fill="#FFFFFF" font-size="7" font-weight="750" text-anchor="middle">1</text>
-        <line x1="18" y1="9" x2="87" y2="9" stroke="#C9E2E5" stroke-width="2" />
-        <circle cx="97" cy="9" r="9" fill="#FFFFFF" stroke="#C9E2E5" /><text x="97" y="12" class="secondary" font-size="7" font-weight="750" text-anchor="middle">2</text>
-        <line x1="106" y1="9" x2="175" y2="9" stroke="#C9E2E5" stroke-width="2" />
-        <circle cx="185" cy="9" r="9" fill="#FFFFFF" stroke="#C9E2E5" /><text x="185" y="12" class="secondary" font-size="7" font-weight="750" text-anchor="middle">3</text>
-        <line x1="194" y1="9" x2="263" y2="9" stroke="#C9E2E5" stroke-width="2" />
-        <circle cx="273" cy="9" r="9" fill="#FFFFFF" stroke="#C9E2E5" /><text x="273" y="12" class="secondary" font-size="7" font-weight="750" text-anchor="middle">4</text>
-        <text x="9" y="32" class="eyebrow" text-anchor="middle">SHEET</text><text x="97" y="32" class="eyebrow" text-anchor="middle">PROGRAM</text><text x="185" y="32" class="eyebrow" text-anchor="middle">WEEK</text><text x="273" y="32" class="eyebrow" text-anchor="middle">REVIEW</text>
-      </g>
-
-      <rect x="24" y="260" width="342" height="86" rx="11" fill="#FFFFFF" stroke="#C9E2E5" />
-      <circle cx="58" cy="303" r="20" fill="#DFF4F4" /><g transform="translate(47 291)" color="#16679A"><use href="#drive-icon" /></g>
-      <text x="88" y="294" class="body" font-size="12" font-weight="700">Google connected</text>
-      <text x="88" y="315" class="secondary" font-size="9.5">junda@gmail.com</text>
-      <text x="88" y="332" fill="#16679A" font-size="9" font-weight="700">Disconnect</text>
-
-      <rect x="24" y="371" width="342" height="142" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
-      <circle cx="195" cy="413" r="24" fill="#DFF4F4" /><g transform="translate(184 401)" color="#16679A"><use href="#sheet-icon" /></g>
-      <text x="195" y="458" class="heading" font-size="15" text-anchor="middle">Select one spreadsheet</text>
-      <text x="195" y="479" class="secondary" font-size="9.5" text-anchor="middle">Google Picker controls file access.</text>
-      <rect x="42" y="527" width="306" height="48" rx="9" fill="#16679A" />
-      <text x="195" y="556" class="button">Choose Google Sheet</text>
-
-      <rect x="24" y="600" width="342" height="58" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
-      <text x="42" y="624" class="body" font-size="10" font-weight="700">Safe to leave</text>
-      <text x="42" y="642" class="secondary" font-size="9">No program, workout, or week exists yet.</text>
+      <text x="24" y="170" class="heading" font-size="25">Import from Google Sheet</text>
+      <rect x="8" y="104" width="374" height="584" fill="#1D4E89" opacity=".24" />
+      <rect x="24" y="176" width="342" height="408" rx="14" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="44" y="215" class="heading" font-size="18">Select a spreadsheet</text>
+      <line x1="24" y1="234" x2="366" y2="234" stroke="#C9E2E5" />
+      <rect x="42" y="252" width="306" height="68" rx="9" fill="#DFF4F4" stroke="#16679A" />
+      <g transform="translate(58 273) scale(.78)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="91" y="278" class="heading" font-size="12.5">JUNDA – M2</text>
+      <text x="91" y="298" class="secondary" font-size="9.5">Google Sheets</text>
+      <rect x="42" y="330" width="306" height="68" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <g transform="translate(58 351) scale(.78)" color="#526966"><use href="#sheet-icon" /></g>
+      <text x="91" y="356" class="body" font-size="12.5" font-weight="700">JUNDA – M1</text>
+      <text x="91" y="376" class="secondary" font-size="9.5">Google Sheets</text>
+      <rect x="42" y="510" width="112" height="44" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="98" y="537" class="secondary" font-size="11" font-weight="700" text-anchor="middle">Cancel</text>
+      <rect x="166" y="510" width="182" height="44" rx="9" fill="#16679A" />
+      <text x="257" y="537" class="button">Open</text>
       <use href="#phone-footer" />
     </g>
 
     <!-- 03 Name program -->
     <g transform="translate(955 236)">
       <use href="#phone-base" />
-      <text x="24" y="137" class="eyebrow">SOURCE · JUNDA – M2</text>
-      <text x="24" y="170" class="heading" font-size="25">Name this program</text>
+      <text x="24" y="170" class="heading" font-size="25">Program details</text>
       <rect x="280" y="125" width="86" height="24" rx="12" fill="#FFF7E6" />
       <text x="323" y="141" fill="#7A5200" font-size="8.5" font-weight="750" text-anchor="middle">DRAFT ONLY</text>
 
-      <rect x="24" y="195" width="342" height="68" rx="10" fill="#DFF4F4" />
-      <g transform="translate(42 216)" color="#16679A"><use href="#sheet-icon" /></g>
-      <text x="76" y="218" class="heading" font-size="13">JUNDA – M2</text>
-      <text x="76" y="239" class="secondary" font-size="9.5">Selected from Google Drive</text>
-      <text x="348" y="229" fill="#16679A" font-size="9" font-weight="700" text-anchor="end">Change</text>
+      <text x="24" y="212" class="secondary" font-size="10.5">JUNDA – M2</text>
 
       <text x="24" y="300" class="eyebrow">PROGRAM NAME</text>
       <rect x="24" y="314" width="342" height="52" rx="9" fill="#FFFFFF" stroke="#16679A" stroke-width="1.5" />
       <text x="42" y="346" class="body" font-size="13">M2</text>
-      <text x="24" y="385" class="secondary" font-size="9">Suggested from the Sheet title. Edit before applying.</text>
 
       <text x="24" y="420" class="eyebrow">START DATE · OPTIONAL</text>
       <rect x="24" y="434" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
@@ -195,7 +157,7 @@
       <text x="42" y="561" class="secondary" font-size="10.5">Pregnancy strength block</text>
 
       <rect x="24" y="620" width="342" height="48" rx="9" fill="#16679A" />
-      <text x="195" y="649" class="button">Continue to week selection</text>
+      <text x="195" y="649" class="button">Continue</text>
       <use href="#phone-footer" />
     </g>
 
@@ -208,10 +170,7 @@
       <use href="#phone-base" />
       <text x="24" y="135" class="eyebrow">M2 DRAFT · JUNDA – M2</text>
       <text x="24" y="167" class="heading" font-size="25">Choose one week</text>
-      <rect x="24" y="194" width="342" height="66" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
-      <g transform="translate(42 214)" color="#16679A"><use href="#sheet-icon" /></g>
-      <text x="77" y="219" class="heading" font-size="13">6 week labels found</text>
-      <text x="77" y="240" class="secondary" font-size="9.5">Nothing has been extracted yet</text>
+      <text x="24" y="205" class="secondary" font-size="10.5">6 weeks found</text>
 
       <text x="24" y="300" class="eyebrow">WEEK TO IMPORT</text>
       <g>
@@ -224,14 +183,8 @@
         <rect x="246" y="386" width="120" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="306" y="421" class="body" font-size="14" font-weight="700" text-anchor="middle">6</text>
       </g>
 
-      <rect x="24" y="478" width="342" height="104" rx="11" fill="#DFF4F4" />
-      <text x="42" y="505" class="heading" font-size="12">M2 will begin with Week 1 only</text>
-      <text x="42" y="528" class="secondary" font-size="9.5">Weeks 2–6 stay only in Google Sheets.</text>
-      <text x="42" y="547" class="secondary" font-size="9.5">No placeholder weeks or execution values.</text>
-      <text x="42" y="566" class="secondary" font-size="9.5">You can import another week later.</text>
-
       <rect x="24" y="612" width="342" height="48" rx="9" fill="#16679A" />
-      <text x="195" y="641" class="button">Continue with Week 1</text>
+      <text x="195" y="641" class="button">Continue</text>
       <use href="#phone-footer" />
     </g>
 
@@ -240,7 +193,6 @@
       <use href="#phone-base" />
       <text x="24" y="135" class="eyebrow">M2 DRAFT · WEEK 1</text>
       <text x="24" y="167" class="heading" font-size="24">Confirm this week</text>
-      <text x="24" y="190" class="secondary" font-size="10">Every tab is explicitly included or excluded.</text>
 
       <rect x="24" y="218" width="342" height="118" rx="11" fill="#FFFFFF" stroke="#3FC1C0" />
       <circle cx="44" cy="241" r="9" fill="#16679A" /><g transform="translate(39 236) scale(.47)" color="#FFFFFF"><use href="#check-icon" /></g>
@@ -263,8 +215,7 @@
       <text x="42" y="528" class="secondary" font-size="9.5">No workout or Week 1 row will be created.</text>
 
       <rect x="24" y="578" width="342" height="48" rx="9" fill="#16679A" />
-      <text x="195" y="607" class="button">Extract these Week 1 ranges</text>
-      <text x="195" y="651" class="secondary" font-size="9" text-anchor="middle">Execution cells are cleared before extraction.</text>
+      <text x="195" y="607" class="button">Extract Week 1</text>
       <use href="#phone-footer" />
     </g>
 
@@ -272,7 +223,7 @@
     <g transform="translate(955 1066)">
       <use href="#phone-base" />
       <text x="24" y="132" class="eyebrow">M2 · WEEK 1 · REVIEW</text>
-      <text x="24" y="163" class="heading" font-size="24">Review the new program</text>
+      <text x="24" y="163" class="heading" font-size="24">Review Week 1</text>
       <rect x="24" y="184" width="342" height="72" rx="10" fill="#DFF4F4" />
       <text x="42" y="209" class="heading" font-size="12">Still an import draft</text>
       <text x="42" y="230" class="secondary" font-size="9.5">2 new workouts · 13 movements · Week 1 only</text>
@@ -298,7 +249,6 @@
 
       <rect x="24" y="586" width="342" height="50" rx="9" fill="#16679A" />
       <text x="195" y="616" class="button">Create program &amp; apply Week 1</text>
-      <text x="195" y="658" class="secondary" font-size="8.8" text-anchor="middle">This opens a final activation confirmation.</text>
       <use href="#phone-footer" />
     </g>
 
@@ -384,20 +334,14 @@
       <text x="42" y="428" class="secondary" font-size="9.5">History retained · browse past weeks</text>
 
       <text x="24" y="500" class="eyebrow">START ANOTHER PROGRAM</text>
-      <rect x="24" y="517" width="342" height="72" rx="11" fill="#DFF4F4" stroke="#3FC1C0" />
-      <g transform="translate(42 541)" color="#16679A"><use href="#sheet-icon" /></g>
-      <text x="78" y="542" class="heading" font-size="12.5">Import new program from Sheet</text>
-      <text x="78" y="562" class="secondary" font-size="9">Creates nothing until reviewed and applied.</text>
-      <path d="m337 545 7 7-7 7" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-
-      <rect x="24" y="601" width="342" height="58" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
-      <g transform="translate(43 620) scale(.8)" color="#526966"><use href="#plus-icon" /></g>
-      <text x="78" y="636" class="body" font-size="11" font-weight="700">Create manually</text>
+      <rect x="24" y="517" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="546" class="button">Import from Google Sheet</text>
+      <rect x="24" y="581" width="342" height="48" rx="9" fill="#FFFFFF" stroke="#16679A" />
+      <text x="195" y="610" class="button-secondary">Create manually</text>
       <use href="#phone-footer" />
     </g>
 
     <line x1="52" y1="2694" x2="1328" y2="2694" stroke="#C9E2E5" />
-    <text x="690" y="2724" class="secondary" font-size="11.5" text-anchor="middle">The current one-week extraction and review screens remain reusable. This addition changes the target from “existing active program only” to an explicit existing-or-new program choice.</text>
-    <text x="690" y="2745" class="secondary" font-size="10" text-anchor="middle">Manual authoring remains available, but it no longer blocks the natural first use: turning the trainer’s existing Sheet into the first active program.</text>
+    <text x="690" y="2730" class="secondary" font-size="11.5" text-anchor="middle">Import and manual creation share one concise Create Program entry.</text>
   </g>
 </svg>

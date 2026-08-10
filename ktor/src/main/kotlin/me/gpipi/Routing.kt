@@ -45,6 +45,9 @@ import me.gpipi.shopping.ShoppingExtractionService
 import me.gpipi.shopping.ShoppingRepository
 import me.gpipi.shopping.ShoppingService
 import me.gpipi.shopping.shoppingApiRoutes
+import me.gpipi.training.TrainingRepository
+import me.gpipi.training.TrainingService
+import me.gpipi.training.trainingApiRoutes
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -114,6 +117,7 @@ fun Application.configureRouting() {
     val shoppingRepository = ShoppingRepository()
     val shoppingService = ShoppingService(db, shoppingRepository)
     val shoppingExtractionService = ShoppingExtractionService(orClient)
+    val trainingService = TrainingService(db, TrainingRepository())
 
     val webBaseUrl = cfg.property("web.baseUrl").getString()
     val eventHandler = SlackEventHandler(
@@ -171,6 +175,7 @@ fun Application.configureRouting() {
             accountApiRoutes(accountService)
             budgetApiRoutes(budgetService)
             shoppingApiRoutes(shoppingService)
+            trainingApiRoutes(trainingService)
         }
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")

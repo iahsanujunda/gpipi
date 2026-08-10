@@ -9,6 +9,9 @@ import BudgetsPage from '@/budgets/BudgetsPage'
 import ShoppingPage from '@/shopping/ShoppingPage'
 import WalletDetailPage from '@/wallets/WalletDetailPage'
 import WalletsPage from '@/wallets/WalletsPage'
+import TrainingPage from '@/training/TrainingPage'
+import TrainingProgramPage from '@/training/TrainingProgramPage'
+import WorkoutPage from '@/training/WorkoutPage'
 
 export const routes = [
   { path: '/enter', element: <EnterPage /> },
@@ -27,6 +30,10 @@ export const routes = [
           { path: 'budgets', element: <BudgetsPage /> },
           { path: 'activity', element: <ActivityPage /> },
           { path: 'shopping', element: <ShoppingPage /> },
+          { path: 'training', element: <TrainingPage /> },
+          { path: 'training/weeks/:weekNumber', element: <TrainingPage /> },
+          { path: 'training/weeks/:weekNumber/workouts/:workoutId', element: <WorkoutPage /> },
+          { path: 'training/program', element: <TrainingProgramPage /> },
         ],
       },
     ],

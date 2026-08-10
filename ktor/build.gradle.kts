@@ -113,8 +113,23 @@ pgen {
             addTable("public", "shopping_mutation_item")
             addTable("public", "account")
             addTable("public", "money_movement")
+            addTable("public", "exercise")
+            addTable("public", "exercise_alias")
+            addTable("public", "program")
+            addTable("public", "workout")
+            addTable("public", "workout_week")
+            addTable("public", "workout_group")
+            addTable("public", "prescription")
+            addTable("public", "training_session")
+            addTable("public", "performed_exercise")
+            addTable("public", "performed_set")
         }
         columnTypeMappings {
+            add(
+                sqlType = "pg_catalog.date",
+                columnTypeClass = "org.jetbrains.exposed.v1.javatime.JavaLocalDateColumnType",
+                valueClass = "java.time.LocalDate",
+            )
             add(
                 sqlType = "pg_catalog.timestamptz",
                 columnTypeClass = "org.jetbrains.exposed.v1.javatime.JavaOffsetDateTimeColumnType",

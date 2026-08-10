@@ -4,6 +4,11 @@ const port = 18080
 const webOrigin = 'http://127.0.0.1:4173'
 const everydayAccountId = '90000000-0000-0000-0000-000000000001'
 const billsAccountId = '90000000-0000-0000-0000-000000000002'
+const trainingProgramId = '60000000-0000-0000-0000-000000000001'
+const trainingWorkoutIds = [
+  '61000000-0000-0000-0000-000000000001',
+  '61000000-0000-0000-0000-000000000002',
+]
 
 const expenses = [
   {
@@ -140,6 +145,170 @@ let nextShoppingMutation = 10
 let nextAccountId = 10
 let nextMovementId = 10
 
+function trainingId(prefix, week, workout, suffix = 0) {
+  return `${prefix}000000-0000-0000-0000-${String((week * 100) + (workout * 10) + suffix).padStart(12, '0')}`
+}
+
+const trainingWeeks = new Map()
+for (const weekNumber of [2, 3, 4]) {
+  trainingWeeks.set(weekNumber, trainingWorkoutIds.map((workoutId, workoutIndex) => {
+    const historical = weekNumber === 2
+    const inProgress = weekNumber === 3 && workoutIndex === 0
+    const status = historical ? 'COMPLETED' : inProgress ? 'IN_PROGRESS' : 'NOT_STARTED'
+    const firstPrescription = trainingId('63', weekNumber, workoutIndex + 1, 1)
+    return {
+      weekId: trainingId('62', weekNumber, workoutIndex + 1),
+      workoutId,
+      workoutName: `Full Body ${workoutIndex + 1}`,
+      status,
+      performedOn: historical ? '2026-08-02' : inProgress ? '2026-08-08' : null,
+      sessionId: status === 'NOT_STARTED' ? null : trainingId('64', weekNumber, workoutIndex + 1),
+      updatedAt: status === 'NOT_STARTED' ? null : '2026-08-08T03:00:00Z',
+      completedAt: historical ? '2026-08-02T04:00:00Z' : null,
+      note: null,
+      skipped: false,
+      sets: historical || inProgress
+        ? new Map([[firstPrescription, [{
+            id: trainingId('66', weekNumber, workoutIndex + 1, 1),
+            setNumber: 1,
+            reps: 10,
+            durationSeconds: null,
+            load: '22.5',
+            rir: 2,
+            note: null,
+            targetReps: '10–12',
+            targetLoad: '20–25 kg',
+            targetRir: '3',
+            targetTempo: '3–1–1',
+          }]]])
+        : new Map(),
+    }
+  }))
+}
+
+function currentTrainingWeek() {
+  return [...trainingWeeks.entries()]
+    .filter(([, workouts]) => workouts.some((workout) => !['COMPLETED', 'SKIPPED'].includes(workout.status)))
+    .map(([week]) => week)
+    .sort((left, right) => left - right)[0] ?? null
+}
+
+function trainingExercises(weekNumber, workoutIndex) {
+  const firstId = trainingId('63', weekNumber, workoutIndex + 1, 1)
+  const secondId = trainingId('63', weekNumber, workoutIndex + 1, 2)
+  if (workoutIndex === 0) {
+    return [{
+      prescriptionId: firstId,
+      position: 1,
+      exerciseName: 'Goblet squat',
+      demoUrl: 'https://example.com/squat',
+      executionType: 'REPS',
+      targetSets: '3',
+      targetRest: '60 sec',
+      targetReps: '10–12',
+      targetLoad: '20–25 kg',
+      targetRir: '3',
+      targetTempo: '3–1–1',
+      targetNote: 'Keep the whole foot planted and control the descent.',
+    }, {
+      prescriptionId: secondId,
+      position: 2,
+      exerciseName: 'Suitcase carry',
+      demoUrl: null,
+      executionType: 'REPS_PER_SIDE',
+      targetSets: '3',
+      targetRest: null,
+      targetReps: '10 / side',
+      targetLoad: '12 kg',
+      targetRir: null,
+      targetTempo: null,
+      targetNote: null,
+    }]
+  }
+  return [{
+    prescriptionId: firstId,
+    position: 1,
+    exerciseName: 'Rear-foot elevated split squat',
+    demoUrl: null,
+    executionType: 'REPS_PER_SIDE',
+    targetSets: '3 each',
+    targetRest: '60 sec',
+    targetReps: '10 / side',
+    targetLoad: '8 kg each',
+    targetRir: '3',
+    targetTempo: null,
+    targetNote: null,
+  }, {
+    prescriptionId: secondId,
+    position: 2,
+    exerciseName: 'Full plank',
+    demoUrl: null,
+    executionType: 'DURATION',
+    targetSets: '3',
+    targetRest: '45 sec',
+    targetReps: '40–50 sec',
+    targetLoad: 'Body weight',
+    targetRir: null,
+    targetTempo: null,
+    targetNote: 'Stop before the lower back loses position.',
+  }]
+}
+
+function trainingOverview(weekNumber) {
+  const workouts = trainingWeeks.get(weekNumber)
+  return {
+    program: { id: trainingProgramId, name: 'M1', note: null, startsOn: '2026-07-20', active: true },
+    currentWeekNumber: currentTrainingWeek(),
+    selectedWeekNumber: weekNumber,
+    availableWeekNumbers: [...trainingWeeks.keys()],
+    workouts: workouts.map((workout) => ({
+      weekId: workout.weekId,
+      workoutId: workout.workoutId,
+      workoutName: workout.workoutName,
+      status: workout.status,
+      sessionId: workout.sessionId,
+      performedOn: workout.performedOn,
+      setCount: [...workout.sets.values()].flat().length,
+      updatedAt: workout.updatedAt,
+    })),
+  }
+}
+
+function trainingDetail(weekNumber, workoutIndex) {
+  const workout = trainingWeeks.get(weekNumber)[workoutIndex]
+  return {
+    program: { id: trainingProgramId, name: 'M1', note: null, startsOn: '2026-07-20', active: true },
+    currentWeekNumber: currentTrainingWeek(),
+    weekId: workout.weekId,
+    weekNumber,
+    skipped: workout.skipped,
+    workoutId: workout.workoutId,
+    workoutName: workout.workoutName,
+    workoutNote: 'Record a side view for the trainer when practical.',
+    session: workout.sessionId ? {
+      id: workout.sessionId,
+      performedOn: workout.performedOn,
+      status: workout.status,
+      note: workout.note,
+      updatedAt: workout.updatedAt,
+      completedAt: workout.completedAt,
+    } : null,
+    groups: [{
+      position: 1,
+      label: workoutIndex === 0 ? 'A' : 'FINISHER',
+      kind: workoutIndex === 0 ? 'SUPERSET' : 'STRAIGHT_SET',
+      exercises: trainingExercises(weekNumber, workoutIndex).map((exercise) => ({
+        ...exercise,
+        performedExerciseId: workout.sessionId
+          ? trainingId('65', weekNumber, workoutIndex + 1, exercise.position)
+          : null,
+        executionNote: null,
+        sets: workout.sets.get(exercise.prescriptionId) ?? [],
+      })),
+    }],
+  }
+}
+
 const shoppingItems = [
   {
     id: '20000000-0000-0000-0000-000000000001',
@@ -270,7 +439,7 @@ createServer(async (request, response) => {
     response.writeHead(204, {
       'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Allow-Headers': 'Accept, Content-Type',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+      'Access-Control-Allow-Methods': 'DELETE, GET, POST, PUT, OPTIONS',
       'Access-Control-Allow-Origin': webOrigin,
     })
     response.end()
@@ -283,6 +452,139 @@ createServer(async (request, response) => {
   }
   if (request.url === '/api/auth/session') {
     sendJson(response, 200, { userId: 'U-LOCAL' })
+    return
+  }
+
+  if (request.url?.startsWith('/api/training') && request.method === 'GET') {
+    if (request.url === '/api/training/exercises') {
+      sendJson(response, 200, [{
+        id: '68000000-0000-0000-0000-000000000001',
+        name: 'Goblet squat',
+        demoUrl: 'https://example.com/squat',
+        aliases: ['DB goblet squat'],
+      }])
+      return
+    }
+    if (request.url === '/api/training/programs') {
+      sendJson(response, 200, [{
+        id: trainingProgramId,
+        name: 'M1',
+        note: null,
+        startsOn: '2026-07-20',
+        active: true,
+      }])
+      return
+    }
+    const detailMatch = request.url.match(/^\/api\/training\/weeks\/(\d+)\/workouts\/([^/?]+)$/)
+    if (detailMatch) {
+      const weekNumber = Number(detailMatch[1])
+      const workoutIndex = trainingWorkoutIds.indexOf(detailMatch[2])
+      if (!trainingWeeks.has(weekNumber) || workoutIndex < 0) {
+        sendJson(response, 404, { message: 'Training record not found.' })
+        return
+      }
+      sendJson(response, 200, trainingDetail(weekNumber, workoutIndex))
+      return
+    }
+    const requested = new URL(request.url, 'http://127.0.0.1').searchParams.get('week')
+    const weekNumber = requested ? Number(requested) : currentTrainingWeek()
+    sendJson(response, 200, trainingOverview(weekNumber))
+    return
+  }
+
+  const trainingSetMatch = request.url?.match(
+    /^\/api\/training\/weeks\/([^/]+)\/prescriptions\/([^/]+)\/sets\/(\d+)$/,
+  )
+  if (trainingSetMatch && ['PUT', 'DELETE'].includes(request.method)) {
+    const [, weekId, prescriptionId, setNumberValue] = trainingSetMatch
+    const workout = [...trainingWeeks.values()].flat().find((candidate) => candidate.weekId === weekId)
+    if (!workout) {
+      sendJson(response, 404, { message: 'Training record not found.' })
+      return
+    }
+    const setNumber = Number(setNumberValue)
+    const sets = workout.sets.get(prescriptionId) ?? []
+    if (request.method === 'DELETE') {
+      workout.sets.set(prescriptionId, sets.filter((item) => item.setNumber !== setNumber))
+    } else {
+      const body = await readJson(request)
+      const existing = sets.find((item) => item.setNumber === setNumber)
+      const nextSet = {
+        id: existing?.id ?? trainingId('67', setNumber, 1, 1),
+        setNumber,
+        reps: body.reps,
+        durationSeconds: body.durationSeconds,
+        load: body.load,
+        rir: body.rir,
+        note: body.note,
+        targetReps: null,
+        targetLoad: null,
+        targetRir: null,
+        targetTempo: null,
+      }
+      workout.sets.set(
+        prescriptionId,
+        [...sets.filter((item) => item.setNumber !== setNumber), nextSet]
+          .sort((left, right) => left.setNumber - right.setNumber),
+      )
+      if (!workout.sessionId) {
+        workout.sessionId = trainingId('64', 3, trainingWorkoutIds.indexOf(workout.workoutId) + 1)
+        workout.performedOn = '2026-08-10'
+      }
+      workout.status = workout.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'
+      workout.skipped = false
+    }
+    workout.updatedAt = new Date().toISOString()
+    response.writeHead(204, {
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': webOrigin,
+    })
+    response.end()
+    return
+  }
+
+  const trainingSessionMatch = request.url?.match(/^\/api\/training\/weeks\/([^/]+)\/session$/)
+  if (trainingSessionMatch && request.method === 'PUT') {
+    const workout = [...trainingWeeks.values()].flat().find((candidate) => candidate.weekId === trainingSessionMatch[1])
+    const body = await readJson(request)
+    workout.sessionId ??= trainingId('64', 3, trainingWorkoutIds.indexOf(workout.workoutId) + 1)
+    workout.status = workout.status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS'
+    workout.performedOn = body.performedOn
+    workout.note = body.note
+    workout.updatedAt = new Date().toISOString()
+    response.writeHead(204, {
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': webOrigin,
+    })
+    response.end()
+    return
+  }
+
+  const trainingLifecycleMatch = request.url?.match(/^\/api\/training\/weeks\/([^/]+)\/(finish|resume|skip|restore)$/)
+  if (trainingLifecycleMatch && request.method === 'PUT') {
+    const workout = [...trainingWeeks.values()].flat().find((candidate) => candidate.weekId === trainingLifecycleMatch[1])
+    const action = trainingLifecycleMatch[2]
+    if (action === 'finish') {
+      workout.sessionId ??= trainingId('64', 3, trainingWorkoutIds.indexOf(workout.workoutId) + 1)
+      workout.performedOn ??= '2026-08-10'
+      workout.status = 'COMPLETED'
+      workout.completedAt = new Date().toISOString()
+    } else if (action === 'resume') {
+      workout.status = 'IN_PROGRESS'
+      workout.completedAt = null
+    } else if (action === 'skip') {
+      workout.status = 'SKIPPED'
+      workout.skipped = true
+    } else {
+      workout.status = workout.sessionId ? 'IN_PROGRESS' : 'NOT_STARTED'
+      workout.skipped = false
+    }
+    workout.updatedAt = new Date().toISOString()
+    response.writeHead(204, {
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Allow-Origin': webOrigin,
+    })
+    response.end()
     return
   }
   if (request.url?.startsWith('/api/expenses')) {

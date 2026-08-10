@@ -101,6 +101,20 @@ export function WalletIcon(props) {
   )
 }
 
+export function TrainingIcon(props) {
+  return (
+    <SvgIcon viewBox="0 0 24 24" {...props}>
+      <path
+        d="M3.5 9v6m3-8v10m11-10v10m3-8v6M6.5 12h11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </SvgIcon>
+  )
+}
+
 export function SwapIcon(props) {
   return (
     <SvgIcon viewBox="0 0 24 24" {...props}>

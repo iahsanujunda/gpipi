@@ -104,8 +104,8 @@ Both members' programs have several workouts per week, so a model that goes `pro
 
 Two consequences:
 
-- The gym screen opens **"week 2 · WO 1"**, not "week 2". Workout is the primary selector, week the secondary.
-- `training_session` references the (workout, week) pair. This is what makes *"my WO 1 across the whole block"* a natural query, which is the comparison any progression view wants.
+- The Training landing page may present **Week 2** as the primary view by grouping the independently authored `workout_week` rows that share `week_number = 2`. It then shows each workout authored for that week. Opening one still means **"week 2 · WO 1"**, never a session attached to a global week row.
+- `training_session` references the (workout, week) pair. This is what makes both *"everything prescribed in week 2"* and *"my WO 1 across the whole block"* natural queries without adding a program-level week entity.
 
 **Workout count varies per block and per member.** Observed across the household: three days a week, then one day a week postpartum, currently two. Nothing may assume a fixed cadence — not the schema, not the workout selector, not any future progression view.
 
@@ -123,7 +123,7 @@ When a session or a week is missed, the trainer does **not** expect it to be mad
 
 Three consequences, each of which removes work rather than adding it:
 
-**No date arithmetic anywhere.** The gym screen resumes an in-progress session for the selected workout; otherwise it shows *the next week that exists and has no completed session against it* — never "whatever week the calendar says." There is no catch-up state, no drift, no notion of being "behind." `program.starts_on` is decorative and must stay optional.
+**No date arithmetic anywhere.** The current program week is derived as the lowest authored `week_number` containing at least one workout that is neither completed nor explicitly skipped. One completed workout does not advance the page while another workout authored for the same week remains unresolved. When every workout present in that week is completed or skipped, the next unresolved authored week becomes current. There is no catch-up state, no drift, no notion of being "behind," and no stored current-week pointer that can fall out of sync. `program.starts_on` is decorative and must stay optional.
 
 **Progression comparisons are between authored progressions, not equal time intervals.** "Week 3 versus week 8" is the right coaching comparison, but it is not eight weeks of calendar training. Any future progression view should label by week number and session date, never imply regular spacing.
 
@@ -157,7 +157,7 @@ Unlike money, a training program is **freely editable**. A coach adjusting week 
 
 One narrow exception needs handling: editing a week that has already been performed rewrites what the member was measured against. If the sheet said `3 × 5 @ 60kg`, the member hit it, and the prescription is later revised to `65kg`, the logged history silently reads as a miss.
 
-**The fix is the snapshot pattern already used for `expense.account_id`.** When the first set for a prescribed movement is logged, `performed_exercise` snapshots the complete display prescription: group label/kind, canonical exercise name, execution type, sets, rest, reps, load, RIR, tempo, note, and demo URL. Each performed set also carries the set-relevant target fields copied at log time. The live prescription may then be edited or deactivated freely, with no locking, versioning, or frozen-week rule, because history renders from the snapshot rather than silently adopting later edits.
+**The fix is the snapshot pattern already used for `expense.account_id`.** The first state-changing action for a workout session — logging a set, changing session metadata, or finishing — creates the session if necessary and snapshots every active prescription in that workout week into `performed_exercise`. Each snapshot contains the complete display prescription: group label/kind, canonical exercise name, execution type, sets, rest, reps, load, RIR, tempo, note, and demo URL. A snapshot with no performed sets means **prescribed but not logged**; it does not claim the movement was performed. Each performed set carries its set-relevant target fields copied from that session snapshot when logged. The live prescription may then be edited or deactivated freely, with no locking, versioning, or frozen-week rule, because history renders every prescribed movement from the session snapshot rather than silently adopting later edits.
 
 This is the same principle phase 2 states for wallets: *"changing a budget line's wallet later affects future expenses, not history."*
 
@@ -224,11 +224,22 @@ The trainer will keep using spreadsheets — they run dozens of clients that way
 
 # Iteration 1 — Private Programs and Gym Execution
 
-The member-facing loop: see this workout's session for the current week, log sets against it. Private to the owning member, exactly like every budgeting surface. No sharing, no coach access.
+The member-facing loop: open the current authored week, choose one of its workouts, and log sets against it. Private to the owning member, exactly like every budgeting surface. No sharing, no coach access.
 
 The goal is as much **schema validation as feature delivery** — get two real programs in and find out where the model bends.
 
+Approved UI references:
+
+- [Mobile workout baseline](mockups/training-mobile-default.svg)
+- [Iteration 1 interaction and authoring states](mockups/training-iteration1-views.svg)
+
+These mockups define the intended information hierarchy and state transitions. They are not sample data contracts; the persistence and lifecycle rules below remain authoritative when a visual example does not cover an edge case.
+
 ### 1.1 The gym screen
+
+The Training navigation item opens a **week-first overview** for the active program. Its primary navigator follows authored week numbers, using the same previous/next and explicit return-to-current pattern as weekly Budgeting. The current week shows one card for every workout authored at that `week_number`, including its `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, or `SKIPPED` state. A historical week shows the sessions performed there and lets the member open any workout to review its prescription snapshot and execution.
+
+Week selection belongs in the route so opening a workout and going back returns to the selected week rather than silently jumping to current. Whenever a past or future authored week is selected, **Current · Week N** returns directly to the derived current week. Browsing a week or opening a workout records no execution.
 
 Design target: **empty means not yet recorded.** Every new execution input starts blank. The prescription remains visible immediately above it for reference, but no prescribed or previously populated sheet value is copied into execution. A set becomes evidence only after the member enters the actual values and presses **Log**.
 
@@ -256,13 +267,13 @@ DB alternating hooklying skullcrushers · 3 each × 15 @ 4kg
 Bear hold pull through · 3 × 20 total · 15s to failure
 ```
 
-Workout is the primary selector and week the secondary, per the workout-dimension reference — the same authored week number appears independently under several workouts.
+Week is the primary overview dimension while workout is the unit opened for prescription and execution. The overview is a projection over independently stored workout weeks, not a new program-level week entity.
 
-**"Current" first means an in-progress session for the selected workout; otherwise it means the next uncompleted, unskipped week.** Never a calendar derivation: weeks are authored, missed sessions are not made up, and any date-based rule breaks the first time one is skipped.
+**"Current" means the lowest authored week with any unresolved workout.** An in-progress workout is surfaced before not-started workouts inside that week. Completed and skipped workouts remain visible but are resolved for advancement. Never use a calendar derivation: weeks are authored, missed sessions are not made up, and any date-based rule breaks the first time one is skipped.
 
 **Sets commit immediately.** No session-level save button. A member is between sets, sweaty, and may close the app at any point — the same immediate-durability argument as the shopping list card, for the same reason. An explicit **Finish workout** action marks the session complete; it does not save the sets, which are already durable.
 
-Blank fields are never interpreted as matching the prescription. They remain null until the member supplies an actual value, and merely opening or revisiting a session creates no performed set. This matters especially for delayed entry: the app must not turn a remembered target, or a trainer's copied execution cells, into claimed performance.
+Blank fields are never interpreted as matching the prescription. They remain null until the member supplies an actual value, and merely opening or revisiting a workout creates no session or performed row. On the first state-changing action, the app snapshots all prescribed movements for historical display but creates no `performed_set` except the one the member explicitly logs. This matters especially for delayed entry: the app must not turn a remembered target, or a trainer's copied execution cells, into claimed performance.
 
 Each exercise renders its already logged sets followed by **one blank set editor**. The editor targets the lowest positive set number that is not currently logged; when there are no gaps, that is the next sequential number. When a gap exists, the correction slot is the default, but the member may instead choose the next new number — for example, **Correct Set 1** or **Log new Set 4** — without filling or renumbering the gap. Pressing **Log** fills the chosen stable slot, then clears the editor for another set. The UI does not parse the prescription's `sets` prose to decide how many rows to create, and no empty placeholder is persisted. This makes both corrections and additional sets ordinary.
 
@@ -270,7 +281,7 @@ Each exercise renders its already logged sets followed by **one blank set editor
 
 **Doing the workout and entering it are different events.** `performed_on` is the member-supplied date the workout happened in real life and defaults to today. `started_at`, `updated_at`, and `completed_at` describe interaction with the app. A member may therefore enter a workout days after performing it without falsifying the training date.
 
-There is **one attempt per workout week**. A partially entered attempt remains `IN_PROGRESS` and is resumed when the member returns. **Finish workout** is allowed even when some or all prescribed movements have no logged sets; completion is a workflow marker, not a completeness validation. Finishing changes the status to `COMPLETED`, advances the default "current" week, and makes the session eligible for sheet write-back.
+There is **one attempt per workout week**. A partially entered attempt remains `IN_PROGRESS` and is resumed when the member returns. **Finish workout** is allowed even when some or all prescribed movements have no logged sets; completion is a workflow marker, not a completeness validation. Finishing changes the status to `COMPLETED` and makes the session eligible for sheet write-back. It advances the derived current week only when every other workout authored for that same week is also completed or skipped.
 
 Completion is not a lock. A completed session remains available from the week selector and may be reviewed or corrected days later; ordinary edits leave it `COMPLETED`. An explicit **Resume workout** reverses an accidental finish by returning it to `IN_PROGRESS` and clearing `completed_at`. Editing reps, duration, load, or RIR updates both `updated_at` and `execution_updated_at`, making a previously written session unsynced again. Editing metadata that is not written to the sheet, such as `performed_on`, the session note, or a set note, updates `updated_at` only and does not by itself require another sheet write. The set mutation and both timestamp updates happen in the same database transaction.
 
@@ -404,7 +415,8 @@ create table training_session (
     )
 );
 
--- A prescribed movement as actually performed. There is no separate substitution type.
+-- A prescribed movement snapshotted into an execution session. It may have zero
+-- performed sets, meaning "prescribed but not logged". There is no substitution type.
 create table performed_exercise (
     id              uuid primary key default gen_random_uuid(),
     session_id      uuid not null references training_session(id) on delete cascade,
@@ -498,9 +510,14 @@ Removing a prescription deactivates it immediately rather than destroying it. It
 - [ ] Exercise names and aliases are case-insensitively unique per member
 - [ ] Exercise selection reuses existing rows and confirmed aliases; new names are created deliberately, not by typo
 - [ ] Every prescription has a human-confirmed `REPS`, `REPS_PER_SIDE`, or `DURATION` execution type, with no default
-- [ ] This week's session renders on mobile with one-handed reach and no horizontal scroll
+- [ ] Member execution and desktop authoring match the approved Iteration 1 mockups at phone and wide-screen sizes
+- [ ] The current-week overview and each workout detail render on mobile with one-handed reach and no horizontal scroll
+- [ ] Training opens on the derived current-week overview, grouping every workout that shares that authored week number
+- [ ] The current week does not advance until every workout authored for it is completed or skipped
+- [ ] Previous and next authored weeks can be browsed without calendar arithmetic; a non-current view offers a one-tap return to the current week
+- [ ] Week selection is route-addressable, so returning from workout detail preserves the selected week
 - [ ] Every new execution input starts blank; targets are visible for reference but never copied into the inputs
-- [ ] Opening or revisiting a session does not create a performed set
+- [ ] Opening or revisiting a workout creates no session, performed exercise, or performed set
 - [ ] Each exercise shows logged sets plus one blank next-set editor; logging clears it for the next set
 - [ ] The number of editors is never derived by parsing prescribed `sets` prose
 - [ ] Set numbers are stable: deleting an earlier set never renumbers later sets
@@ -520,15 +537,16 @@ Removing a prescription deactivates it immediately rather than destroying it. It
 - [ ] Metadata-only edits update the relevant row and session `updated_at`, but not `execution_updated_at`
 - [ ] Editing execution after a successful sheet write makes the session visibly unsynced again
 - [ ] Logging reveals another blank editor, allowing execution beyond prescription
-- [ ] The first logged set creates a performed-exercise snapshot containing the complete prescription display
-- [ ] Every logged set stores its set-relevant target snapshot
+- [ ] The first state-changing session action snapshots every active prescription, including movements for which no set is logged
+- [ ] A snapshotted movement with no sets renders as prescribed but not logged and never claims execution
+- [ ] Every logged set stores its set-relevant target copied from its session exercise snapshot
 - [ ] Editing a prescription after logging does not alter logged targets
 - [ ] Deactivating a prescription removes it from future training without removing its execution or prescribed-target history
 - [ ] Prescription prose renders verbatim, including tempo and per-side instructions
 - [ ] Timed movements log `duration_s` rather than `reps`
 - [ ] Group labels render as authored, including finisher/superset parentheticals
 - [ ] A workout with no prescribed RIR column renders without an empty RIR affordance
-- [ ] The gym screen resolves "current" as an in-progress session first, then the next uncompleted, unskipped week — no calendar arithmetic
+- [ ] The gym screen derives "current" as the lowest authored week containing any workout that is neither completed nor skipped — no stored pointer or calendar arithmetic
 - [ ] Skip and restore are explicit, reversible actions; skip is never inferred from later sessions
 - [ ] Logging a skipped week restores it automatically; a completed week cannot also be skipped
 - [ ] A block with one workout and a block with three both render correctly (no fixed-cadence assumption)

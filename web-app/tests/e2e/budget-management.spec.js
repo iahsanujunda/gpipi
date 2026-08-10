@@ -130,17 +130,17 @@ test('weekly and monthly history controls move independently', async ({ page }) 
   await expect(weeklyPeriod).not.toHaveText(initialWeek)
   await expect(monthlyPeriod).toHaveText(initialMonth)
   await expect(weekly.getByRole('button', { name: 'This week' })).toBeVisible()
-  await expect(monthly.getByRole('button', { name: 'This month' })).toHaveCount(0)
+  await expect(monthly.getByRole('button', { name: 'This payday period' })).toHaveCount(0)
   await expect(weekly.getByText('CURRENT CAP BASIS').first()).toBeVisible()
   await expect(weekly.getByText("Past spending is compared with each line's current cap."))
     .toBeVisible()
 
-  await monthly.getByRole('button', { name: 'Previous month' }).click()
+  await monthly.getByRole('button', { name: 'Previous payday period' }).click()
 
   await expect(monthlyPeriod).not.toHaveText(initialMonth)
   await expect(weeklyPeriod).not.toHaveText(initialWeek)
-  await expect(monthly.getByRole('button', { name: 'This month' })).toBeVisible()
-  await expect(monthly.getByRole('button', { name: 'Next month' })).toBeEnabled()
+  await expect(monthly.getByRole('button', { name: 'This payday period' })).toBeVisible()
+  await expect(monthly.getByRole('button', { name: 'Next payday period' })).toBeEnabled()
 
   await weekly.getByRole('button', { name: 'This week' }).click()
   await expect(weeklyPeriod).toHaveText(initialWeek)
@@ -165,7 +165,7 @@ test('period selectors stay aligned with their headings while mobile dates chang
   const weeklySamples = await samplePeriodHeaderWhileChanging(weekly, 'Previous week')
   expectPeriodHeaderToStayAligned(weeklySamples)
 
-  const monthlySamples = await samplePeriodHeaderWhileChanging(monthly, 'Previous month')
+  const monthlySamples = await samplePeriodHeaderWhileChanging(monthly, 'Previous payday period')
   expectPeriodHeaderToStayAligned(monthlySamples)
 })
 

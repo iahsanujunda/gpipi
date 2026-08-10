@@ -258,6 +258,118 @@
           ]
         },
         {
+          "name": "public.exercise",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "owner_user_id",
+              "type": "text"
+            },
+            {
+              "name": "name",
+              "type": "text"
+            },
+            {
+              "name": "demo_url",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "exercise_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "uniqueConstraints": [
+            {
+              "name": "exercise_id_owner_user_id_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "exercise_name_not_blank"
+            },
+            {
+              "name": "exercise_owner_not_blank"
+            }
+          ]
+        },
+        {
+          "name": "public.exercise_alias",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "exercise_id",
+              "type": "uuid"
+            },
+            {
+              "name": "owner_user_id",
+              "type": "text"
+            },
+            {
+              "name": "alias",
+              "type": "text"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "exercise_alias_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "exercise_alias_exercise_owner_fk",
+              "targetTable": "public.exercise",
+              "references": [
+                {
+                  "sourceColumn": "exercise_id",
+                  "targetColumn": "id"
+                },
+                {
+                  "sourceColumn": "exercise_id",
+                  "targetColumn": "owner_user_id"
+                },
+                {
+                  "sourceColumn": "owner_user_id",
+                  "targetColumn": "id"
+                },
+                {
+                  "sourceColumn": "owner_user_id",
+                  "targetColumn": "owner_user_id"
+                }
+              ]
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "exercise_alias_not_blank"
+            },
+            {
+              "name": "exercise_alias_owner_not_blank"
+            }
+          ]
+        },
+        {
           "name": "public.expense",
           "columns": [
             {
@@ -600,6 +712,436 @@
             },
             {
               "name": "money_movement_has_tracked_endpoint"
+            }
+          ]
+        },
+        {
+          "name": "public.performed_exercise",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "session_id",
+              "type": "uuid"
+            },
+            {
+              "name": "exercise_id",
+              "type": "uuid"
+            },
+            {
+              "name": "prescription_id",
+              "type": "uuid"
+            },
+            {
+              "name": "position",
+              "type": "int4"
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_group_label",
+              "type": "text"
+            },
+            {
+              "name": "target_group_kind",
+              "type": "text"
+            },
+            {
+              "name": "target_exercise_name",
+              "type": "text"
+            },
+            {
+              "name": "target_demo_url",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_execution_type",
+              "type": "text"
+            },
+            {
+              "name": "target_sets",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_rest",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_reps",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_load",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_rir",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_tempo",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_note",
+              "type": "text",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "performed_exercise_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "performed_exercise_exercise_id_fkey",
+              "targetTable": "public.exercise",
+              "references": [
+                {
+                  "sourceColumn": "exercise_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "performed_exercise_prescription_id_fkey",
+              "targetTable": "public.prescription",
+              "references": [
+                {
+                  "sourceColumn": "prescription_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "performed_exercise_session_id_fkey",
+              "targetTable": "public.training_session",
+              "references": [
+                {
+                  "sourceColumn": "session_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "performed_exercise_session_id_position_key"
+            },
+            {
+              "name": "performed_exercise_session_id_prescription_id_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "performed_exercise_execution_type_valid"
+            },
+            {
+              "name": "performed_exercise_group_kind_valid"
+            },
+            {
+              "name": "performed_exercise_position_positive"
+            }
+          ]
+        },
+        {
+          "name": "public.performed_set",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "performed_exercise_id",
+              "type": "uuid"
+            },
+            {
+              "name": "set_number",
+              "type": "int4"
+            },
+            {
+              "name": "reps",
+              "type": "int4",
+              "nullable": true
+            },
+            {
+              "name": "duration_s",
+              "type": "int4",
+              "nullable": true
+            },
+            {
+              "name": "load",
+              "type": {
+                "kind": "numeric",
+                "precision": 8,
+                "scale": 2
+              },
+              "nullable": true
+            },
+            {
+              "name": "rir",
+              "type": "int4",
+              "nullable": true
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_reps",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_load",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_rir",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_tempo",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "logged_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "updated_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "deleted_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "performed_set_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "performed_set_performed_exercise_id_fkey",
+              "targetTable": "public.performed_exercise",
+              "references": [
+                {
+                  "sourceColumn": "performed_exercise_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "performed_set_performed_exercise_id_set_number_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "performed_set_duration_nonnegative"
+            },
+            {
+              "name": "performed_set_load_nonnegative"
+            },
+            {
+              "name": "performed_set_number_positive"
+            },
+            {
+              "name": "performed_set_one_primary_measure"
+            },
+            {
+              "name": "performed_set_reps_nonnegative"
+            }
+          ]
+        },
+        {
+          "name": "public.prescription",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "group_id",
+              "type": "uuid"
+            },
+            {
+              "name": "exercise_id",
+              "type": "uuid"
+            },
+            {
+              "name": "position",
+              "type": "int4"
+            },
+            {
+              "name": "execution_type",
+              "type": "text"
+            },
+            {
+              "name": "sets",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "rest",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "reps",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "load",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "rir",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "tempo",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "archived_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "prescription_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "prescription_exercise_id_fkey",
+              "targetTable": "public.exercise",
+              "references": [
+                {
+                  "sourceColumn": "exercise_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "prescription_group_id_fkey",
+              "targetTable": "public.workout_group",
+              "references": [
+                {
+                  "sourceColumn": "group_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "prescription_group_id_position_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "prescription_execution_type_valid"
+            },
+            {
+              "name": "prescription_position_positive"
+            }
+          ]
+        },
+        {
+          "name": "public.program",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "owner_user_id",
+              "type": "text"
+            },
+            {
+              "name": "name",
+              "type": "text"
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "starts_on",
+              "type": "pg_catalog.date",
+              "nullable": true
+            },
+            {
+              "name": "active",
+              "type": "bool",
+              "defaultExpr": "true"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "updated_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "program_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "checkConstraints": [
+            {
+              "name": "program_name_not_blank"
+            },
+            {
+              "name": "program_owner_not_blank"
             }
           ]
         },
@@ -954,6 +1496,254 @@
                   "targetColumn": "id"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "name": "public.training_session",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "week_id",
+              "type": "uuid"
+            },
+            {
+              "name": "performed_on",
+              "type": "pg_catalog.date"
+            },
+            {
+              "name": "status",
+              "type": "text",
+              "defaultExpr": "'IN_PROGRESS'::text"
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "started_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "updated_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "execution_updated_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            },
+            {
+              "name": "completed_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "training_session_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "training_session_week_id_fkey",
+              "targetTable": "public.workout_week",
+              "references": [
+                {
+                  "sourceColumn": "week_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "training_session_week_id_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "training_session_completion_consistent"
+            },
+            {
+              "name": "training_session_status_valid"
+            }
+          ]
+        },
+        {
+          "name": "public.workout",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "program_id",
+              "type": "uuid"
+            },
+            {
+              "name": "name",
+              "type": "text"
+            },
+            {
+              "name": "note",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "position",
+              "type": "int4"
+            }
+          ],
+          "primaryKey": {
+            "name": "workout_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "workout_program_id_fkey",
+              "targetTable": "public.program",
+              "references": [
+                {
+                  "sourceColumn": "program_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "workout_program_id_position_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "workout_name_not_blank"
+            },
+            {
+              "name": "workout_position_positive"
+            }
+          ]
+        },
+        {
+          "name": "public.workout_group",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "week_id",
+              "type": "uuid"
+            },
+            {
+              "name": "label",
+              "type": "text"
+            },
+            {
+              "name": "kind",
+              "type": "text"
+            },
+            {
+              "name": "position",
+              "type": "int4"
+            }
+          ],
+          "primaryKey": {
+            "name": "workout_group_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "workout_group_week_id_fkey",
+              "targetTable": "public.workout_week",
+              "references": [
+                {
+                  "sourceColumn": "week_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "workout_group_week_id_position_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "workout_group_kind_valid"
+            },
+            {
+              "name": "workout_group_label_not_blank"
+            },
+            {
+              "name": "workout_group_position_positive"
+            }
+          ]
+        },
+        {
+          "name": "public.workout_week",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "workout_id",
+              "type": "uuid"
+            },
+            {
+              "name": "week_number",
+              "type": "int4"
+            },
+            {
+              "name": "skipped_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "workout_week_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "workout_week_workout_id_fkey",
+              "targetTable": "public.workout",
+              "references": [
+                {
+                  "sourceColumn": "workout_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "workout_week_workout_id_week_number_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "workout_week_number_positive"
             }
           ]
         }

@@ -13,6 +13,8 @@ Related references:
 - [Activity page, default state](mockups/activity-mobile-default.svg)
 - [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
+- [Training page, mobile workout baseline](mockups/training-mobile-default.svg)
+- [Training Iteration 1 interaction and authoring states](mockups/training-iteration1-views.svg)
 - [Source color palette](https://coolors.co/palette/3fc1c0-20bac5-00b2ca-04a6c2-0899ba-0f80aa-16679a-1a5b92-1c558e-1d4e89)
 
 ## Product principles
@@ -304,6 +306,25 @@ Use `Activity` as the page heading with one short supporting sentence explaining
 - Amounts are right-aligned, use tabular numerals, and remain visually prominent without overpowering the merchant.
 - Filters and sorting are client-side for this initial read-only view. Date ranges are inclusive.
 - Loading, request failure, no recorded activity, and no filter matches are distinct states. A filtered empty state offers a direct Clear filters action.
+
+### Training
+
+Use `Training` as the page heading. Keep the active program visible as a compact status chip, then make the authored week the primary overview dimension. Reuse Budgeting's previous/next period language, but label by authored `Week N` rather than calendar dates. The current week is the lowest authored week with any workout that is neither completed nor skipped; show every workout authored for that week as a status-bearing row or card.
+
+- Group labels use uppercase supporting text and a short accent rule. Exercise cards keep the prescription immediately above execution so targets remain available without resembling entered values.
+- New execution controls are always blank. Render existing sets followed by exactly one empty editor; logging it reveals the next editor without manufacturing persisted placeholders.
+- Label the primary execution field from the confirmed prescription type: `REPS`, `REPS / SIDE`, or `SECONDS`. Load, RIR, and note are optional, and execution is not constrained to equal the prescription.
+- Set numbers are stable identities. If an earlier set is removed, later sets retain their numbers and the editor makes the choice between repairing the missing slot and logging the next new slot explicit.
+- Logging and edits commit immediately. `Finish workout` changes lifecycle state and may finish partial execution; editing a completed workout leaves it completed, while `Resume workout` explicitly reopens it.
+- Historical workout detail renders every prescription from the session snapshot. A movement with no logged sets is labelled `Prescribed · not logged`; never omit it or imply it was performed.
+- Set deletion is a recoverable soft-delete and does not require a confirmation dialog. Logging the deleted slot restores it. This is the deliberate training exception to the general confirmation guidance for destructive actions.
+- Week management uses the shared adaptive drawer. Skip and restore are explicit reversible actions, and logging against a skipped week restores it automatically.
+- Historical and future authored weeks remain browseable. Highlight a non-current selection and offer `Current · Week N` as a one-tap return; keep the selected week in the route so Back from workout detail returns to the same overview.
+- Mobile controls retain the standard `44 px` minimum touch target and remain clear of the fixed launcher dock. Do not introduce horizontal scrolling for set inputs.
+- Desktop authoring exposes the active program and workouts alongside the selected week. Weeks are open-ended: offer `Duplicate previous week` for copy-forward and `Add blank week`, but never request an expected week count.
+- Authoring supports ordered groups and prescriptions with their explicit execution types. Historical structure is archived/deactivated rather than hard-deleted when execution exists.
+
+See the [mobile baseline](mockups/training-mobile-default.svg) for the default execution hierarchy and the [Iteration 1 state board](mockups/training-iteration1-views.svg) for current and past weeks, gap repair, completed history, week lifecycle, input types, program structure, and desktop authoring.
 
 ### Buttons
 

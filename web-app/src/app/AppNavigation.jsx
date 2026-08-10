@@ -8,13 +8,14 @@ import {
   BudgetsIcon,
   CloseIcon,
   ShoppingListIcon,
+  TrainingIcon,
   WalletIcon,
 } from './AppIcons'
 import { usePageActions } from './pageActions'
 
 const OPEN_DURATION = 320
 const CLOSE_DURATION = 220
-const STAGGER = 35
+const STAGGER = 25
 const LAUNCHER_ICON_DURATION = 280
 const OPEN_EASING = 'cubic-bezier(0.2, 0.75, 0.2, 1)'
 const CLOSE_EASING = 'cubic-bezier(0.4, 0, 1, 1)'
@@ -24,6 +25,7 @@ const navigationItems = [
   { label: 'Budgets', to: '/budgets', icon: BudgetsIcon },
   { label: 'Activity', to: '/activity', icon: ActivityIcon },
   { label: 'Shopping list', to: '/shopping', icon: ShoppingListIcon },
+  { label: 'Training', to: '/training', icon: TrainingIcon },
 ]
 
 function isCurrentPath(pathname, target) {

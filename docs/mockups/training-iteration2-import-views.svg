@@ -1,0 +1,523 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="3690" viewBox="0 0 1380 3690" role="img" aria-labelledby="title description">
+  <title id="title">Phase 5 iteration 2 one-week Google Sheet import states</title>
+  <desc id="description">Nine mobile views and one desktop review view show Google connection, Picker handoff, choosing exactly one week, confirming only that week's workout ranges, bounded extraction, human review, conflict resolution, failure recovery, and the applied current week.</desc>
+
+  <defs>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity=".16" />
+    </filter>
+    <filter id="panel-shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#1D4E89" flood-opacity=".12" />
+    </filter>
+    <filter id="control-shadow" x="-25%" y="-30%" width="150%" height="175%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1D4E89" flood-opacity=".22" />
+    </filter>
+    <style>
+      .app { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .board-title { fill: #1D4E89; font-size: 28px; font-weight: 760; letter-spacing: -.6px; }
+      .board-copy { fill: #526966; font-size: 14px; }
+      .board-label { fill: #1D4E89; font-size: 12px; font-weight: 760; letter-spacing: 1.2px; }
+      .heading { fill: #1D4E89; font-weight: 720; letter-spacing: -.3px; }
+      .body { fill: #17312E; }
+      .secondary { fill: #526966; }
+      .eyebrow { fill: #526966; font-size: 9px; font-weight: 750; letter-spacing: .75px; }
+      .chip { fill: #526966; font-size: 9px; font-weight: 720; letter-spacing: .45px; }
+      .button { fill: #FFFFFF; font-size: 12px; font-weight: 720; text-anchor: middle; }
+      .button-secondary { fill: #16679A; font-size: 12px; font-weight: 720; text-anchor: middle; }
+      .tiny { fill: #526966; font-size: 9.5px; }
+    </style>
+
+    <g id="phone-base">
+      <rect width="390" height="760" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+      <rect x="8" y="8" width="374" height="744" rx="40" fill="#F4FAFB" />
+      <rect x="8" y="8" width="374" height="38" rx="40" fill="#FFFFFF" />
+      <rect x="8" y="32" width="374" height="14" fill="#FFFFFF" />
+      <text x="28" y="33" class="heading" font-size="13">9:41</text>
+      <g fill="none" stroke="#1D4E89" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M328 28c4-5 9-5 13 0" />
+        <path d="M331 31c2-3 5-3 7 0" />
+        <circle cx="334.5" cy="34" r="1" fill="#1D4E89" stroke="none" />
+        <rect x="350" y="23" width="18" height="10" rx="2" />
+        <path d="M369 26v4" />
+      </g>
+      <rect x="352.5" y="25.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+      <rect x="8" y="46" width="374" height="58" fill="#FFFFFF" />
+      <rect x="16" y="53" width="44" height="44" rx="10" fill="#FFFFFF" />
+      <path d="M39 65 29 75l10 10M30 75h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="68" y="81" class="heading" font-size="17">gpipi</text>
+      <line x1="8" y1="103.5" x2="382" y2="103.5" stroke="#C9E2E5" />
+      <rect x="146" y="17" width="98" height="20" rx="10" fill="#1D4E89" />
+    </g>
+
+    <g id="phone-footer">
+      <rect x="8" y="688" width="374" height="64" fill="#F4FAFB" fill-opacity=".98" />
+      <line x1="8" y1="688" x2="382" y2="688" stroke="#D9E9EB" />
+      <circle cx="195" cy="714" r="28" fill="#16679A" filter="url(#control-shadow)" />
+      <rect x="182" y="701" width="11" height="11" rx="3" fill="#3FC1C0" />
+      <rect x="197" y="701" width="11" height="11" rx="3" fill="#FFFFFF" />
+      <rect x="182" y="716" width="11" height="11" rx="3" fill="#FFFFFF" />
+      <rect x="197" y="716" width="11" height="11" rx="3" fill="#3FC1C0" />
+      <rect x="139" y="739" width="112" height="5" rx="2.5" fill="#1D4E89" fill-opacity=".72" />
+    </g>
+
+    <g id="sheet-icon">
+      <rect x="2" y="1" width="18" height="22" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7" />
+      <path d="M6 7h10M6 12h10M6 17h10M10 7v10" fill="none" stroke="currentColor" stroke-width="1.4" />
+    </g>
+    <g id="drive-icon">
+      <path d="m11 2 5 9H6L11 2Zm5 9 5 9H11l5-9ZM6 11l5 9H1l5-9Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+    </g>
+    <g id="check-icon">
+      <path d="m2 10 5 5L18 3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    <g id="edit-icon">
+      <path d="m3 19 2-6L15 3l5 5-10 10-7 1Zm10-13 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+    </g>
+    <g id="warning-icon">
+      <path d="M11 2 21 20H1L11 2Zm0 6v5m0 3v.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+    <g id="spinner-icon">
+      <path d="M20 11A9 9 0 1 1 11 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+    </g>
+  </defs>
+
+  <rect width="1380" height="3690" fill="#E7F5F7" />
+  <g class="app">
+    <text x="52" y="58" class="board-title">TRAINING · ITERATION 2 · ONE-WEEK SHEET IMPORT</text>
+    <text x="52" y="87" class="board-copy">Choose the boundary first, then review only what crossed it. Google remains the trainer’s workspace; the app creates nothing until one selected week is explicitly applied.</text>
+    <rect x="52" y="112" width="1276" height="58" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <circle cx="82" cy="141" r="13" fill="#DFF4F4" />
+    <g transform="translate(74 133) scale(.8)" color="#16679A"><use href="#check-icon" /></g>
+    <text x="106" y="137" class="body" font-size="13" font-weight="700">Scope rule</text>
+    <text x="106" y="156" class="secondary" font-size="12">Selecting Week 5 creates no drafts, provenance, placeholders, comparisons, or program rows for Weeks 1–4 or 6 onward.</text>
+
+    <!-- Row 1 labels -->
+    <text x="230" y="208" class="board-label" text-anchor="middle">01 · CONNECT GOOGLE</text>
+    <text x="690" y="208" class="board-label" text-anchor="middle">02 · PICK ONE SHEET</text>
+    <text x="1150" y="208" class="board-label" text-anchor="middle">03 · STEP 1 · CHOOSE WEEK</text>
+
+    <!-- 01 Connect Google -->
+    <g transform="translate(35 230)">
+      <use href="#phone-base" />
+      <text x="24" y="142" class="eyebrow">TRAINING · PROGRAM SETTINGS</text>
+      <text x="24" y="176" class="heading" font-size="27">M1</text>
+      <rect x="298" y="151" width="68" height="25" rx="12.5" fill="#DFF4F4" />
+      <text x="332" y="167" class="chip" text-anchor="middle">ACTIVE</text>
+
+      <text x="24" y="220" class="heading" font-size="16">Google Sheet</text>
+      <rect x="24" y="236" width="342" height="230" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="195" cy="286" r="28" fill="#DFF4F4" />
+      <g transform="translate(184 274)" color="#16679A"><use href="#drive-icon" /></g>
+      <text x="195" y="337" class="heading" font-size="18" text-anchor="middle">Connect your Google account</text>
+      <text x="195" y="363" class="secondary" font-size="11" text-anchor="middle">Choose a trainer-owned Sheet without granting</text>
+      <text x="195" y="380" class="secondary" font-size="11" text-anchor="middle">access to the rest of your Drive.</text>
+      <rect x="42" y="402" width="306" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="431" class="button">Connect Google</text>
+
+      <rect x="24" y="486" width="342" height="74" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="42" y="511" class="body" font-size="11.5" font-weight="700">Manual authoring remains available</text>
+      <text x="42" y="531" class="secondary" font-size="10">Connection failure never blocks workout logging.</text>
+      <text x="42" y="548" fill="#16679A" font-size="10" font-weight="700">Open manual program editor</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- 02 Picker handoff -->
+    <g transform="translate(495 230)">
+      <use href="#phone-base" />
+      <text x="24" y="142" class="eyebrow">GOOGLE-PROVIDED PICKER</text>
+      <text x="24" y="176" class="heading" font-size="27">Choose a Sheet</text>
+      <rect x="24" y="201" width="342" height="50" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="M44 220a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm6 14 6 6" fill="none" stroke="#526966" stroke-width="1.7" stroke-linecap="round" />
+      <text x="70" y="231" class="secondary" font-size="12">Search your files</text>
+
+      <text x="24" y="284" class="eyebrow">RECENT SPREADSHEETS</text>
+      <rect x="24" y="299" width="342" height="86" rx="10" fill="#DFF4F4" stroke="#3FC1C0" stroke-width="1.5" />
+      <rect x="42" y="317" width="46" height="50" rx="7" fill="#FFFFFF" />
+      <g transform="translate(54 330)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="104" y="334" class="heading" font-size="14">JUNDA – M1</text>
+      <text x="104" y="355" class="secondary" font-size="10.5">Modified 8 Aug · Google Sheets</text>
+      <circle cx="342" cy="342" r="10" fill="#16679A" />
+      <g transform="translate(336 336) scale(.58)" color="#FFFFFF"><use href="#check-icon" /></g>
+
+      <rect x="24" y="399" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="42" y="412" width="46" height="44" rx="7" fill="#F4FAFB" />
+      <g transform="translate(54 423)" color="#526966"><use href="#sheet-icon" /></g>
+      <text x="104" y="427" class="body" font-size="13" font-weight="650">JUNDA – M2 archive</text>
+      <text x="104" y="447" class="secondary" font-size="10">Modified 27 Jul</text>
+
+      <rect x="24" y="501" width="342" height="54" rx="9" fill="#F4FAFB" />
+      <text x="42" y="523" class="body" font-size="10.5" font-weight="700">The app receives only the selected file.</text>
+      <text x="42" y="540" class="secondary" font-size="9.5">This surface is owned and rendered by Google.</text>
+
+      <rect x="24" y="584" width="104" height="46" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="76" y="612" class="secondary" font-size="11" font-weight="700" text-anchor="middle">Cancel</text>
+      <rect x="140" y="584" width="226" height="46" rx="9" fill="#16679A" />
+      <text x="253" y="612" class="button">Choose JUNDA – M1</text>
+    </g>
+
+    <!-- 03 Choose week -->
+    <g transform="translate(955 230)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">IMPORT FROM JUNDA – M1</text>
+      <text x="24" y="167" class="heading" font-size="25">Choose one week</text>
+      <g transform="translate(24 188)">
+        <circle cx="14" cy="14" r="14" fill="#16679A" /><text x="14" y="18" fill="#FFFFFF" font-size="10" font-weight="750" text-anchor="middle">1</text>
+        <line x1="28" y1="14" x2="160" y2="14" stroke="#C9E2E5" stroke-width="2" />
+        <circle cx="174" cy="14" r="14" fill="#FFFFFF" stroke="#C9E2E5" /><text x="174" y="18" class="secondary" font-size="10" font-weight="750" text-anchor="middle">2</text>
+        <text x="14" y="43" class="eyebrow" text-anchor="middle">CHOOSE</text><text x="174" y="43" class="eyebrow" text-anchor="middle">CONFIRM</text>
+      </g>
+
+      <rect x="24" y="251" width="342" height="72" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <g transform="translate(42 273)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="78" y="274" class="heading" font-size="14">8 week labels found</text>
+      <text x="78" y="296" class="secondary" font-size="10.5">Across Full Body 1, 2, and hidden 3</text>
+
+      <text x="24" y="356" class="eyebrow">WEEK TO IMPORT</text>
+      <g>
+        <rect x="24" y="371" width="76" height="52" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="62" y="402" class="body" font-size="13" font-weight="700" text-anchor="middle">1</text>
+        <rect x="112" y="371" width="76" height="52" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="150" y="402" class="body" font-size="13" font-weight="700" text-anchor="middle">2</text>
+        <rect x="200" y="371" width="76" height="52" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="238" y="402" class="body" font-size="13" font-weight="700" text-anchor="middle">3</text>
+        <rect x="288" y="371" width="78" height="52" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="327" y="402" class="body" font-size="13" font-weight="700" text-anchor="middle">4</text>
+        <rect x="24" y="435" width="76" height="52" rx="10" fill="#DFF4F4" stroke="#16679A" stroke-width="2" /><text x="62" y="466" class="heading" font-size="13" text-anchor="middle">5</text>
+        <g transform="translate(78 447) scale(.55)" color="#16679A"><use href="#check-icon" /></g>
+        <rect x="112" y="435" width="76" height="52" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="150" y="466" class="body" font-size="13" font-weight="700" text-anchor="middle">6</text>
+        <rect x="200" y="435" width="76" height="52" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="238" y="466" class="body" font-size="13" font-weight="700" text-anchor="middle">7</text>
+        <rect x="288" y="435" width="78" height="52" rx="10" fill="#FFFFFF" stroke="#C9E2E5" /><text x="327" y="466" class="body" font-size="13" font-weight="700" text-anchor="middle">8</text>
+      </g>
+
+      <rect x="24" y="510" width="342" height="82" rx="10" fill="#DFF4F4" />
+      <text x="42" y="535" class="heading" font-size="12">Only Week 5 will cross into the app</text>
+      <text x="42" y="556" class="secondary" font-size="10">Weeks 1–4 and 6–8 will not be extracted,</text>
+      <text x="42" y="573" class="secondary" font-size="10">compared, or represented in the database.</text>
+
+      <rect x="24" y="617" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="646" class="button">Continue with Week 5</text>
+    </g>
+
+    <!-- Row 2 -->
+    <text x="230" y="1038" class="board-label" text-anchor="middle">04 · STEP 2 · CONFIRM WEEK 5 SCOPE</text>
+    <text x="690" y="1038" class="board-label" text-anchor="middle">05 · BOUNDED EXTRACTION</text>
+    <text x="1150" y="1038" class="board-label" text-anchor="middle">06 · HUMAN REVIEW · WEEK 5 ONLY</text>
+
+    <!-- 04 Confirm scope -->
+    <g transform="translate(35 1060)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">JUNDA – M1 · WEEK 5</text>
+      <text x="24" y="167" class="heading" font-size="25">Confirm this week</text>
+      <g transform="translate(24 185)">
+        <circle cx="14" cy="14" r="14" fill="#DFF4F4" /><g transform="translate(7 7) scale(.65)" color="#16679A"><use href="#check-icon" /></g>
+        <line x1="28" y1="14" x2="160" y2="14" stroke="#3FC1C0" stroke-width="2" />
+        <circle cx="174" cy="14" r="14" fill="#16679A" /><text x="174" y="18" fill="#FFFFFF" font-size="10" font-weight="750" text-anchor="middle">2</text>
+        <text x="14" y="43" class="eyebrow" text-anchor="middle">WEEK 5</text><text x="174" y="43" class="eyebrow" text-anchor="middle">DETAILS</text>
+      </g>
+
+      <text x="24" y="258" class="heading" font-size="15">Workout tabs</text>
+      <text x="366" y="258" class="secondary" font-size="10" text-anchor="end">2 ranges · 3 excluded</text>
+
+      <rect x="24" y="274" width="342" height="90" rx="10" fill="#FFFFFF" stroke="#3FC1C0" />
+      <circle cx="44" cy="295" r="9" fill="#16679A" /><g transform="translate(39 290) scale(.47)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="62" y="300" class="heading" font-size="14">Full Body 1 → Full Body 1</text>
+      <text x="42" y="326" class="secondary" font-size="10">Rows 72–91 · execution begins K</text>
+      <text x="42" y="347" class="tiny">Week 5 label and boundary confirmed</text>
+      <rect x="322" y="319" width="30" height="30" rx="7" fill="#FFFFFF" stroke="#C9E2E5" /><g transform="translate(328 324) scale(.72)" color="#16679A"><use href="#edit-icon" /></g>
+
+      <rect x="24" y="376" width="342" height="90" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="44" cy="397" r="9" fill="#16679A" /><g transform="translate(39 392) scale(.47)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="62" y="402" class="heading" font-size="14">Full Body 2 → Full Body 2</text>
+      <text x="42" y="428" class="secondary" font-size="10">Rows 69–87 · execution begins J</text>
+      <text x="42" y="449" class="tiny">Week 5 label and boundary confirmed</text>
+      <rect x="322" y="421" width="30" height="30" rx="7" fill="#FFFFFF" stroke="#C9E2E5" /><g transform="translate(328 426) scale(.72)" color="#16679A"><use href="#edit-icon" /></g>
+
+      <rect x="24" y="478" width="342" height="76" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+      <circle cx="44" cy="499" r="9" fill="#FFFFFF" stroke="#526966" />
+      <text x="62" y="504" class="heading" font-size="14">Full Body 3 → absent in Week 5</text>
+      <text x="42" y="532" class="secondary" font-size="10">No range extracted · no Week 5 workout row</text>
+
+      <rect x="24" y="568" width="342" height="44" rx="9" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="42" y="595" class="secondary" font-size="10">Excluded: Warming Up · Macro Check In</text>
+      <rect x="24" y="628" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="657" class="button">Extract Week 5</text>
+    </g>
+
+    <!-- 05 Extracting -->
+    <g transform="translate(495 1060)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">JUNDA – M1 · WEEK 5</text>
+      <text x="24" y="167" class="heading" font-size="25">Reading prescriptions</text>
+      <rect x="24" y="195" width="342" height="92" rx="10" fill="#DFF4F4" />
+      <g transform="translate(42 220)" color="#16679A"><use href="#spinner-icon" /></g>
+      <text x="78" y="229" class="heading" font-size="13">1 of 2 workout ranges complete</text>
+      <text x="78" y="251" class="secondary" font-size="10.5">Full Body 2 is being validated</text>
+      <rect x="42" y="266" width="306" height="5" rx="2.5" fill="#FFFFFF" />
+      <rect x="42" y="266" width="153" height="5" rx="2.5" fill="#16679A" />
+
+      <text x="24" y="325" class="heading" font-size="15">Selected scope</text>
+      <g>
+        <rect x="24" y="341" width="342" height="64" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+        <circle cx="46" cy="373" r="12" fill="#DFF4F4" /><g transform="translate(39 366) scale(.66)" color="#16679A"><use href="#check-icon" /></g>
+        <text x="68" y="369" class="body" font-size="12" font-weight="700">Full Body 1</text><text x="68" y="388" class="secondary" font-size="10">7 movements · validated</text>
+        <rect x="24" y="417" width="342" height="64" rx="10" fill="#FFFFFF" stroke="#3FC1C0" />
+        <circle cx="46" cy="449" r="12" fill="#FFFFFF" stroke="#3FC1C0" />
+        <g transform="translate(35 438) scale(.95)" color="#16679A"><use href="#spinner-icon" /></g>
+        <text x="68" y="445" class="body" font-size="12" font-weight="700">Full Body 2</text><text x="68" y="464" class="secondary" font-size="10">Checking source addresses</text>
+        <rect x="24" y="493" width="342" height="64" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+        <circle cx="46" cy="525" r="12" fill="#FFFFFF" stroke="#526966" />
+        <text x="68" y="521" class="body" font-size="12" font-weight="700">Full Body 3 · absent</text><text x="68" y="540" class="secondary" font-size="10">No model call · no draft</text>
+      </g>
+
+      <rect x="24" y="582" width="342" height="70" rx="10" fill="#F4FAFB" />
+      <text x="42" y="607" class="body" font-size="10.5" font-weight="700">Execution values were removed before extraction</text>
+      <text x="42" y="627" class="secondary" font-size="9.5">No other week is queued or read in the background.</text>
+      <text x="42" y="643" class="secondary" font-size="9.5">You can safely leave and return to this import.</text>
+    </g>
+
+    <!-- 06 Review -->
+    <g transform="translate(955 1060)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">REVIEW · JUNDA – M1</text>
+      <text x="24" y="167" class="heading" font-size="25">Week 5</text>
+      <rect x="258" y="132" width="108" height="26" rx="13" fill="#DFF4F4" />
+      <text x="312" y="149" class="chip" text-anchor="middle">HUMAN REVIEW</text>
+      <text x="24" y="190" class="secondary" font-size="10.5">Weeks 1–4 and 6–8 were not extracted.</text>
+
+      <rect x="24" y="211" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#3FC1C0" />
+      <text x="42" y="237" class="heading" font-size="14">Full Body 1</text>
+      <rect x="287" y="223" width="61" height="24" rx="12" fill="#DFF4F4" /><text x="317.5" y="239" class="chip" text-anchor="middle">CHANGED</text>
+      <text x="42" y="261" class="secondary" font-size="10">7 movements · 1 value differs from stored Week 5</text>
+
+      <rect x="24" y="293" width="342" height="232" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="320" class="eyebrow">MOVEMENT · F75</text>
+      <text x="42" y="345" class="heading" font-size="15">DB romanian deadlift</text>
+      <text x="42" y="366" class="secondary" font-size="10">3 sets · 8 each · 6–7 kg each</text>
+      <line x1="42" y1="382" x2="348" y2="382" stroke="#E2EEF0" />
+      <text x="42" y="406" class="eyebrow">EXERCISE MATCH</text>
+      <rect x="42" y="416" width="306" height="42" rx="8" fill="#DFF4F4" stroke="#3FC1C0" />
+      <circle cx="60" cy="437" r="8" fill="#16679A" /><g transform="translate(56 433) scale(.38)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="76" y="441" class="body" font-size="11" font-weight="700">DB romanian deadlift</text>
+      <text x="42" y="481" class="eyebrow">EXECUTION TYPE · CONFIRM REQUIRED</text>
+      <rect x="42" y="491" width="100" height="26" rx="13" fill="#DFF4F4" stroke="#16679A" />
+      <text x="92" y="508" class="chip" text-anchor="middle">REPS / SIDE</text>
+      <rect x="151" y="491" width="70" height="26" rx="13" fill="#FFFFFF" stroke="#C9E2E5" /><text x="186" y="508" class="chip" text-anchor="middle">REPS</text>
+      <rect x="230" y="491" width="86" height="26" rx="13" fill="#FFFFFF" stroke="#C9E2E5" /><text x="273" y="508" class="chip" text-anchor="middle">DURATION</text>
+
+      <rect x="24" y="537" width="342" height="52" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="559" class="heading" font-size="12">Full Body 2</text><text x="348" y="559" class="secondary" font-size="9.5" text-anchor="end">6 movements · new</text>
+      <text x="42" y="577" class="secondary" font-size="9.5">All exercise matches and types still need review</text>
+      <rect x="24" y="599" width="342" height="44" rx="9" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="42" y="626" class="secondary" font-size="10">Full Body 3 · absent this week</text>
+      <rect x="24" y="654" width="342" height="46" rx="9" fill="#A9C1C5" />
+      <text x="195" y="682" class="button">6 decisions remaining</text>
+    </g>
+
+    <!-- Row 3 -->
+    <text x="230" y="1868" class="board-label" text-anchor="middle">07 · RE-IMPORT CONFLICT</text>
+    <text x="690" y="1868" class="board-label" text-anchor="middle">08 · BOUNDED FAILURE RECOVERY</text>
+    <text x="1150" y="1868" class="board-label" text-anchor="middle">09 · APPLIED · WEEK 5 IS CURRENT</text>
+
+    <!-- 07 Conflict -->
+    <g transform="translate(35 1890)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">REVIEW · WEEK 5 · FULL BODY 1</text>
+      <text x="24" y="167" class="heading" font-size="25">Resolve one conflict</text>
+      <rect x="24" y="192" width="342" height="62" rx="10" fill="#FFF7E6" stroke="#D6A54A" />
+      <g transform="translate(41 210) scale(.82)" color="#9A6700"><use href="#warning-icon" /></g>
+      <text x="75" y="216" fill="#7A5200" font-size="11" font-weight="700">Both the app and sheet changed</text>
+      <text x="75" y="235" fill="#7A5200" font-size="9.5">Nothing wins until you choose.</text>
+
+      <text x="24" y="286" class="heading" font-size="16">DB romanian deadlift</text>
+      <text x="24" y="307" class="secondary" font-size="10">Load target · source F75</text>
+
+      <rect x="24" y="327" width="342" height="59" rx="9" fill="#F4FAFB" />
+      <text x="42" y="348" class="eyebrow">LAST APPLIED</text><text x="348" y="350" class="body" font-size="11" font-weight="700" text-anchor="end">6–7 kg each</text>
+      <text x="42" y="370" class="secondary" font-size="9.5">The comparison base</text>
+
+      <rect x="24" y="398" width="342" height="74" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="45" cy="435" r="9" fill="#FFFFFF" stroke="#526966" />
+      <text x="66" y="426" class="eyebrow">KEEP APP EDIT</text>
+      <text x="66" y="448" class="body" font-size="12" font-weight="700">7 kg each</text>
+      <text x="348" y="448" class="secondary" font-size="9.5" text-anchor="end">edited locally</text>
+
+      <rect x="24" y="484" width="342" height="74" rx="9" fill="#DFF4F4" stroke="#16679A" stroke-width="1.5" />
+      <circle cx="45" cy="521" r="9" fill="#16679A" /><circle cx="45" cy="521" r="3.5" fill="#FFFFFF" />
+      <text x="66" y="512" class="eyebrow">USE SHEET</text>
+      <text x="66" y="534" class="body" font-size="12" font-weight="700">7–8 kg each</text>
+      <text x="348" y="534" class="secondary" font-size="9.5" text-anchor="end">incoming F75</text>
+
+      <rect x="24" y="570" width="342" height="52" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="45" cy="596" r="9" fill="#FFFFFF" stroke="#526966" />
+      <text x="66" y="600" class="body" font-size="11" font-weight="700">Enter another value</text>
+      <rect x="24" y="638" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="667" class="button">Resolve and continue</text>
+    </g>
+
+    <!-- 08 Failure -->
+    <g transform="translate(495 1890)">
+      <use href="#phone-base" />
+      <text x="24" y="135" class="eyebrow">JUNDA – M1 · WEEK 5</text>
+      <text x="24" y="167" class="heading" font-size="25">One workout needs help</text>
+      <rect x="24" y="192" width="342" height="116" rx="10" fill="#FDECEC" stroke="#B42318" />
+      <circle cx="52" cy="224" r="14" fill="#FFFFFF" />
+      <path d="M52 216v10m0 5v.2" stroke="#B42318" stroke-width="2.1" stroke-linecap="round" />
+      <text x="78" y="220" fill="#B42318" font-size="12" font-weight="700">Full Body 2 was not saved</text>
+      <text x="78" y="241" fill="#7A271A" font-size="10">A returned value did not match its cited cell.</text>
+      <text x="42" y="272" fill="#7A271A" font-size="9.5">Full Body 1 remains a draft. No program rows exist yet.</text>
+      <text x="42" y="290" fill="#7A271A" font-size="9.5">No other week was read or retried.</text>
+
+      <text x="24" y="347" class="heading" font-size="15">Choose how to continue</text>
+      <rect x="24" y="365" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#16679A" />
+      <text x="42" y="390" class="heading" font-size="12">Correct range or boundary</text>
+      <text x="42" y="410" class="secondary" font-size="9.5">Review rows 69–87, then retry only Full Body 2.</text>
+      <g transform="translate(326 382) scale(.72)" color="#16679A"><use href="#edit-icon" /></g>
+
+      <rect x="24" y="447" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="472" class="heading" font-size="12">Enter this workout manually</text>
+      <text x="42" y="492" class="secondary" font-size="9.5">Keep Week 5 and use the normal authoring fields.</text>
+
+      <rect x="24" y="529" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="554" class="heading" font-size="12">Mark Full Body 2 absent</text>
+      <text x="42" y="574" class="secondary" font-size="9.5">Exclude only this workout from the Week 5 import.</text>
+
+      <rect x="24" y="620" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="649" class="button">Review range and retry</text>
+    </g>
+
+    <!-- 09 Applied current week -->
+    <g transform="translate(955 1890)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Training</text>
+      <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
+      <circle cx="290" cy="134.5" r="3.5" fill="#16679A" />
+      <text x="301" y="138" class="chip">M1 · ACTIVE</text>
+
+      <rect x="24" y="169" width="342" height="54" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+      <circle cx="46" cy="196" r="12" fill="#16679A" /><g transform="translate(39 189) scale(.66)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="68" y="192" class="heading" font-size="12">Week 5 imported</text>
+      <text x="68" y="210" class="secondary" font-size="9.5">Only the reviewed prescriptions were applied.</text>
+
+      <rect x="24" y="241" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m50 254-9 11 9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="76" y="241" width="238" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="195" y="260" class="eyebrow" text-anchor="middle">CURRENT WEEK</text>
+      <text x="195" y="279" class="heading" font-size="15" text-anchor="middle">Week 5</text>
+      <rect x="322" y="241" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m340 254 9 11-9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+
+      <text x="24" y="326" class="heading" font-size="16">Week 5 workouts</text>
+      <text x="366" y="326" class="secondary" font-size="10" text-anchor="end">0 of 2 resolved</text>
+      <rect x="24" y="342" width="342" height="120" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
+      <rect x="42" y="360" width="92" height="24" rx="12" fill="#F4FAFB" />
+      <text x="88" y="376" class="chip" text-anchor="middle">NOT STARTED</text>
+      <text x="42" y="414" class="heading" font-size="17">Full Body 1</text>
+      <text x="42" y="438" class="secondary" font-size="10">7 prescribed movements · from JUNDA – M1</text>
+      <rect x="278" y="391" width="70" height="44" rx="9" fill="#16679A" /><text x="313" y="418" class="button" font-size="10.5">Open</text>
+
+      <rect x="24" y="476" width="342" height="110" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="42" y="494" width="92" height="24" rx="12" fill="#F4FAFB" />
+      <text x="88" y="510" class="chip" text-anchor="middle">NOT STARTED</text>
+      <text x="42" y="548" class="heading" font-size="17">Full Body 2</text>
+      <text x="42" y="572" class="secondary" font-size="10">6 prescribed movements · from JUNDA – M1</text>
+      <rect x="278" y="525" width="70" height="44" rx="9" fill="#FFFFFF" stroke="#16679A" /><text x="313" y="552" class="button-secondary" font-size="10.5">Open</text>
+
+      <text x="24" y="626" class="secondary" font-size="10">Full Body 3 was absent and has no Week 5 row.</text>
+      <text x="24" y="649" fill="#16679A" font-size="10.5" font-weight="700">View import details</text>
+      <use href="#phone-footer" />
+    </g>
+
+    <!-- Desktop review -->
+    <line x1="52" y1="2724" x2="1328" y2="2724" stroke="#C9E2E5" />
+    <text x="690" y="2767" class="board-label" text-anchor="middle">10 · DESKTOP REVIEW · SAME TWO-STEP CONTRACT, MORE COMPARISON SPACE</text>
+    <g transform="translate(52 2792)" filter="url(#panel-shadow)">
+      <rect width="1276" height="790" rx="18" fill="#F4FAFB" stroke="#C9E2E5" />
+      <rect width="1276" height="64" rx="18" fill="#FFFFFF" />
+      <rect y="46" width="1276" height="18" fill="#FFFFFF" />
+      <path d="M34 22 24 32l10 10M25 32h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="58" y="39" class="heading" font-size="18">gpipi</text>
+      <line y1="63.5" x2="1276" y2="63.5" stroke="#C9E2E5" />
+
+      <g transform="translate(30 92)">
+        <rect width="254" height="654" rx="14" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="22" y="35" class="eyebrow">IMPORT SCOPE</text>
+        <text x="22" y="68" class="heading" font-size="23">Week 5</text>
+        <text x="22" y="91" class="secondary" font-size="10.5">JUNDA – M1</text>
+        <rect x="22" y="112" width="210" height="50" rx="9" fill="#DFF4F4" />
+        <circle cx="43" cy="137" r="10" fill="#16679A" /><g transform="translate(37 131) scale(.56)" color="#FFFFFF"><use href="#check-icon" /></g>
+        <text x="61" y="133" class="body" font-size="11" font-weight="700">Step 1 · Week chosen</text>
+        <text x="61" y="150" class="secondary" font-size="9">Week 5 only</text>
+        <rect x="22" y="174" width="210" height="50" rx="9" fill="#DFF4F4" />
+        <circle cx="43" cy="199" r="10" fill="#16679A" /><g transform="translate(37 193) scale(.56)" color="#FFFFFF"><use href="#check-icon" /></g>
+        <text x="61" y="195" class="body" font-size="11" font-weight="700">Step 2 · Scope confirmed</text>
+        <text x="61" y="212" class="secondary" font-size="9">2 ranges · 3 excluded</text>
+
+        <text x="22" y="263" class="eyebrow">WORKOUTS</text>
+        <rect x="14" y="278" width="226" height="62" rx="9" fill="#DFF4F4" stroke="#3FC1C0" />
+        <text x="30" y="303" class="heading" font-size="12">Full Body 1</text><text x="224" y="303" class="chip" text-anchor="end">CHANGED</text>
+        <text x="30" y="324" class="secondary" font-size="9.5">7 movements · 1 conflict</text>
+        <rect x="14" y="348" width="226" height="62" rx="9" fill="#FFFFFF" />
+        <text x="30" y="373" class="body" font-size="12" font-weight="650">Full Body 2</text><text x="224" y="373" class="chip" text-anchor="end">NEW</text>
+        <text x="30" y="394" class="secondary" font-size="9.5">6 movements · 6 decisions</text>
+        <rect x="14" y="418" width="226" height="62" rx="9" fill="#FFFFFF" />
+        <text x="30" y="443" class="body" font-size="12" font-weight="650">Full Body 3</text><text x="224" y="443" class="chip" text-anchor="end">ABSENT</text>
+        <text x="30" y="464" class="secondary" font-size="9.5">No Week 5 row will be created</text>
+
+        <line x1="22" y1="508" x2="232" y2="508" stroke="#E2EEF0" />
+        <text x="22" y="537" class="body" font-size="10.5" font-weight="700">Outside this import</text>
+        <text x="22" y="558" class="secondary" font-size="9.5">Weeks 1–4 and 6–8</text>
+        <text x="22" y="576" class="secondary" font-size="9.5">No extraction · no comparison · no rows</text>
+        <rect x="22" y="601" width="210" height="38" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="127" y="625" class="secondary" font-size="10" font-weight="700" text-anchor="middle">Cancel import</text>
+      </g>
+
+      <g transform="translate(314 91)">
+        <text x="0" y="34" class="eyebrow">HUMAN REVIEW · FULL BODY 1</text>
+        <text x="0" y="69" class="heading" font-size="27">Review Week 5 prescriptions</text>
+        <text x="0" y="93" class="secondary" font-size="11.5">Values remain verbatim. Every exercise identity and execution type must be confirmed before Apply.</text>
+        <rect x="710" y="17" width="220" height="44" rx="9" fill="#A9C1C5" />
+        <text x="820" y="44" class="button">Apply Week 5</text>
+
+        <rect x="0" y="119" width="930" height="63" rx="10" fill="#FFF7E6" stroke="#D6A54A" />
+        <g transform="translate(20 138) scale(.78)" color="#9A6700"><use href="#warning-icon" /></g>
+        <text x="55" y="143" fill="#7A5200" font-size="11.5" font-weight="700">1 conflict and 2 unconfirmed execution types remain</text>
+        <text x="55" y="163" fill="#7A5200" font-size="9.5">Apply stays unavailable until every visible decision is resolved.</text>
+
+        <rect x="0" y="198" width="930" height="338" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+        <rect x="18" y="217" width="112" height="25" rx="12.5" fill="#1D4E89" />
+        <text x="74" y="234" fill="#FFFFFF" font-size="9.5" font-weight="750" letter-spacing=".8" text-anchor="middle">STRAIGHT SET</text>
+        <line x1="140" y1="229.5" x2="912" y2="229.5" stroke="#3FC1C0" stroke-width="2" />
+        <text x="22" y="273" class="eyebrow">MOVEMENT / SOURCE</text><text x="326" y="273" class="eyebrow">EXERCISE IDENTITY</text><text x="573" y="273" class="eyebrow">EXECUTION TYPE</text><text x="754" y="273" class="eyebrow">PRESCRIPTION</text>
+        <line x1="18" y1="286" x2="912" y2="286" stroke="#E2EEF0" />
+
+        <text x="22" y="317" class="body" font-size="12.5" font-weight="700">DB romanian deadlift</text>
+        <text x="22" y="337" class="secondary" font-size="9.5">Movement F75 · Load J75</text>
+        <rect x="326" y="300" width="221" height="43" rx="8" fill="#DFF4F4" stroke="#3FC1C0" />
+        <circle cx="344" cy="321" r="8" fill="#16679A" /><g transform="translate(340 317) scale(.38)" color="#FFFFFF"><use href="#check-icon" /></g>
+        <text x="360" y="325" class="body" font-size="10.5" font-weight="700">DB romanian deadlift</text>
+        <rect x="573" y="300" width="142" height="43" rx="8" fill="#DFF4F4" stroke="#16679A" />
+        <text x="644" y="325" class="heading" font-size="10.5" text-anchor="middle">REPS / SIDE</text>
+        <text x="754" y="316" class="body" font-size="10.5">3 sets · 8 each</text><text x="754" y="336" class="secondary" font-size="9.5">6–7 kg each · F75</text>
+
+        <line x1="18" y1="360" x2="912" y2="360" stroke="#E2EEF0" />
+        <text x="22" y="392" class="body" font-size="12.5" font-weight="700">Incline push up</text>
+        <text x="22" y="412" class="secondary" font-size="9.5">Movement F76 · Load J76</text>
+        <rect x="326" y="375" width="221" height="43" rx="8" fill="#FFFFFF" stroke="#C9E2E5" />
+        <text x="342" y="401" class="body" font-size="10.5">Incline push up</text>
+        <rect x="573" y="375" width="142" height="43" rx="8" fill="#FFFFFF" stroke="#D6A54A" />
+        <text x="644" y="401" fill="#7A5200" font-size="10.5" font-weight="700" text-anchor="middle">Choose type</text>
+        <text x="754" y="392" class="body" font-size="10.5">3 sets · 6 each</text><text x="754" y="412" class="secondary" font-size="9.5">body weight · J76</text>
+
+        <line x1="18" y1="435" x2="912" y2="435" stroke="#E2EEF0" />
+        <text x="22" y="467" class="body" font-size="12.5" font-weight="700">Full plank</text>
+        <text x="22" y="487" class="secondary" font-size="9.5">Movement F82 · Reps I82</text>
+        <rect x="326" y="450" width="221" height="43" rx="8" fill="#FFFFFF" stroke="#C9E2E5" /><text x="342" y="476" class="body" font-size="10.5">Full plank</text>
+        <rect x="573" y="450" width="142" height="43" rx="8" fill="#DFF4F4" stroke="#16679A" /><text x="644" y="476" class="heading" font-size="10.5" text-anchor="middle">DURATION</text>
+        <text x="754" y="467" class="body" font-size="10.5">3 sets · 45 sec</text><text x="754" y="487" class="secondary" font-size="9.5">body weight · I82</text>
+
+        <rect x="0" y="554" width="930" height="86" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
+        <text x="20" y="580" class="heading" font-size="12">Source visibility without execution leakage</text>
+        <text x="20" y="601" class="secondary" font-size="9.5">Addresses let the member verify placement. Execution cells are not shown because their values were never extracted.</text>
+        <text x="20" y="620" class="secondary" font-size="9.5">Changing an extracted value turns it into an explicit member edit; Apply records that reviewed result atomically.</text>
+      </g>
+    </g>
+
+    <text x="690" y="3624" class="secondary" font-size="12" text-anchor="middle">Mobile keeps scope and review sequential. Desktop expands comparison density without widening the import beyond the one selected week.</text>
+  </g>
+</svg>

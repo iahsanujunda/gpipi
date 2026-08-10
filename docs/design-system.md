@@ -15,6 +15,7 @@ Related references:
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
 - [Training page, mobile workout baseline](mockups/training-mobile-default.svg)
 - [Training Iteration 1 interaction and authoring states](mockups/training-iteration1-views.svg)
+- [Training Iteration 2 one-week Google Sheet import states](mockups/training-iteration2-import-views.svg)
 - [Source color palette](https://coolors.co/palette/3fc1c0-20bac5-00b2ca-04a6c2-0899ba-0f80aa-16679a-1a5b92-1c558e-1d4e89)
 
 ## Product principles

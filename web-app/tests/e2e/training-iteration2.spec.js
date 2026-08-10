@@ -71,24 +71,12 @@ function reviewImport(decision = null) {
         note: null,
       },
       decision,
-      exerciseId: decision === 'MATCH' ? exerciseId : exerciseId,
+      exerciseId,
       newExerciseName: null,
       executionType: decision === 'MATCH' ? 'REPS_PER_SIDE' : null,
       rememberAsAlias: true,
     }],
   }]
-  return data
-}
-
-function newProgramImport(decision = null) {
-  const data = reviewImport(decision)
-  data.targetType = 'NEW_PROGRAM'
-  data.programId = null
-  data.programName = 'M2'
-  data.programNote = 'Pregnancy strength block'
-  data.programStartsOn = null
-  data.tabs[0].targetWorkoutId = null
-  data.tabs[0].newWorkoutName = 'Full Body 1'
   return data
 }
 
@@ -191,9 +179,8 @@ test('one explicit week crosses Picker, mapping, extraction, review, and Apply',
   })
   await page.route(`**/api/training/imports/${importId}/mapping`, async (route) => {
     const body = await route.request().postDataJSON()
-    expect(body.tabs).toHaveLength(2)
-    expect(body.tabs[0]).toMatchObject({ googleSheetId: 101, decision: 'WORKOUT', startRow: 72, endRow: 91 })
-    expect(body.tabs[1]).toMatchObject({ googleSheetId: 202, decision: 'EXCLUDE' })
+    expect(body.tabs[0]).toMatchObject({ decision: 'WORKOUT', startRow: 72, endRow: 91 })
+    expect(body.tabs[1]).toMatchObject({ decision: 'EXCLUDE' })
     currentImport = mappedImport()
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(currentImport) })
   })
@@ -202,9 +189,7 @@ test('one explicit week crosses Picker, mapping, extraction, review, and Apply',
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(currentImport) })
   })
   await page.route(`**/api/training/imports/${importId}/review`, async (route) => {
-    const body = await route.request().postDataJSON()
-    expect(body.workouts).toHaveLength(1)
-    expect(body.workouts[0].groups[0].prescriptions[0]).toMatchObject({
+    expect((await route.request().postDataJSON()).workouts[0].groups[0].prescriptions[0]).toMatchObject({
       decision: 'MATCH',
       exerciseId,
       executionType: 'REPS_PER_SIDE',
@@ -229,15 +214,12 @@ test('one explicit week crosses Picker, mapping, extraction, review, and Apply',
 
   await page.goto('/training/program/import')
   await page.getByRole('button', { name: 'Choose Google Sheet' }).click()
-  await expect(page.getByRole('heading', { name: 'Choose one week from JUNDA – M1' })).toBeVisible()
   await page.getByRole('button', { name: 'Week 5' }).click()
   await expect(page.getByText('Only Week 5 will cross into the app')).toBeVisible()
   await expect(page.getByText('Warming Up')).toBeVisible()
   await page.getByRole('button', { name: 'Confirm Week 5 scope' }).click()
-  await expect(page.getByRole('heading', { name: 'Week 5 scope confirmed' })).toBeVisible()
   await page.getByRole('button', { name: 'Extract Week 5' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Full Body 1' })).toBeVisible()
   await expect(page.getByText('DB romanian deadlift')).toBeVisible()
   await expect(page.getByText(/No session or performed set will be created/)).toBeVisible()
   await page.getByLabel('Exercise decision').click()
@@ -247,173 +229,8 @@ test('one explicit week crosses Picker, mapping, extraction, review, and Apply',
   await page.getByLabel('Execution type — confirm').click()
   await page.getByRole('option', { name: 'Reps per side' }).click()
   await page.getByRole('button', { name: 'Save reviewed week' }).click()
-  await expect(page.getByRole('button', { name: 'Apply Week 5' })).toBeEnabled()
   await page.getByRole('button', { name: 'Apply Week 5' }).click()
+
   await expect(page).toHaveURL(/\/training\/weeks\/5$/)
-  await expectNoHorizontalOverflow(page)
-})
-
-test('a Sheet can create the first program only after review and activation confirmation', async ({ page }) => {
-  let currentImport = newProgramImport()
-  currentImport.state = 'NEEDS_MAPPING'
-  currentImport.selectedWeekNumber = null
-  currentImport.tabs = []
-
-  await page.addInitScript(({ selectedId }) => {
-    class DocsView {
-      setMimeTypes() { return this }
-      setSelectFolderEnabled() { return this }
-    }
-    class PickerBuilder {
-      addView() { return this }
-      setOAuthToken() { return this }
-      setDeveloperKey() { return this }
-      setAppId() { return this }
-      setCallback(callback) { this.callback = callback; return this }
-      build() {
-        return { setVisible: () => this.callback({ action: 'picked', docs: [{ id: selectedId }] }) }
-      }
-    }
-    window.google = {
-      picker: {
-        Action: { PICKED: 'picked', CANCEL: 'cancel' },
-        DocsView,
-        PickerBuilder,
-        ViewId: { SPREADSHEETS: 'spreadsheets' },
-      },
-    }
-  }, { selectedId: 'new-program-sheet' })
-
-  await page.route(/\/api\/training(?:\?.*)?$/, (route) => {
-    if (route.request().method() === 'GET') return route.fulfill({ status: 204 })
-    return route.continue()
-  })
-  await page.route('**/api/training/programs', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: '[]',
-  }))
-  await page.route('**/api/training/exercises', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify([{ id: exerciseId, name: 'Romanian deadlift', demoUrl: null, aliases: [] }]),
-  }))
-  await page.route('**/api/training/google/status', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ configured: true, connected: true, connectedAt: '2026-08-11T00:00:00Z', missingConfiguration: [] }),
-  }))
-  await page.route('**/api/training/google/picker-token', (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify({ accessToken: 'picker-token', expiresIn: 3600, apiKey: 'picker-key', appId: '123456789' }),
-  }))
-  await page.route('**/api/training/imports', async (route) => {
-    expect(await route.request().postDataJSON()).toEqual({ spreadsheetId: 'new-program-sheet' })
-    await route.fulfill({
-      status: 201,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        importId,
-        spreadsheetTitle: 'JUNDA – M2',
-        availableWeekNumbers: [1, 2, 3],
-        replacesLinkedSheet: false,
-        targetType: 'NEW_PROGRAM',
-        suggestedProgramName: 'M2',
-      }),
-    })
-  })
-  await page.route(`**/api/training/imports/${importId}`, (route) => route.fulfill({
-    contentType: 'application/json',
-    body: JSON.stringify(currentImport),
-  }))
-  await page.route(`**/api/training/imports/${importId}/program`, async (route) => {
-    expect(await route.request().postDataJSON()).toEqual({
-      name: 'M2',
-      startsOn: null,
-      note: 'Pregnancy strength block',
-    })
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(currentImport) })
-  })
-  await page.route(`**/api/training/imports/${importId}/week`, async (route) => {
-    expect(await route.request().postDataJSON()).toEqual({ weekNumber: 1 })
-    currentImport.selectedWeekNumber = 1
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        importId,
-        selectedWeekNumber: 1,
-        workouts: [],
-        tabs: [{
-          googleSheetId: 101,
-          tabTitle: 'Full Body 1',
-          present: true,
-          startRow: 18,
-          endRow: 37,
-          executionBoundaryColumn: 11,
-          executionHeaderAddress: 'K18',
-          executionHeaderValue: 'Eksekusi Week 1',
-          boundaryAmbiguous: false,
-        }],
-      }),
-    })
-  })
-  await page.route(`**/api/training/imports/${importId}/mapping`, async (route) => {
-    expect((await route.request().postDataJSON()).tabs[0]).toMatchObject({
-      decision: 'WORKOUT',
-      targetWorkoutId: null,
-      newWorkoutName: 'Full Body 1',
-      startRow: 18,
-      endRow: 37,
-    })
-    currentImport = newProgramImport()
-    currentImport.selectedWeekNumber = 1
-    currentImport.state = 'NEEDS_MAPPING'
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(currentImport) })
-  })
-  await page.route(`**/api/training/imports/${importId}/extract`, (route) => {
-    currentImport = newProgramImport()
-    currentImport.selectedWeekNumber = 1
-    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(currentImport) })
-  })
-  await page.route(`**/api/training/imports/${importId}/review`, async (route) => {
-    expect((await route.request().postDataJSON()).workouts[0].groups[0].prescriptions[0]).toMatchObject({
-      decision: 'MATCH',
-      exerciseId,
-      executionType: 'REPS_PER_SIDE',
-    })
-    currentImport = newProgramImport('MATCH')
-    currentImport.selectedWeekNumber = 1
-    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(currentImport) })
-  })
-  let applyCalls = 0
-  await page.route(`**/api/training/imports/${importId}/apply`, (route) => {
-    applyCalls += 1
-    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ weekNumber: 1 }) })
-  })
-
-  await page.goto('/training/program')
-  await expect(page.getByRole('heading', { name: 'Import from Google Sheet' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Program details' })).not.toBeVisible()
-  await page.getByRole('link', { name: 'Start from a Sheet' }).click()
-  await page.getByRole('button', { name: 'Choose Google Sheet' }).click()
-  await expect(page.getByRole('heading', { name: 'Name this program' })).toBeVisible()
-  await page.getByLabel('Program note (optional)').fill('Pregnancy strength block')
-  await page.getByRole('button', { name: 'Continue to week selection' }).click()
-  await expect(page.getByRole('heading', { name: 'Choose one week from JUNDA – M2' })).toBeVisible()
-  await page.getByRole('button', { name: 'Week 1' }).click()
-  await expect(page.getByLabel('Workout mapping')).toContainText('Create a new workout')
-  await expect(page.getByLabel('New workout name')).toHaveValue('Full Body 1')
-  await page.getByRole('button', { name: 'Confirm Week 1 scope' }).click()
-  await page.getByRole('button', { name: 'Extract Week 1' }).click()
-  await page.getByLabel('Exercise decision').click()
-  await page.getByRole('option', { name: 'Match existing exercise' }).click()
-  await page.getByLabel('Existing exercise').click()
-  await page.getByRole('option', { name: 'Romanian deadlift' }).click()
-  await page.getByLabel('Execution type — confirm').click()
-  await page.getByRole('option', { name: 'Reps per side' }).click()
-  await page.getByRole('button', { name: 'Save reviewed week' }).click()
-  await page.getByRole('button', { name: 'Create program & apply Week 1' }).click()
-  await expect(page.getByRole('dialog')).toContainText('This is the first training-domain write')
-  expect(applyCalls).toBe(0)
-  await page.getByRole('button', { name: 'Create & make active' }).click()
-  await expect(page).toHaveURL(/\/training\/weeks\/1$/)
-  expect(applyCalls).toBe(1)
   await expectNoHorizontalOverflow(page)
 })

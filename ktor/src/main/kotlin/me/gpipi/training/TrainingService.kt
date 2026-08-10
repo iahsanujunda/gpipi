@@ -25,6 +25,13 @@ sealed interface ProgramCreateResult {
     data class Conflict(val message: String) : ProgramCreateResult
 }
 
+sealed interface WorkoutCreateResult {
+    data class Created(val id: UUID) : WorkoutCreateResult
+    data object NotFound : WorkoutCreateResult
+    data class Invalid(val message: String) : WorkoutCreateResult
+    data class Conflict(val message: String) : WorkoutCreateResult
+}
+
 class TrainingService(
     private val db: Database,
     private val repository: TrainingRepository,
@@ -53,7 +60,21 @@ class TrainingService(
         val program = repository.activeProgram(ownerUserId)
             ?: return@dbQuery TrainingReadResult.NoActiveProgram
         val weekNumbers = repository.weekNumbers(program.id)
-        if (weekNumbers.isEmpty()) return@dbQuery TrainingReadResult.NotFound
+        if (weekNumbers.isEmpty()) {
+            val selected = selectedWeekNumber ?: 1
+            if (selected != 1) {
+                return@dbQuery TrainingReadResult.Invalid("Week $selected is not authored in this program.")
+            }
+            return@dbQuery TrainingReadResult.Found(
+                WeekOverviewRecord(
+                    program = program,
+                    currentWeekNumber = 1,
+                    selectedWeekNumber = 1,
+                    availableWeekNumbers = listOf(1),
+                    workouts = emptyList(),
+                ),
+            )
+        }
         val current = repository.currentWeekNumber(program.id)
         val selected = selectedWeekNumber ?: current ?: weekNumbers.last()
         if (selected !in weekNumbers) {
@@ -225,6 +246,52 @@ class TrainingService(
         }
     }
 
+    suspend fun createWorkout(
+        ownerUserId: String,
+        programId: UUID,
+        weekNumber: Int,
+        input: WorkoutCreateInput,
+    ): WorkoutCreateResult {
+        if (weekNumber < 1) return WorkoutCreateResult.Invalid("'weekNumber' must be positive.")
+        validateWorkout(input)?.let { return WorkoutCreateResult.Invalid(it) }
+        return try {
+            dbQuery(db) {
+                val activeProgram = repository.activeProgram(ownerUserId)
+                    ?: return@dbQuery WorkoutCreateResult.NotFound
+                if (activeProgram.id != programId) return@dbQuery WorkoutCreateResult.NotFound
+
+                val authoredWeeks = repository.weekNumbers(programId)
+                val currentWeek = repository.currentWeekNumber(programId)
+                    ?: if (authoredWeeks.isEmpty()) 1 else null
+                if (currentWeek == null) {
+                    return@dbQuery WorkoutCreateResult.Invalid(
+                        "This program has no unresolved current week.",
+                    )
+                }
+                if (weekNumber != currentWeek) {
+                    return@dbQuery WorkoutCreateResult.Invalid(
+                        "Workouts can only be added to current Week $currentWeek.",
+                    )
+                }
+
+                repository.createWorkout(
+                    ownerUserId,
+                    programId,
+                    weekNumber,
+                    input.normalized(),
+                )?.let(WorkoutCreateResult::Created) ?: WorkoutCreateResult.NotFound
+            }
+        } catch (ex: IllegalArgumentException) {
+            WorkoutCreateResult.Invalid(ex.message ?: "A selected exercise is invalid.")
+        } catch (ex: ExposedSQLException) {
+            if (ex.sqlState == "23505") {
+                WorkoutCreateResult.Conflict("The workout contains duplicate positions or exercise names.")
+            } else {
+                throw ex
+            }
+        }
+    }
+
     suspend fun duplicateWeek(
         ownerUserId: String,
         workoutId: UUID,
@@ -254,7 +321,6 @@ class TrainingService(
     private fun validateProgram(input: ProgramAuthoringInput): String? {
         if (input.name.isBlank()) return "Program name must not be blank."
         if (input.name.length > 160) return "Program name must be 160 characters or fewer."
-        if (input.workouts.isEmpty()) return "Add at least one workout."
         input.workouts.forEach { workout ->
             if (workout.name.isBlank()) return "Workout names must not be blank."
             if (workout.weeks.isEmpty()) return "Each workout needs at least one authored week."
@@ -279,6 +345,29 @@ class TrainingService(
                             return "Every movement needs a valid execution type."
                         }
                     }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun validateWorkout(input: WorkoutCreateInput): String? {
+        if (input.name.isBlank()) return "Workout name must not be blank."
+        if (input.name.length > 160) return "Workout name must be 160 characters or fewer."
+        if (input.groups.isEmpty()) return "Add at least one group."
+        input.groups.forEach { group ->
+            if (group.label.isBlank()) return "Group labels must not be blank."
+            if (group.kind !in setOf("STRAIGHT_SET", "SUPERSET")) {
+                return "Group kind must be STRAIGHT_SET or SUPERSET."
+            }
+            if (group.prescriptions.isEmpty()) return "Each group needs at least one movement."
+            group.prescriptions.forEach { prescription ->
+                if (prescription.exerciseName.isBlank()) return "Movement names must not be blank."
+                if ((prescription.exerciseId != null) == prescription.createExercise) {
+                    return "Choose an existing exercise or explicitly create a new one."
+                }
+                if (prescription.executionType !in setOf("REPS", "REPS_PER_SIDE", "DURATION")) {
+                    return "Every movement needs a valid execution type."
                 }
             }
         }
@@ -311,6 +400,29 @@ class TrainingService(
                             },
                         )
                     })
+                },
+            )
+        },
+    )
+
+    private fun WorkoutCreateInput.normalized() = copy(
+        name = name.trim(),
+        note = note.normalized(),
+        groups = groups.map { group ->
+            group.copy(
+                label = group.label.trim(),
+                prescriptions = group.prescriptions.map { prescription ->
+                    prescription.copy(
+                        exerciseName = prescription.exerciseName.trim(),
+                        demoUrl = prescription.demoUrl.normalized(),
+                        sets = prescription.sets.normalized(),
+                        rest = prescription.rest.normalized(),
+                        reps = prescription.reps.normalized(),
+                        load = prescription.load.normalized(),
+                        rir = prescription.rir.normalized(),
+                        tempo = prescription.tempo.normalized(),
+                        note = prescription.note.normalized(),
+                    )
                 },
             )
         },

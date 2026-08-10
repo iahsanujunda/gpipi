@@ -21,6 +21,57 @@ class TrainingServiceTest : PersistenceTest() {
     )
 
     @Test
+    fun `program details create an empty current week and workouts are added separately`() = runBlocking {
+        val program = assertIs<ProgramCreateResult.Created>(
+            service.createProgram(
+                OWNER,
+                ProgramAuthoringInput(
+                    name = "M2",
+                    note = "Pregnancy strength block",
+                    startsOn = java.time.LocalDate.parse("2026-08-11"),
+                    workouts = emptyList(),
+                ),
+            ),
+        )
+
+        val emptyWeek = found(service.overview(OWNER, null))
+        assertEquals(program.id, emptyWeek.program.id)
+        assertEquals(1, emptyWeek.currentWeekNumber)
+        assertEquals(1, emptyWeek.selectedWeekNumber)
+        assertEquals(listOf(1), emptyWeek.availableWeekNumbers)
+        assertEquals(emptyList(), emptyWeek.workouts)
+
+        assertIs<WorkoutCreateResult.Created>(
+            service.createWorkout(
+                OWNER,
+                program.id,
+                1,
+                workoutInput(),
+            ),
+        )
+
+        val authoredWeek = found(service.overview(OWNER, 1))
+        assertEquals(listOf("Full Body 1"), authoredWeek.workouts.map { it.workoutName })
+        assertEquals(1, authoredWeek.currentWeekNumber)
+    }
+
+    @Test
+    fun `manual workout creation is restricted to the active current week`() = runBlocking {
+        val program = assertIs<ProgramCreateResult.Created>(
+            service.createProgram(OWNER, ProgramAuthoringInput(name = "M2", workouts = emptyList())),
+        )
+
+        assertIs<WorkoutCreateResult.Invalid>(
+            service.createWorkout(OWNER, program.id, 2, workoutInput()),
+        )
+        assertEquals(
+            WorkoutCreateResult.NotFound,
+            service.createWorkout("U-other", program.id, 1, workoutInput()),
+        )
+        assertEquals(emptyList(), found(service.overview(OWNER, 1)).workouts)
+    }
+
+    @Test
     fun `current week advances only after every workout in the week is resolved`() = runBlocking {
         createProgram()
         val weekOne = found(service.overview(OWNER, null))
@@ -242,6 +293,26 @@ class TrainingServiceTest : PersistenceTest() {
                         ),
                     )
                 },
+            ),
+        ),
+    )
+
+    private fun workoutInput() = WorkoutCreateInput(
+        name = "Full Body 1",
+        note = "Record a side view",
+        groups = listOf(
+            GroupAuthoringInput(
+                label = "A",
+                kind = "STRAIGHT_SET",
+                prescriptions = listOf(
+                    PrescriptionAuthoringInput(
+                        exerciseName = "Goblet squat",
+                        createExercise = true,
+                        executionType = "REPS",
+                        sets = "3",
+                        reps = "10-12",
+                    ),
+                ),
             ),
         ),
     )

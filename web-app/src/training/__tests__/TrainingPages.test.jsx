@@ -99,6 +99,39 @@ describe('training iteration 1 pages', () => {
       'href',
       '/training/weeks/2/workouts/workout-a',
     )
+    expect(screen.queryByRole('button', { name: 'Add workout' })).not.toBeInTheDocument()
+  })
+
+  it('offers manual or Sheet authoring only from the current week', async () => {
+    const user = userEvent.setup()
+    mockUseTrainingOverview.mockReturnValue({
+      data: {
+        program,
+        currentWeekNumber: 1,
+        selectedWeekNumber: 1,
+        availableWeekNumbers: [1],
+        workouts: [],
+      },
+      isPending: false,
+      isError: false,
+    })
+
+    renderWithProviders(
+      <Routes><Route path="training/weeks/:weekNumber" element={<TrainingPage />} /></Routes>,
+      { route: '/training/weeks/1' },
+    )
+
+    expect(screen.getByText('No workouts yet')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Add workout' }))
+    expect(await screen.findByRole('dialog', { name: 'Add workout' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Create manually' })).toHaveAttribute(
+      'href',
+      '/training/weeks/1/workouts/new',
+    )
+    expect(screen.getByRole('link', { name: 'Import from Google Sheet' })).toHaveAttribute(
+      'href',
+      '/training/program/import',
+    )
   })
 
   it('keeps execution blank and selects the lowest missing stable set slot', async () => {

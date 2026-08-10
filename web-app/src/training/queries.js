@@ -109,6 +109,13 @@ export function useCreateTrainingProgram() {
   }))
 }
 
+export function useCreateTrainingWorkout() {
+  return useTrainingMutation(({ programId, weekNumber, workout }) => apiFetch(
+    `/api/training/programs/${programId}/weeks/${weekNumber}/workouts`,
+    { method: 'POST', body: workout },
+  ))
+}
+
 export function useDuplicateTrainingWeek() {
   return useTrainingMutation(({ workoutId, sourceWeek, targetWeek }) => apiFetch(
     `/api/training/workouts/${workoutId}/weeks/duplicate`,

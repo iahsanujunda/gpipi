@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   Box,
@@ -11,7 +11,9 @@ import {
   Typography,
 } from '@mui/material'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ChevronLeftIcon, ChevronRightIcon } from '@/app/AppIcons'
+import { AddIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '@/app/AppIcons'
+import { usePageAction } from '@/app/pageActions'
+import AnimatedBottomSheet from '@/components/AnimatedBottomSheet'
 import { useTrainingLifecycle, useTrainingOverview } from './queries'
 
 const statusLabels = {
@@ -101,6 +103,24 @@ function TrainingLoading() {
   )
 }
 
+function NoActiveProgram() {
+  const navigate = useNavigate()
+  const createProgram = useCallback(() => navigate('/training/program'), [navigate])
+  usePageAction(useMemo(() => ({
+    id: 'create-training-program',
+    label: 'Create Program',
+    icon: AddIcon,
+    onSelect: createProgram,
+  }), [createProgram]))
+
+  return (
+    <Stack spacing={2.5} sx={{ maxWidth: 620 }}>
+      <Typography component="h1" variant="h4">Training</Typography>
+      <Typography component="h2" variant="h6">No Active Program</Typography>
+    </Stack>
+  )
+}
+
 export default function TrainingPage() {
   const { weekNumber: routeWeek } = useParams()
   const requestedWeek = routeWeek ? Number.parseInt(routeWeek, 10) : undefined
@@ -109,6 +129,7 @@ export default function TrainingPage() {
   const skip = useTrainingLifecycle('skip')
   const restore = useTrainingLifecycle('restore')
   const [notice, setNotice] = useState(null)
+  const [addWorkoutOpen, setAddWorkoutOpen] = useState(false)
 
   useEffect(() => {
     if (!routeWeek && overview.data?.selectedWeekNumber) {
@@ -121,22 +142,7 @@ export default function TrainingPage() {
     return <Alert severity="error">{overview.error.message}</Alert>
   }
   if (!overview.data) {
-    return (
-      <Stack spacing={2.5} sx={{ maxWidth: 620 }}>
-        <Typography component="h1" variant="h4">Training</Typography>
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <Stack spacing={1.5}>
-            <Typography component="h2" variant="h6">No active program</Typography>
-            <Typography color="text.secondary">
-              Author the prescribed workouts and weeks before logging execution.
-            </Typography>
-            <Button component={Link} to="/training/program" variant="contained" sx={{ alignSelf: 'flex-start' }}>
-              Create training program
-            </Button>
-          </Stack>
-        </Paper>
-      </Stack>
-    )
+    return <NoActiveProgram />
   }
 
   const data = overview.data
@@ -193,6 +199,17 @@ export default function TrainingPage() {
         </Stack>
       </Paper>
 
+      {isCurrent && (
+        <Button
+          onClick={() => setAddWorkoutOpen(true)}
+          startIcon={<AddIcon />}
+          variant="contained"
+          sx={{ width: { xs: '100%', sm: 'auto' }, alignSelf: 'flex-start' }}
+        >
+          Add workout
+        </Button>
+      )}
+
       {!isCurrent && data.currentWeekNumber && (
         <Button
           onClick={() => navigate(`/training/weeks/${data.currentWeekNumber}`)}
@@ -223,6 +240,9 @@ export default function TrainingPage() {
             />
           ))}
         </Box>
+        {data.workouts.length === 0 && (
+          <Typography color="text.secondary">No workouts yet</Typography>
+        )}
       </Box>
 
       {!data.currentWeekNumber && (
@@ -232,6 +252,36 @@ export default function TrainingPage() {
       <Button component={Link} to="/training/program" variant="text" sx={{ alignSelf: 'flex-start' }}>
         Program settings
       </Button>
+
+      <AnimatedBottomSheet
+        aria-labelledby="add-workout-title"
+        open={addWorkoutOpen}
+        onClose={() => setAddWorkoutOpen(false)}
+        slotProps={{ paper: { 'aria-labelledby': 'add-workout-title' } }}
+      >
+        <Stack spacing={2.5} sx={{ px: { xs: 2.5, sm: 4 }, pt: 4, pb: 'calc(28px + env(safe-area-inset-bottom))', maxWidth: 600, width: '100%', mx: 'auto' }}>
+          <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <Stack spacing={0.5}>
+              <Typography id="add-workout-title" component="h2" variant="h5">Add workout</Typography>
+              <Typography color="text.secondary" variant="body2">Current · Week {data.selectedWeekNumber}</Typography>
+            </Stack>
+            <IconButton aria-label="Close add workout" onClick={() => setAddWorkoutOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+          <Button
+            component={Link}
+            to={`/training/weeks/${data.selectedWeekNumber}/workouts/new`}
+            variant="contained"
+            size="large"
+          >
+            Create manually
+          </Button>
+          <Button component={Link} to="/training/program/import" variant="outlined" size="large">
+            Import from Google Sheet
+          </Button>
+        </Stack>
+      </AnimatedBottomSheet>
     </Stack>
   )
 }

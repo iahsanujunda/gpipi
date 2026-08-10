@@ -65,11 +65,13 @@ test('navigation opens the derived current week and preserves week history retur
   await expect(page.getByRole('heading', { name: 'Training', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Week 3', exact: true })).toBeVisible()
   await expect(page.getByText('0 of 2 resolved')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add workout' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
   await page.getByRole('button', { name: 'Previous authored week' }).click()
   await expect(page).toHaveURL(/\/training\/weeks\/2$/)
   await expect(page.getByText('2 of 2 resolved')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add workout' })).toHaveCount(0)
 
   const pastWorkout = page.getByRole('article').filter({ hasText: 'Full Body 1' })
   await pastWorkout.getByRole('link', { name: 'Review' }).click()
@@ -126,16 +128,90 @@ test('blank execution, stable slot repair, finish, and completed edits work in t
   await expectNoHorizontalOverflow(page)
 })
 
-test('manual authoring copy-forwards a reviewed week without assuming a block length', async ({ page }) => {
-  await page.goto('/training/program')
+test('manual flow creates program details, then adds a workout from empty current Week 1', async ({ page }) => {
+  const programId = '60000000-0000-0000-0000-000000000099'
+  const workoutId = '61000000-0000-0000-0000-000000000099'
+  let activeProgram = null
+  let workouts = []
 
-  await expect(page.getByRole('heading', { name: 'Programs', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Start another program' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Import new program from Sheet' })).toBeVisible()
-  await expect(page.getByLabel('Program name')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Create manually' }).click()
-  await expect(page.getByRole('heading', { name: 'Create manually' })).toBeVisible()
+  await page.route(/\/api\/training(?:\?week=\d+)?$/, (route) => {
+    if (!activeProgram) return route.fulfill({ status: 204 })
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        program: activeProgram,
+        currentWeekNumber: 1,
+        selectedWeekNumber: 1,
+        availableWeekNumbers: [1],
+        workouts,
+      }),
+    })
+  })
+  await page.route('**/api/training/programs', async (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify(activeProgram ? [activeProgram] : []),
+      })
+    }
+    expect(await route.request().postDataJSON()).toEqual({
+      name: 'M2',
+      startsOn: null,
+      note: 'Pregnancy strength block',
+    })
+    activeProgram = { id: programId, name: 'M2', startsOn: null, note: 'Pregnancy strength block', active: true }
+    return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: programId }) })
+  })
+  await page.route('**/api/training/exercises', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify([]),
+  }))
+  await page.route(`**/api/training/programs/${programId}/weeks/1/workouts`, async (route) => {
+    expect(await route.request().postDataJSON()).toMatchObject({
+      name: 'Full Body 1',
+      groups: [{
+        label: 'A',
+        kind: 'STRAIGHT_SET',
+        prescriptions: [{
+          exerciseName: 'Front squat',
+          createExercise: true,
+          executionType: 'REPS',
+          sets: '3',
+          reps: '8–10',
+        }],
+      }],
+    })
+    workouts = [{
+      weekId: '62000000-0000-0000-0000-000000000099',
+      workoutId,
+      workoutName: 'Full Body 1',
+      status: 'NOT_STARTED',
+      sessionId: null,
+      performedOn: null,
+      setCount: 0,
+      updatedAt: null,
+    }]
+    return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: workoutId }) })
+  })
+
+  await page.goto('/training')
+  await expect(page.getByRole('heading', { name: 'No Active Program' })).toBeVisible()
+  await expect(page.getByText(/author the prescribed/i)).toHaveCount(0)
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  await page.getByRole('button', { name: 'Create Program' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Create Program' })).toBeVisible()
+  await expect(page.getByText('Import from Google Sheet')).toHaveCount(0)
   await page.getByLabel('Program name').fill('M2')
+  await page.getByLabel('Program note (optional)').fill('Pregnancy strength block')
+  await page.getByRole('button', { name: 'Create Program' }).click()
+
+  await expect(page).toHaveURL(/\/training\/weeks\/1$/)
+  await expect(page.getByText('No workouts yet')).toBeVisible()
+  await page.getByRole('button', { name: 'Add workout' }).click()
+  await page.getByRole('link', { name: 'Create manually' }).click()
+
+  await page.getByLabel('Workout name').fill('Full Body 1')
   await page.getByLabel('Exercise — select or create').click()
   await page.getByRole('option', { name: 'Create a new exercise…' }).click()
   await page.getByLabel('New exercise name').fill('Front squat')
@@ -143,16 +219,9 @@ test('manual authoring copy-forwards a reviewed week without assuming a block le
   await page.getByRole('option', { name: 'Reps', exact: true }).click()
   await page.getByLabel('Sets').fill('3')
   await page.getByLabel('Reps / time').fill('8–10')
+  await page.getByRole('button', { name: 'Save Workout' }).first().click()
 
-  await page.getByRole('button', { name: 'Duplicate this week' }).click()
-
-  const weekInputs = page.getByLabel('Week')
-  await expect(weekInputs).toHaveCount(2)
-  await expect(weekInputs.nth(0)).toHaveValue('1')
-  await expect(weekInputs.nth(1)).toHaveValue('2')
-  await expect(page.getByLabel('New exercise name')).toHaveCount(2)
-  await expect(page.getByLabel('New exercise name').nth(1)).toHaveValue('Front squat')
-  await expect(page.getByLabel('Execution type — confirm').nth(1)).toHaveText(/Reps/)
-  await expect(page.getByText(/expected week/i)).toHaveCount(0)
+  await expect(page).toHaveURL(/\/training\/weeks\/1$/)
+  await expect(page.getByRole('heading', { name: 'Full Body 1' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })

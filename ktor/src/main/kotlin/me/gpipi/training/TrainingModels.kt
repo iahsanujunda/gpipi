@@ -145,7 +145,13 @@ data class ProgramAuthoringInput(
     val name: String,
     val note: String? = null,
     val startsOn: LocalDate? = null,
-    val workouts: List<WorkoutAuthoringInput>,
+    val workouts: List<WorkoutAuthoringInput> = emptyList(),
+)
+
+data class WorkoutCreateInput(
+    val name: String,
+    val note: String? = null,
+    val groups: List<GroupAuthoringInput>,
 )
 
 sealed interface TrainingMutationResult {

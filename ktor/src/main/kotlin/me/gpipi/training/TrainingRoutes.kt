@@ -158,21 +158,17 @@ data class GroupAuthoringRequest(
 )
 
 @Serializable
-data class WeekAuthoringRequest(val weekNumber: Int, val groups: List<GroupAuthoringRequest>)
-
-@Serializable
-data class WorkoutAuthoringRequest(
-    val name: String,
-    val note: String? = null,
-    val weeks: List<WeekAuthoringRequest>,
-)
-
-@Serializable
 data class CreateProgramRequest(
     val name: String,
     val note: String? = null,
     val startsOn: String? = null,
-    val workouts: List<WorkoutAuthoringRequest>,
+)
+
+@Serializable
+data class CreateWorkoutRequest(
+    val name: String,
+    val note: String? = null,
+    val groups: List<GroupAuthoringRequest>,
 )
 
 @Serializable
@@ -316,6 +312,29 @@ fun Route.trainingApiRoutes(service: TrainingService) {
             }
         }
 
+        post("/programs/{programId}/weeks/{weekNumber}/workouts") {
+            val actorId = call.actorId() ?: return@post
+            val programId = call.uuid("programId") ?: return@post
+            val weekNumber = call.positiveInt("weekNumber") ?: return@post
+            val request = call.receive<CreateWorkoutRequest>()
+            val input = try {
+                request.toInput()
+            } catch (_: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, TrainingApiError("'exerciseId' must be a UUID."))
+                return@post
+            }
+            when (val result = service.createWorkout(actorId, programId, weekNumber, input)) {
+                is WorkoutCreateResult.Created ->
+                    call.respond(HttpStatusCode.Created, CreatedResponse(result.id.toString()))
+                WorkoutCreateResult.NotFound ->
+                    call.respond(HttpStatusCode.NotFound, TrainingApiError("Training record not found."))
+                is WorkoutCreateResult.Invalid ->
+                    call.respond(HttpStatusCode.BadRequest, TrainingApiError(result.message))
+                is WorkoutCreateResult.Conflict ->
+                    call.respond(HttpStatusCode.Conflict, TrainingApiError(result.message))
+            }
+        }
+
         post("/workouts/{workoutId}/weeks/duplicate") {
             val actorId = call.actorId() ?: return@post
             val workoutId = call.uuid("workoutId") ?: return@post
@@ -453,37 +472,32 @@ private fun CreateProgramRequest.toInput(startsOn: LocalDate?) = ProgramAuthorin
     name = name,
     note = note,
     startsOn = startsOn,
-    workouts = workouts.map { workout ->
-        WorkoutAuthoringInput(
-            name = workout.name,
-            note = workout.note,
-            weeks = workout.weeks.map { week ->
-                WeekAuthoringInput(
-                    weekNumber = week.weekNumber,
-                    groups = week.groups.map { group ->
-                        GroupAuthoringInput(
-                            label = group.label,
-                            kind = group.kind,
-                            prescriptions = group.prescriptions.map { prescription ->
-                                PrescriptionAuthoringInput(
-                                    exerciseName = prescription.exerciseName,
-                                    exerciseId = prescription.exerciseId?.let(UUID::fromString),
-                                    createExercise = prescription.createExercise,
-                                    demoUrl = prescription.demoUrl,
-                                    executionType = prescription.executionType,
-                                    sets = prescription.sets,
-                                    rest = prescription.rest,
-                                    reps = prescription.reps,
-                                    load = prescription.load,
-                                    rir = prescription.rir,
-                                    tempo = prescription.tempo,
-                                    note = prescription.note,
-                                )
-                            },
-                        )
-                    },
-                )
-            },
+    workouts = emptyList(),
+)
+
+private fun CreateWorkoutRequest.toInput() = WorkoutCreateInput(
+    name = name,
+    note = note,
+    groups = groups.map { group ->
+        GroupAuthoringInput(
+            label = group.label,
+            kind = group.kind,
+            prescriptions = group.prescriptions.map { it.toInput() },
         )
     },
+)
+
+private fun PrescriptionAuthoringRequest.toInput() = PrescriptionAuthoringInput(
+    exerciseName = exerciseName,
+    exerciseId = exerciseId?.let(UUID::fromString),
+    createExercise = createExercise,
+    demoUrl = demoUrl,
+    executionType = executionType,
+    sets = sets,
+    rest = rest,
+    reps = reps,
+    load = load,
+    rir = rir,
+    tempo = tempo,
+    note = note,
 )

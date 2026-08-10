@@ -597,6 +597,41 @@ class TrainingRepository {
         return programId
     }
 
+    fun createWorkout(
+        ownerUserId: String,
+        programId: UUID,
+        weekNumber: Int,
+        input: WorkoutCreateInput,
+    ): UUID? {
+        val ownedProgram = rows(
+            """
+            select id from program
+            where id = ? and owner_user_id = ? and active = true
+            """.trimIndent(),
+            listOf(uuid(programId), text(ownerUserId)),
+        ) { it.getObject("id", UUID::class.java) }.singleOrNull() ?: return null
+        val position = rows(
+            """select coalesce(max(position), 0) + 1 as position from workout where program_id = ?""",
+            listOf(uuid(ownedProgram)),
+        ) { it.getInt("position") }.single()
+        val workoutId = insertId(
+            """
+            insert into workout (id, program_id, name, note, position)
+            values (?, ?, ?, ?, ?) returning id
+            """.trimIndent(),
+            listOf(
+                uuid(UUID.randomUUID()), uuid(ownedProgram), text(input.name),
+                nullableText(input.note), integer(position),
+            ),
+        )
+        val weekId = insertId(
+            """insert into workout_week (id, workout_id, week_number) values (?, ?, ?) returning id""",
+            listOf(uuid(UUID.randomUUID()), uuid(workoutId), integer(weekNumber)),
+        )
+        insertGroups(ownerUserId, weekId, input.groups, mutableMapOf())
+        return workoutId
+    }
+
     fun duplicateWeek(ownerUserId: String, workoutId: UUID, sourceWeek: Int, targetWeek: Int): UUID? {
         val owned = rows(
             """

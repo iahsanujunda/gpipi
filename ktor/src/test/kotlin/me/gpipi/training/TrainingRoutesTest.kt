@@ -124,6 +124,64 @@ class TrainingRoutesTest {
         }
 
     @Test
+    fun `POST workout scopes manual authoring to one program week`() = testApplication {
+        val programId = UUID.randomUUID()
+        val exerciseId = UUID.randomUUID()
+        val workoutId = UUID.randomUUID()
+        val input = WorkoutCreateInput(
+            name = "Full Body 1",
+            groups = listOf(
+                GroupAuthoringInput(
+                    label = "A",
+                    kind = "STRAIGHT_SET",
+                    prescriptions = listOf(
+                        PrescriptionAuthoringInput(
+                            exerciseName = "Goblet squat",
+                            exerciseId = exerciseId,
+                            executionType = "REPS",
+                            sets = "3",
+                            reps = "10-12",
+                        ),
+                    ),
+                ),
+            ),
+        )
+        coEvery { service.createWorkout("U-web", programId, 1, input) } returns
+            WorkoutCreateResult.Created(workoutId)
+        boot()
+        val client = apiClient()
+        client.post("/test/login")
+
+        val response = client.post("/api/training/programs/$programId/weeks/1/workouts") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                CreateWorkoutRequest(
+                    name = "Full Body 1",
+                    groups = listOf(
+                        GroupAuthoringRequest(
+                            label = "A",
+                            kind = "STRAIGHT_SET",
+                            prescriptions = listOf(
+                                PrescriptionAuthoringRequest(
+                                    exerciseName = "Goblet squat",
+                                    exerciseId = exerciseId.toString(),
+                                    executionType = "REPS",
+                                    sets = "3",
+                                    reps = "10-12",
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            )
+        }
+
+        assertEquals(HttpStatusCode.Created, response.status)
+        assertEquals(workoutId.toString(), response.body<JsonObject>()["id"]?.jsonPrimitive?.content)
+        coVerify(exactly = 1) { service.createWorkout("U-web", programId, 1, input) }
+    }
+
+    @Test
     fun `foreign records remain indistinguishable from missing records at HTTP boundary`() =
         testApplication {
             val workoutId = UUID.randomUUID()

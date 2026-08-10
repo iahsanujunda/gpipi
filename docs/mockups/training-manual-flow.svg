@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="4500" viewBox="0 0 1380 4500" role="img" aria-labelledby="title description">
-  <title id="title">Phase 5 iteration 1 training interface states</title>
-  <desc id="description">Training interaction states cover week navigation, workout logging, stable set repair, completed history, lifecycle controls, a concise no-program entry through the navigation action, program-only manual creation, and a separate add-week authoring page.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="5250" viewBox="0 0 1380 5250" role="img" aria-labelledby="title description">
+  <title id="title">Phase 5 complete manual training flow</title>
+  <desc id="description">The complete manual path creates program details without import, lands on an empty current week, branches from Add workout to manual or Google Sheet, and keeps Add workout unavailable on past weeks. Logging, repair, history, and lifecycle states remain included.</desc>
 
   <defs>
     <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
@@ -98,80 +98,75 @@
     </g>
   </defs>
 
-  <rect width="1380" height="3630" fill="#E7F5F7" />
+  <rect width="1380" height="5250" fill="#E7F5F7" />
   <g class="app">
-    <text x="52" y="58" class="board-title">TRAINING · ITERATION 1 INTERACTION MODEL</text>
-    <text x="52" y="87" class="board-copy">Gym logging stays sparse and immediate. Prescription is reference; execution begins empty. Stable set slots, explicit lifecycle actions, and open-ended authoring preserve real-world corrections.</text>
+    <text x="52" y="58" class="board-title">TRAINING · COMPLETE MANUAL FLOW</text>
+    <text x="52" y="87" class="board-copy">Create the program first, then add workouts from the current week. Program creation is manual; import exists only inside Add workout.</text>
     <rect x="52" y="112" width="1276" height="58" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
     <circle cx="82" cy="141" r="13" fill="#DFF4F4" />
     <path d="m77 141 4 4 7-9" fill="none" stroke="#16679A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
-    <text x="106" y="137" class="body" font-size="13" font-weight="700">Design rule</text>
-    <text x="106" y="156" class="secondary" font-size="12">One blank editor only. No target prefill, set compaction, completeness gate, expected week count, or separate substitution workflow.</text>
+    <text x="106" y="137" class="body" font-size="13" font-weight="700">Flow rule</text>
+    <text x="106" y="156" class="secondary" font-size="12">Create Program → empty current week → Add workout → manual or Google Sheet. Past weeks never show Add workout.</text>
 
-    <text x="230" y="208" class="board-label" text-anchor="middle">01 · CURRENT WEEK · NAVIGATION DESTINATION</text>
-    <text x="690" y="208" class="board-label" text-anchor="middle">02 · PAST WEEK · REVIEW AND EDIT</text>
-    <text x="1150" y="208" class="board-label" text-anchor="middle">WEEK-FIRST BEHAVIOUR</text>
+    <text x="230" y="208" class="board-label" text-anchor="middle">01 · NO ACTIVE PROGRAM</text>
+    <text x="690" y="208" class="board-label" text-anchor="middle">02 · CREATE PROGRAM · MANUAL ONLY</text>
+    <text x="1150" y="208" class="board-label" text-anchor="middle">03 · EMPTY CURRENT WEEK</text>
 
-    <!-- 01 Current week -->
-    <g transform="translate(35 230)">
+    <!-- 06 Populated current week -->
+    <g transform="translate(35 2750)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Training</text>
       <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
       <circle cx="290" cy="134.5" r="3.5" fill="#16679A" />
-      <text x="301" y="138" class="chip">M1 · ACTIVE</text>
+      <text x="301" y="138" class="chip">M2 · ACTIVE</text>
 
       <rect x="24" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <path d="m50 182-9 11 9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       <rect x="76" y="169" width="238" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <text x="195" y="188" class="eyebrow" text-anchor="middle">CURRENT WEEK</text>
-      <text x="195" y="207" class="heading" font-size="15" text-anchor="middle">Week 3</text>
+      <text x="195" y="207" class="heading" font-size="15" text-anchor="middle">Week 1</text>
       <rect x="322" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <path d="m340 182 9 11-9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 
-      <text x="24" y="251" class="heading" font-size="16">Week 3 workouts</text>
-      <text x="366" y="251" class="secondary" font-size="10.5" text-anchor="end">0 of 2 resolved</text>
-      <rect x="24" y="267" width="342" height="140" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
-      <rect x="42" y="285" width="90" height="24" rx="12" fill="#DFF4F4" />
-      <text x="87" y="301" class="chip" text-anchor="middle">IN PROGRESS</text>
-      <text x="42" y="340" class="heading" font-size="18">Full Body 1</text>
-      <text x="42" y="362" class="secondary" font-size="10.5">1 set logged · last edited 8 Aug</text>
-      <rect x="238" y="326" width="110" height="48" rx="9" fill="#16679A" />
-      <text x="293" y="355" class="button">Continue</text>
-      <text x="42" y="390" class="secondary" font-size="10">Returns to the same stable set slots.</text>
+      <rect x="24" y="233" width="342" height="46" rx="9" fill="#16679A" />
+      <path d="M46 248v16m-8-8h16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+      <text x="205" y="261" class="button">Add workout</text>
 
-      <rect x="24" y="421" width="342" height="112" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <rect x="42" y="439" width="92" height="24" rx="12" fill="#F4FAFB" />
-      <text x="88" y="455" class="chip" text-anchor="middle">NOT STARTED</text>
-      <text x="42" y="492" class="heading" font-size="17">Full Body 2</text>
-      <text x="42" y="514" class="secondary" font-size="10.5">Prescription ready to review</text>
-      <rect x="278" y="463" width="70" height="44" rx="9" fill="#FFFFFF" stroke="#16679A" />
-      <text x="313" y="490" class="button-secondary" font-size="10.5">Open</text>
+      <text x="24" y="316" class="heading" font-size="16">Week 1 workouts</text>
+      <text x="366" y="316" class="secondary" font-size="10.5" text-anchor="end">1 workout</text>
+      <rect x="24" y="332" width="342" height="122" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
+      <rect x="42" y="348" width="92" height="24" rx="12" fill="#F4FAFB" />
+      <text x="88" y="364" class="chip" text-anchor="middle">NOT STARTED</text>
+      <text x="42" y="404" class="heading" font-size="18">Full Body 1</text>
+      <text x="42" y="426" class="secondary" font-size="10.5">3 prescribed movements · saved just now</text>
+      <rect x="278" y="385" width="70" height="46" rx="9" fill="#16679A" />
+      <text x="313" y="413" class="button">Open</text>
 
-      <text x="24" y="574" class="secondary" font-size="10.5">Manage M1 and authored weeks</text>
-      <text x="348" y="574" fill="#16679A" font-size="10.5" font-weight="700" text-anchor="end">Program settings</text>
-      <text x="24" y="616" class="secondary" font-size="9.5">Week 3 remains current until both workouts are</text>
-      <text x="24" y="632" class="secondary" font-size="9.5">completed or explicitly skipped.</text>
+      <text x="24" y="506" class="secondary" font-size="10.5">Add another workout from the same current-week action.</text>
+      <text x="24" y="612" class="secondary" font-size="10.5">Manage M2 and authored weeks</text>
+      <text x="348" y="612" fill="#16679A" font-size="10.5" font-weight="700" text-anchor="end">Program settings</text>
+      <text x="24" y="643" class="secondary" font-size="9.5">Add workout appears here because Week 1 is current.</text>
       <use href="#phone-footer" />
     </g>
 
-    <!-- 02 Past week -->
-    <g transform="translate(495 230)">
+    <!-- 10 Past week -->
+    <g transform="translate(495 3600)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Training</text>
       <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
-      <text x="321.5" y="138" class="chip" text-anchor="middle">M1 · ACTIVE</text>
+      <text x="321.5" y="138" class="chip" text-anchor="middle">M2 · ACTIVE</text>
 
       <rect x="24" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <path d="m50 182-9 11 9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       <rect x="76" y="169" width="238" height="48" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
       <text x="195" y="188" class="eyebrow" text-anchor="middle">PAST WEEK</text>
-      <text x="195" y="207" class="heading" font-size="15" text-anchor="middle">Week 2</text>
+      <text x="195" y="207" class="heading" font-size="15" text-anchor="middle">Week 1</text>
       <rect x="322" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <path d="m340 182 9 11-9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       <rect x="235" y="229" width="131" height="40" rx="9" fill="#FFFFFF" stroke="#16679A" />
-      <text x="300.5" y="254" class="button-secondary" font-size="10.5">Current · Week 3</text>
+      <text x="300.5" y="254" class="button-secondary" font-size="10.5">Current · Week 2</text>
 
-      <text x="24" y="304" class="heading" font-size="16">Week 2 workouts</text>
+      <text x="24" y="304" class="heading" font-size="16">Week 1 workouts</text>
       <text x="366" y="304" class="secondary" font-size="10.5" text-anchor="end">2 completed</text>
       <rect x="24" y="320" width="342" height="118" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
       <rect x="42" y="338" width="86" height="24" rx="12" fill="#DFF4F4" />
@@ -196,7 +191,7 @@
     </g>
 
     <!-- Week-first behaviour notes -->
-    <g transform="translate(955 230)">
+    <g transform="translate(495 4430)">
       <rect width="373" height="760" rx="18" fill="#FFFFFF" stroke="#C9E2E5" filter="url(#panel-shadow)" />
       <text x="28" y="48" class="eyebrow">DERIVED, NOT CALENDAR-BASED</text>
       <text x="28" y="82" class="heading" font-size="21">What “current” means</text>
@@ -229,23 +224,63 @@
       <text x="66" y="640" class="secondary" font-size="10">Show it whenever another week is selected.</text>
 
       <rect x="28" y="681" width="317" height="51" rx="9" fill="#F4FAFB" />
-      <text x="46" y="703" class="body" font-size="10.5" font-weight="700">No active week?</text>
-      <text x="46" y="719" class="secondary" font-size="9.5">Say no next week is authored; keep history.</text>
+      <text x="46" y="703" class="body" font-size="10.5" font-weight="700">No workouts authored yet?</text>
+      <text x="46" y="719" class="secondary" font-size="9.5">Show empty Week 1; persist nothing until Add workout.</text>
     </g>
 
     <g transform="translate(0 850)">
-    <text x="230" y="208" class="board-label" text-anchor="middle">03 · CURRENT WORKOUT</text>
-    <text x="690" y="208" class="board-label" text-anchor="middle">04 · STABLE SLOT REPAIR</text>
-    <text x="1150" y="208" class="board-label" text-anchor="middle">05 · COMPLETED HISTORY</text>
+    <text x="230" y="188" class="board-label" text-anchor="middle">04 · ADD WORKOUT · CHOOSE METHOD</text>
+    <text x="690" y="188" class="board-label" text-anchor="middle">MANUAL CONTINUES BELOW</text>
+    <text x="1150" y="188" class="board-label" text-anchor="middle">IMPORT CONTINUES IN IMPORT FLOW</text>
 
-    <!-- 03 Current workout -->
-    <g transform="translate(35 230)">
+    <g transform="translate(495 210)">
+      <rect width="373" height="760" rx="18" fill="#FFFFFF" stroke="#C9E2E5" filter="url(#panel-shadow)" />
+      <text x="28" y="48" class="eyebrow">SELECTED PATH</text>
+      <text x="28" y="84" class="heading" font-size="23">Create manually</text>
+      <text x="28" y="118" class="secondary" font-size="11.5">Open the Add Workout page for Week 1.</text>
+      <line x1="28" y1="151" x2="345" y2="151" stroke="#E2EEF0" />
+      <circle cx="52" cy="205" r="22" fill="#DFF4F4" />
+      <path d="M42 205h20m-8-8 8 8-8 8" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="28" y="264" class="heading" font-size="15">Continue to step 05</text>
+      <text x="28" y="291" class="secondary" font-size="10.5">Workout name, groups, movements, execution</text>
+      <text x="28" y="309" class="secondary" font-size="10.5">types, and prescriptions are authored there.</text>
+      <rect x="28" y="350" width="317" height="74" rx="10" fill="#DFF4F4" />
+      <text x="46" y="378" class="body" font-size="11" font-weight="700">Destination stays fixed</text>
+      <text x="46" y="400" class="secondary" font-size="10">M2 · current Week 1</text>
+      <text x="28" y="477" class="secondary" font-size="10.5">Saving returns to the same week overview.</text>
+    </g>
+
+    <g transform="translate(955 210)">
+      <rect width="373" height="760" rx="18" fill="#FFFFFF" stroke="#C9E2E5" filter="url(#panel-shadow)" />
+      <text x="28" y="48" class="eyebrow">ALTERNATE PATH</text>
+      <text x="28" y="84" class="heading" font-size="23">Import from Google Sheet</text>
+      <text x="28" y="118" class="secondary" font-size="11.5">Continue in the dedicated import board.</text>
+      <line x1="28" y1="151" x2="345" y2="151" stroke="#E2EEF0" />
+      <circle cx="52" cy="205" r="22" fill="#F4FAFB" stroke="#C9E2E5" />
+      <path d="M42 205h20m-8-8 8 8-8 8" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="28" y="264" class="heading" font-size="15">Import flow starts here</text>
+      <text x="28" y="291" class="secondary" font-size="10.5">There is no second program-creation path.</text>
+      <text x="28" y="309" class="secondary" font-size="10.5">The Picker is the next screen after this branch.</text>
+      <rect x="28" y="350" width="317" height="74" rx="10" fill="#F4FAFB" />
+      <text x="46" y="378" class="body" font-size="11" font-weight="700">See training-import-flow.svg</text>
+      <text x="46" y="400" class="secondary" font-size="10">One selected Sheet week · human reviewed</text>
+    </g>
+
+    <!-- 07 Current workout -->
+    <g transform="translate(495 1900)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Training</text>
       <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
       <circle cx="290" cy="134.5" r="3.5" fill="#16679A" />
-      <text x="301" y="138" class="chip">M1 · ACTIVE</text>
-      <use href="#compact-selectors" />
+      <text x="301" y="138" class="chip">M2 · ACTIVE</text>
+      <text x="24" y="174" class="eyebrow">WORKOUT</text>
+      <text x="258" y="174" class="eyebrow">WEEK</text>
+      <rect x="24" y="182" width="222" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="39" y="211" class="body" font-size="14" font-weight="650">Full Body 1</text>
+      <use href="#select-chevron" x="224" y="201" />
+      <rect x="258" y="182" width="108" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="273" y="211" class="body" font-size="14" font-weight="650">Week 1</text>
+      <use href="#select-chevron" x="344" y="201" />
 
       <rect x="24" y="244" width="342" height="46" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <rect x="35" y="255" width="88" height="24" rx="12" fill="#DFF4F4" />
@@ -287,12 +322,12 @@
       <use href="#phone-footer" />
     </g>
 
-    <!-- 04 Stable slot repair -->
-    <g transform="translate(495 230)">
+    <!-- 08 Stable slot repair -->
+    <g transform="translate(955 1900)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Training</text>
       <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
-      <text x="321.5" y="138" class="chip" text-anchor="middle">WEEK 3</text>
+      <text x="321.5" y="138" class="chip" text-anchor="middle">WEEK 1</text>
       <rect x="24" y="170" width="342" height="56" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
       <circle cx="46" cy="198" r="12" fill="#FFFFFF" />
       <path d="M40 198h12" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" />
@@ -333,10 +368,10 @@
       <use href="#phone-footer" />
     </g>
 
-    <!-- 05 Completed history -->
-    <g transform="translate(955 230)">
+    <!-- 09 Completed history -->
+    <g transform="translate(35 2750)">
       <use href="#phone-base" />
-      <text x="24" y="142" class="eyebrow">FULL BODY 1 · WEEK 2</text>
+      <text x="24" y="142" class="eyebrow">FULL BODY 1 · WEEK 1</text>
       <text x="24" y="174" class="heading" font-size="27">Workout history</text>
       <rect x="270" y="143" width="96" height="25" rx="12.5" fill="#DFF4F4" />
       <g transform="translate(281 149) scale(.65)" color="#16679A"><use href="#check-icon" /></g>
@@ -372,13 +407,13 @@
       <use href="#phone-footer" />
     </g>
 
-    <line x1="52" y1="1022" x2="1328" y2="1022" stroke="#C9E2E5" />
-    <text x="230" y="1064" class="board-label" text-anchor="middle">06 · WEEK LIFECYCLE DRAWER</text>
-    <text x="690" y="1064" class="board-label" text-anchor="middle">07 · EXECUTION INPUT TYPES</text>
-    <text x="1150" y="1064" class="board-label" text-anchor="middle">08 · ACTIVE PROGRAM · NO WEEKS</text>
+    <line x1="52" y1="2692" x2="1328" y2="2692" stroke="#C9E2E5" />
+    <text x="230" y="2728" class="board-label" text-anchor="middle">09 · COMPLETED WORKOUT</text>
+    <text x="690" y="2728" class="board-label" text-anchor="middle">10 · PAST WEEK · REVIEW AND EDIT</text>
+    <text x="1150" y="2728" class="board-label" text-anchor="middle">11 · WEEK LIFECYCLE</text>
 
-    <!-- 06 Week drawer -->
-    <g transform="translate(35 1086)">
+    <!-- 11 Week drawer -->
+    <g transform="translate(955 2750)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Training</text>
       <use href="#compact-selectors" />
@@ -427,8 +462,8 @@
       </g>
     </g>
 
-    <!-- 07 Execution types -->
-    <g transform="translate(495 1086)">
+    <!-- 12 Execution types -->
+    <g transform="translate(35 3580)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Training</text>
       <rect x="280" y="122" width="86" height="25" rx="12.5" fill="#DFF4F4" />
@@ -465,30 +500,37 @@
       <use href="#phone-footer" />
     </g>
 
-    <!-- 08 Newly created active program -->
-    <g transform="translate(955 1086)">
+    <!-- 03 Newly created program lands on the ordinary current-week view -->
+    <g transform="translate(955 -620)">
       <use href="#phone-base" />
-      <text x="24" y="145" class="heading" font-size="30">M2</text>
-      <rect x="81" y="122" width="70" height="24" rx="12" fill="#DFF4F4" />
-      <circle cx="94" cy="134" r="3.5" fill="#16679A" />
-      <text x="105" y="138" class="chip">ACTIVE</text>
-      <text x="24" y="182" class="secondary" font-size="11">Pregnancy strength block</text>
+      <text x="24" y="145" class="heading" font-size="30">Training</text>
+      <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
+      <circle cx="290" cy="134.5" r="3.5" fill="#16679A" />
+      <text x="301" y="138" class="chip">M2 · ACTIVE</text>
 
-      <line x1="24" y1="216" x2="366" y2="216" stroke="#C9E2E5" />
-      <text x="24" y="254" class="heading" font-size="17">Weeks</text>
-      <text x="24" y="288" class="secondary" font-size="12">No weeks yet</text>
-      <rect x="24" y="320" width="342" height="50" rx="9" fill="#16679A" />
-      <text x="195" y="350" class="button">Add Week</text>
+      <rect x="24" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m50 182-9 11 9 11" fill="none" stroke="#A9C1C5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="76" y="169" width="238" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="195" y="188" class="eyebrow" text-anchor="middle">CURRENT WEEK</text>
+      <text x="195" y="207" class="heading" font-size="15" text-anchor="middle">Week 1</text>
+      <rect x="322" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m340 182 9 11-9 11" fill="none" stroke="#A9C1C5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 
-      <text x="24" y="632" fill="#16679A" font-size="11" font-weight="700">Edit program</text>
+      <rect x="24" y="233" width="342" height="48" rx="9" fill="#16679A" />
+      <path d="M46 249v16m-8-8h16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+      <text x="205" y="262" class="button">Add workout</text>
+      <text x="24" y="323" class="heading" font-size="16">Week 1 workouts</text>
+      <text x="24" y="361" class="secondary" font-size="12">No workouts yet</text>
+      <text x="24" y="386" class="secondary" font-size="10.5">The empty week is a view, not a pre-created workout.</text>
+      <text x="24" y="626" fill="#16679A" font-size="10.5" font-weight="700">Program settings</text>
       <use href="#phone-footer" />
     </g>
 
-    <line x1="52" y1="1882" x2="1328" y2="1882" stroke="#C9E2E5" />
-    <text x="690" y="1925" class="board-label" text-anchor="middle">09 · ADD WEEK · SEPARATE AUTHORING PAGE · DESKTOP ENHANCEMENT</text>
+    <line x1="52" y1="990" x2="1328" y2="990" stroke="#C9E2E5" />
+    <text x="690" y="1028" class="board-label" text-anchor="middle">05 · CREATE MANUALLY · ADD WORKOUT PAGE</text>
 
     <!-- Desktop authoring -->
-    <g transform="translate(52 1950)" filter="url(#panel-shadow)">
+    <g transform="translate(52 1050)" filter="url(#panel-shadow)">
       <rect width="1276" height="742" rx="18" fill="#F4FAFB" stroke="#C9E2E5" />
       <rect width="1276" height="64" rx="18" fill="#FFFFFF" />
       <rect y="46" width="1276" height="18" fill="#FFFFFF" />
@@ -503,7 +545,7 @@
         <rect x="163" y="47" width="61" height="24" rx="12" fill="#DFF4F4" />
         <circle cx="176" cy="59" r="3.5" fill="#16679A" />
         <text x="188" y="63" class="chip">ACTIVE</text>
-        <text x="22" y="91" class="secondary" font-size="11">No weeks yet</text>
+        <text x="22" y="91" class="secondary" font-size="11">Current · Week 1</text>
         <line x1="22" y1="112" x2="224" y2="112" stroke="#E2EEF0" />
         <text x="22" y="142" class="heading" font-size="14">Week 1 workouts</text>
         <rect x="14" y="157" width="218" height="56" rx="9" fill="#DFF4F4" stroke="#3FC1C0" />
@@ -517,14 +559,14 @@
 
       <g transform="translate(306 92)">
         <text x="0" y="35" class="eyebrow">M2</text>
-        <text x="0" y="70" class="heading" font-size="28">Add Week</text>
-        <text x="0" y="94" class="secondary" font-size="12">Full Body 1</text>
+        <text x="0" y="70" class="heading" font-size="28">Add Workout</text>
+        <text x="0" y="94" class="secondary" font-size="12">Workout name · Full Body 1</text>
 
         <rect x="554" y="17" width="150" height="44" rx="9" fill="#FFFFFF" stroke="#16679A" />
-        <text x="572" y="34" class="eyebrow">WEEK NUMBER</text>
-        <text x="572" y="51" class="body" font-size="12" font-weight="700">1</text>
+        <text x="572" y="34" class="eyebrow">CURRENT WEEK</text>
+        <text x="572" y="51" class="body" font-size="12" font-weight="700">Week 1</text>
         <rect x="716" y="17" width="198" height="44" rx="9" fill="#16679A" />
-        <text x="815" y="44" class="button">Save Week 1</text>
+        <text x="815" y="44" class="button">Save Workout</text>
 
         <rect x="0" y="120" width="922" height="212" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
         <g transform="translate(0 120)">
@@ -572,15 +614,15 @@
       </g>
     </g>
 
-    <text x="690" y="2743" class="secondary" font-size="12" text-anchor="middle">Creating a program stores only program details. Workouts and prescriptions begin on the separate Add Week page.</text>
+    <text x="690" y="1820" class="secondary" font-size="12" text-anchor="middle">The manual branch creates one workout in the current week. Week selection is inherited from the overview, not entered again.</text>
 
-    <line x1="52" y1="2782" x2="1328" y2="2782" stroke="#C9E2E5" />
-    <text x="230" y="2824" class="board-label" text-anchor="middle">10 · NO ACTIVE PROGRAM · NAV ACTION</text>
-    <text x="690" y="2824" class="board-label" text-anchor="middle">11 · CREATE PROGRAM</text>
-    <text x="1150" y="2824" class="board-label" text-anchor="middle">12 · MANUAL PROGRAM DETAILS DRAWER</text>
+    <line x1="52" y1="1858" x2="1328" y2="1858" stroke="#C9E2E5" />
+    <text x="230" y="1898" class="board-label" text-anchor="middle">06 · POPULATED CURRENT WEEK</text>
+    <text x="690" y="1898" class="board-label" text-anchor="middle">07 · OPEN AND LOG WORKOUT</text>
+    <text x="1150" y="1898" class="board-label" text-anchor="middle">08 · REPAIR A STABLE SET SLOT</text>
 
-    <!-- 10 Empty Training page with navigation action -->
-    <g transform="translate(35 2846)">
+    <!-- 01 Empty Training page with navigation action -->
+    <g transform="translate(35 -620)">
       <use href="#phone-base" />
       <text x="24" y="145" class="heading" font-size="30">Training</text>
       <text x="24" y="194" class="heading" font-size="19">No Active Program</text>
@@ -605,47 +647,62 @@
       <rect x="139" y="739" width="112" height="5" rx="2.5" fill="#FFFFFF" fill-opacity=".72" />
     </g>
 
-    <!-- 11 Concise create program page -->
-    <g transform="translate(495 2846)">
+    <!-- 02 Program creation is always a manual details form -->
+    <g transform="translate(495 -620)">
       <use href="#phone-base" />
       <text x="24" y="170" class="heading" font-size="28">Create Program</text>
-      <rect x="24" y="214" width="342" height="50" rx="9" fill="#16679A" />
-      <text x="195" y="244" class="button">Import from Google Sheet</text>
-      <rect x="24" y="280" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
-      <text x="195" y="310" class="button-secondary">Create manually</text>
+      <text x="24" y="220" class="eyebrow">PROGRAM NAME</text>
+      <rect x="24" y="234" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
+      <text x="42" y="265" class="body" font-size="12.5">M2</text>
+      <text x="24" y="324" class="eyebrow">START DATE · OPTIONAL</text>
+      <rect x="24" y="338" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="369" class="secondary" font-size="11">11 Aug 2026</text>
+      <text x="24" y="428" class="eyebrow">NOTE · OPTIONAL</text>
+      <rect x="24" y="442" width="342" height="66" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="42" y="471" class="secondary" font-size="10.5">Pregnancy strength block</text>
+      <rect x="24" y="548" width="342" height="48" rx="9" fill="#16679A" />
+      <text x="195" y="577" class="button">Create Program</text>
+      <text x="24" y="632" class="secondary" font-size="10">No workout or imported Sheet is part of this action.</text>
       <use href="#phone-footer" />
     </g>
 
-    <!-- 12 Program-only manual creation drawer -->
-    <g transform="translate(955 2846)">
+    <!-- 04 Add workout is the only manual/import branch -->
+    <g transform="translate(35 210)">
       <use href="#phone-base" />
-      <text x="24" y="170" class="heading" font-size="28">Create Program</text>
-      <rect x="24" y="214" width="342" height="50" rx="9" fill="#16679A" />
-      <text x="195" y="244" class="button">Import from Google Sheet</text>
-      <rect x="24" y="280" width="342" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
-      <text x="195" y="310" class="button-secondary">Create manually</text>
+      <text x="24" y="145" class="heading" font-size="30">Training</text>
+      <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
+      <circle cx="290" cy="134.5" r="3.5" fill="#16679A" />
+      <text x="301" y="138" class="chip">M2 · ACTIVE</text>
+      <rect x="24" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m50 182-9 11 9 11" fill="none" stroke="#A9C1C5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="76" y="169" width="238" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="195" y="188" class="eyebrow" text-anchor="middle">CURRENT WEEK</text>
+      <text x="195" y="207" class="heading" font-size="15" text-anchor="middle">Week 1</text>
+      <rect x="322" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m340 182 9 11-9 11" fill="none" stroke="#A9C1C5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="24" y="233" width="342" height="48" rx="9" fill="#16679A" />
+      <path d="M46 249v16m-8-8h16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+      <text x="205" y="262" class="button">Add workout</text>
       <rect x="8" y="104" width="374" height="584" fill="#1D4E89" opacity=".30" />
 
-      <g transform="translate(0 246)" filter="url(#sheet-shadow)">
-        <path d="M8 18q0-18 18-18h338q18 0 18 18v506H8Z" fill="#FFFFFF" />
+      <g transform="translate(0 350)" filter="url(#sheet-shadow)">
+        <path d="M8 18q0-18 18-18h338q18 0 18 18v320H8Z" fill="#FFFFFF" />
         <use href="#drawer-handle" />
-        <text x="28" y="55" class="heading" font-size="20">Create manually</text>
+        <text x="28" y="57" class="heading" font-size="20">Add workout</text>
+        <text x="28" y="81" class="secondary" font-size="10.5">Current · Week 1</text>
         <path d="m344 38 16 16m0-16-16 16" fill="none" stroke="#526966" stroke-width="2" stroke-linecap="round" />
-        <line x1="8" y1="88" x2="382" y2="88" stroke="#C9E2E5" />
-
-        <text x="28" y="122" class="eyebrow">PROGRAM NAME</text>
-        <rect x="28" y="136" width="334" height="50" rx="9" fill="#FFFFFF" stroke="#16679A" />
-        <text x="44" y="167" class="body" font-size="12.5">M2</text>
-        <text x="28" y="222" class="eyebrow">START DATE · OPTIONAL</text>
-        <rect x="28" y="236" width="334" height="50" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="44" y="267" class="secondary" font-size="11">11 Aug 2026</text>
-        <text x="28" y="322" class="eyebrow">NOTE · OPTIONAL</text>
-        <rect x="28" y="336" width="334" height="66" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-        <text x="44" y="365" class="secondary" font-size="10.5">Pregnancy strength block</text>
-        <rect x="28" y="432" width="334" height="48" rx="9" fill="#16679A" />
-        <text x="195" y="461" class="button">Create Program</text>
+        <line x1="8" y1="101" x2="382" y2="101" stroke="#C9E2E5" />
+        <rect x="28" y="125" width="334" height="58" rx="9" fill="#16679A" />
+        <text x="195" y="160" class="button">Create manually</text>
+        <rect x="28" y="197" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#16679A" />
+        <text x="195" y="232" class="button-secondary">Import from Google Sheet</text>
+        <text x="28" y="292" class="secondary" font-size="10">The choice affects this current week, not the program.</text>
       </g>
     </g>
+
+    <line x1="52" y1="3522" x2="1328" y2="3522" stroke="#C9E2E5" />
+    <text x="230" y="3560" class="board-label" text-anchor="middle">12 · EXECUTION INPUT TYPES</text>
+    <text x="690" y="3560" class="board-label" text-anchor="middle">REFERENCE · WEEK-FIRST BEHAVIOUR</text>
     </g>
   </g>
 </svg>

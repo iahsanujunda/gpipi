@@ -13,9 +13,8 @@ Related references:
 - [Activity page, default state](mockups/activity-mobile-default.svg)
 - [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
 - [Navigation launcher, resting and expanded states](mockups/budget-mobile-navigation-states.svg)
-- [Training page, mobile workout baseline](mockups/training-mobile-default.svg)
-- [Training Iteration 1 interaction and authoring states](mockups/training-iteration1-views.svg)
-- [Training Iteration 2 one-week Google Sheet import states](mockups/training-iteration2-import-views.svg)
+- [Training complete manual flow](mockups/training-manual-flow.svg)
+- [Training complete Google Sheet import flow](mockups/training-import-flow.svg)
 - [Source color palette](https://coolors.co/palette/3fc1c0-20bac5-00b2ca-04a6c2-0899ba-0f80aa-16679a-1a5b92-1c558e-1d4e89)
 
 ## Product principles
@@ -322,10 +321,10 @@ Use `Training` as the page heading. Keep the active program visible as a compact
 - Week management uses the shared adaptive drawer. Skip and restore are explicit reversible actions, and logging against a skipped week restores it automatically.
 - Historical and future authored weeks remain browseable. Highlight a non-current selection and offer `Current · Week N` as a one-tap return; keep the selected week in the route so Back from workout detail returns to the same overview.
 - Mobile controls retain the standard `44 px` minimum touch target and remain clear of the fixed launcher dock. Do not introduce horizontal scrolling for set inputs.
-- Desktop authoring exposes the active program and workouts alongside the selected week. Weeks are open-ended: offer `Duplicate previous week` for copy-forward and `Add blank week`, but never request an expected week count.
+- Desktop authoring exposes the active program and workouts alongside the current week. `Add workout` branches to manual authoring or Google Sheet import and never requests an expected program week count.
 - Authoring supports ordered groups and prescriptions with their explicit execution types. Historical structure is archived/deactivated rather than hard-deleted when execution exists.
 
-See the [mobile baseline](mockups/training-mobile-default.svg) for the default execution hierarchy and the [Iteration 1 state board](mockups/training-iteration1-views.svg) for current and past weeks, gap repair, completed history, week lifecycle, input types, program structure, and desktop authoring.
+See the [complete manual flow](mockups/training-manual-flow.svg) for program creation, add-workout authoring, the default execution hierarchy, current and past weeks, gap repair, completed history, week lifecycle, and input types.
 
 ### Buttons
 

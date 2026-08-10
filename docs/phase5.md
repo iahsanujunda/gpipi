@@ -230,14 +230,17 @@ The goal is as much **schema validation as feature delivery** — get two real p
 
 Approved UI references:
 
-- [Mobile workout baseline](mockups/training-mobile-default.svg)
-- [Iteration 1 interaction and authoring states](mockups/training-iteration1-views.svg)
+- [Complete manual training flow](mockups/training-manual-flow.svg)
 
 These mockups define the intended information hierarchy and state transitions. They are not sample data contracts; the persistence and lifecycle rules below remain authoritative when a visual example does not cover an edge case.
 
 ### 1.1 The gym screen
 
 The Training navigation item opens a **week-first overview** for the active program. Its primary navigator follows authored week numbers, using the same previous/next and explicit return-to-current pattern as weekly Budgeting. The current week shows one card for every workout authored at that `week_number`, including its `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, or `SKIPPED` state. A historical week shows the sessions performed there and lets the member open any workout to review its prescription snapshot and execution.
+
+Program creation is always manual and stores only the program name, optional start date, and optional note. It never imports a Sheet and never creates a workout or prescription. After creation, the member lands on the ordinary week overview with **Week 1** shown as an empty current-week projection. This projection does not require a program-level week row.
+
+The current week shows **Add workout** immediately below the week navigator, whether the week is empty or already has workouts. Pressing it is the only place the member chooses **Create manually** or **Import from Google Sheet**. The choice adds workouts to the active program; it does not create or activate a program. Historical weeks never show Add workout, so browsing history cannot accidentally change workout structure.
 
 Week selection belongs in the route so opening a workout and going back returns to the selected week rather than silently jumping to current. Whenever a past or future authored week is selected, **Current · Week N** returns directly to the derived current week. Browsing a week or opening a workout records no execution.
 
@@ -269,7 +272,7 @@ Bear hold pull through · 3 × 20 total · 15s to failure
 
 Week is the primary overview dimension while workout is the unit opened for prescription and execution. The overview is a projection over independently stored workout weeks, not a new program-level week entity.
 
-**"Current" means the lowest authored week with any unresolved workout.** An in-progress workout is surfaced before not-started workouts inside that week. Completed and skipped workouts remain visible but are resolved for advancement. Never use a calendar derivation: weeks are authored, missed sessions are not made up, and any date-based rule breaks the first time one is skipped.
+**"Current" means the lowest authored week with any unresolved workout.** An in-progress workout is surfaced before not-started workouts inside that week. Completed and skipped workouts remain visible but are resolved for advancement. A brand-new program with no authored workout weeks uses an unpersisted, empty Week 1 authoring projection until its first workout is added. Never use a calendar derivation: weeks are authored, missed sessions are not made up, and any date-based rule breaks the first time one is skipped.
 
 **Sets commit immediately.** No session-level save button. A member is between sets, sweaty, and may close the app at any point — the same immediate-durability argument as the shopping list card, for the same reason. An explicit **Finish workout** action marks the session complete; it does not save the sets, which are already durable.
 
@@ -547,6 +550,10 @@ Removing a prescription deactivates it immediately rather than destroying it. It
 - [ ] Group labels render as authored, including finisher/superset parentheticals
 - [ ] A workout with no prescribed RIR column renders without an empty RIR affordance
 - [ ] The gym screen derives "current" as the lowest authored week containing any workout that is neither completed nor skipped — no stored pointer or calendar arithmetic
+- [ ] Creating a program is manual-only and stores program details without importing or creating workouts
+- [ ] A newly created program opens the ordinary current-week overview as an empty Week 1 projection
+- [ ] Add workout appears directly below week navigation on the current week and offers manual or Google Sheet input
+- [ ] Past weeks never show Add workout; their existing workouts remain reviewable and editable
 - [ ] Skip and restore are explicit, reversible actions; skip is never inferred from later sessions
 - [ ] Logging or explicitly finishing a skipped week restores it automatically; a completed week cannot also be skipped
 - [ ] A block with one workout and a block with three both render correctly (no fixed-cadence assumption)
@@ -559,10 +566,7 @@ Removing a prescription deactivates it immediately rather than destroying it. It
 
 Select the trainer's Google Sheet, choose exactly one authored week, extract that week into a reviewable draft, and record where every selected cell came from. Other weeks in the sheet remain untouched and absent from app storage.
 
-Approved UI references:
-
-- [One-week Google Sheet import states](mockups/training-iteration2-import-views.svg)
-- [New-program Google Sheet import states](mockups/training-iteration2-new-program-import-views.svg)
+Approved UI reference: [complete Google Sheet import flow](mockups/training-import-flow.svg). The board begins at the **Add workout** branch inside an existing active program. Program creation is outside the import flow.
 
 ### 2.1 Why this is tractable now, and was not before
 
@@ -596,8 +600,7 @@ create table google_credential (
 
 | Action | What it does |
 |---|---|
-| **Import new program** | Opens the Picker without requiring an existing program, then reviews a proposed program name/start/note and imports one member-selected week. No program is created until final Apply |
-| **Import another week** | Opens the Picker, discovers available week labels/ranges, and starts a persisted import for one member-selected week in the active program |
+| **Add workout → Import from Google Sheet** | From the current week, opens the Picker, discovers available week labels/ranges, and starts a persisted import for one member-selected week in the active program |
 | **Sync** | Asks for one week, then re-extracts only that week from the already-linked spreadsheet |
 
 Nothing else triggers a read. There is no background poll, no refresh on page load, and no sync on a timer. The trainer edits their sheet on their own schedule; a member decides when to pull those edits in, having usually just been told about them.
@@ -608,7 +611,7 @@ Unselected weeks do not become app history. If one is needed later, the member e
 
 `sheet_link` is unique per program. Selecting a different file for an already-linked program replaces the link only after a warning and a new review; it does not silently retarget existing provenance.
 
-For a new-program import, program metadata belongs to the import draft, not the training domain. The member explicitly confirms the name, optional start date, and optional note before choosing a week. Choosing a Sheet, confirming metadata, mapping tabs, extracting, reviewing, refreshing, failing, or cancelling creates no `program`, `workout`, `workout_week`, or prescription rows. Final Apply creates the program and its selected week in one transaction, makes it the sole active program, and deactivates the previous active program without deleting its history. A cancelled draft can be discarded without changing either program.
+Import requires an existing active program. Choosing a Sheet, mapping tabs, extracting, reviewing, refreshing, failing, or cancelling never creates, activates, or deactivates a program. Program metadata is not part of `training_import`; final Apply may create reviewed workouts, workout weeks, groups, prescriptions, and deliberately confirmed exercises only inside the already-active program.
 
 ### 2.4 Reading the sheet
 
@@ -644,12 +647,7 @@ READING → NEEDS_MAPPING → EXTRACTING → REVIEW → APPLIED
 create table training_import (
     id                    uuid primary key default gen_random_uuid(),
     owner_user_id         text not null,
-    target_type           text not null default 'EXISTING_PROGRAM',
-    program_id            uuid references program(id) on delete cascade,
-    new_program_name      text,
-    new_program_note      text,
-    new_program_starts_on date,
-    new_program_confirmed_at timestamptz,
+    program_id            uuid not null references program(id) on delete cascade,
     spreadsheet_id        text not null,
     selected_week_number integer, -- null until the member completes step 1
     state          text not null,
@@ -661,9 +659,6 @@ create table training_import (
         'READING', 'NEEDS_MAPPING', 'EXTRACTING', 'REVIEW',
         'APPLIED', 'FAILED', 'CANCELLED'
     )),
-    check (target_type in ('EXISTING_PROGRAM', 'NEW_PROGRAM')),
-    check (target_type <> 'EXISTING_PROGRAM' or program_id is not null),
-    check (new_program_name is null or btrim(new_program_name) <> ''),
     check (selected_week_number is null or selected_week_number >= 1)
 );
 
@@ -983,7 +978,7 @@ The spreadsheet ID plus numeric `google_sheet_id` form the stable remote identit
 
 Extraction produces a **draft for the one chosen week**, never a saved week. Nothing reaches `prescription` until a member confirms.
 
-**Every import insert is human-reviewed.** LLM output cannot directly create a program, workout, week, group, prescription, or exercise. A new-program import first requires explicit review of program metadata. For the chosen week, the member can keep or edit every extracted field and exclude an absent workout or movement. For each included movement, they must match an existing exercise or deliberately create a new exercise. The final **Apply** action is the only transition from import draft to domain tables; on the new-program path it atomically creates and activates the program as part of that same transition. Direct member logging is already an explicit human action and does not require a second confirmation screen.
+**Every import insert is human-reviewed.** LLM output cannot directly create a workout, week, group, prescription, or exercise, and import never creates or changes a program. For the chosen week, the member can keep or edit every extracted field and exclude an absent workout or movement. For each included movement, they must match an existing exercise or deliberately create a new exercise. The final **Apply** action is the only transition from import draft to domain tables, and every inserted row belongs to the active program that started the import. Direct member logging is already an explicit human action and does not require a second confirmation screen.
 
 This matters because most syncs are small. The common case is a conversation with the trainer followed by one adjusted exercise in one workout of the current week — the other seven weeks are unrelated and must never enter the draft or Apply transaction.
 
@@ -1069,10 +1064,10 @@ Only the final Apply transaction changes domain tables, confirmed aliases, and p
 - [ ] Group labels captured verbatim; `kind` correct for supersets and finishers
 - [ ] Import lifecycle persists `READING → NEEDS_MAPPING → EXTRACTING → REVIEW → APPLIED`, with recoverable `FAILED` and terminal `CANCELLED`
 - [ ] A browser refresh loses no completed mapping, extraction, or review decisions
-- [ ] With no active program, Program settings presents **Import from Google Sheet** as the primary action while manual creation remains available
-- [ ] A new-program import requires reviewed program name/start/note, and creates no training-domain rows before final confirmation and Apply
-- [ ] Cancelling a new-program import leaves the current active program and all training-domain rows unchanged
-- [ ] Applying a new-program import creates its program, selected-week workouts, and prescriptions atomically; it becomes the sole active program and the prior program remains accessible as inactive history
+- [ ] Import can begin only from **Add workout** on the current week of an existing active program
+- [ ] Program name/start/note and program activation are absent from the import draft and review
+- [ ] Cancelling an import leaves the active program and all training-domain rows unchanged
+- [ ] Applying an import creates only the reviewed selected-week workout data inside the program that started it
 - [ ] `sheet_link`, `sheet_week_link`, and `sheet_prescription_link` capture stable numeric tab ID, display title, week range, execution boundary/header, exact movement/source cells, per-set destination cells, and redacted source snapshot/hash
 - [ ] **Select file** and **Sync** are the only ways a read happens — no poll, no timer, no read on page load
 - [ ] Re-linking a program to a different spreadsheet warns first and does not silently retarget old provenance

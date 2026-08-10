@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="3690" viewBox="0 0 1380 3690" role="img" aria-labelledby="title description">
-  <title id="title">Phase 5 iteration 2 one-week Google Sheet import states</title>
-  <desc id="description">Nine mobile views and one desktop review view show Google connection, Picker handoff, choosing exactly one week, confirming only that week's workout ranges, bounded extraction, human review, conflict resolution, failure recovery, and the applied current week.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="3650" viewBox="0 0 1380 3650" role="img" aria-labelledby="title description">
+  <title id="title">Phase 5 complete Google Sheet training import flow</title>
+  <desc id="description">The import branch begins when Add workout is chosen on the current week, then covers Google file selection, one-week scope confirmation, bounded extraction, human review, conflict and failure handling, and final Apply to the active program.</desc>
 
   <defs>
     <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
@@ -81,47 +81,22 @@
     </g>
   </defs>
 
-  <rect width="1380" height="3690" fill="#E7F5F7" />
+  <rect width="1380" height="3650" fill="#E7F5F7" />
   <g class="app">
-    <text x="52" y="58" class="board-title">TRAINING · ITERATION 2 · ONE-WEEK SHEET IMPORT</text>
-    <text x="52" y="87" class="board-copy">Choose the boundary first, then review only what crossed it. Google remains the trainer’s workspace; the app creates nothing until one selected week is explicitly applied.</text>
+    <text x="52" y="58" class="board-title">TRAINING · COMPLETE GOOGLE SHEET IMPORT FLOW</text>
+    <text x="52" y="87" class="board-copy">Import is an Add workout branch inside the active program. Only the reviewed source week is applied to the current app week.</text>
     <rect x="52" y="112" width="1276" height="58" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
     <circle cx="82" cy="141" r="13" fill="#DFF4F4" />
     <g transform="translate(74 133) scale(.8)" color="#16679A"><use href="#check-icon" /></g>
     <text x="106" y="137" class="body" font-size="13" font-weight="700">Scope rule</text>
-    <text x="106" y="156" class="secondary" font-size="12">Selecting Week 5 creates no drafts, provenance, placeholders, comparisons, or program rows for Weeks 1–4 or 6 onward.</text>
+    <text x="106" y="156" class="secondary" font-size="12">Selecting source Week 5 creates no drafts, provenance, placeholders, or comparisons for source Weeks 1–4 or 6 onward.</text>
 
     <!-- Row 1 labels -->
-    <text x="230" y="208" class="board-label" text-anchor="middle">01 · CONNECT GOOGLE</text>
-    <text x="690" y="208" class="board-label" text-anchor="middle">02 · PICK ONE SHEET</text>
-    <text x="1150" y="208" class="board-label" text-anchor="middle">03 · STEP 1 · CHOOSE WEEK</text>
+    <text x="230" y="208" class="board-label" text-anchor="middle">01 · ADD WORKOUT · BRANCH</text>
+    <text x="690" y="208" class="board-label" text-anchor="middle">02 · GOOGLE FILE PICKER</text>
+    <text x="1150" y="208" class="board-label" text-anchor="middle">03 · CHOOSE ONE WEEK</text>
 
-    <!-- 01 Connect Google -->
-    <g transform="translate(35 230)">
-      <use href="#phone-base" />
-      <text x="24" y="142" class="eyebrow">TRAINING · PROGRAM SETTINGS</text>
-      <text x="24" y="176" class="heading" font-size="27">M1</text>
-      <rect x="298" y="151" width="68" height="25" rx="12.5" fill="#DFF4F4" />
-      <text x="332" y="167" class="chip" text-anchor="middle">ACTIVE</text>
-
-      <text x="24" y="220" class="heading" font-size="16">Google Sheet</text>
-      <rect x="24" y="236" width="342" height="230" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <circle cx="195" cy="286" r="28" fill="#DFF4F4" />
-      <g transform="translate(184 274)" color="#16679A"><use href="#drive-icon" /></g>
-      <text x="195" y="337" class="heading" font-size="18" text-anchor="middle">Connect your Google account</text>
-      <text x="195" y="363" class="secondary" font-size="11" text-anchor="middle">Choose a trainer-owned Sheet without granting</text>
-      <text x="195" y="380" class="secondary" font-size="11" text-anchor="middle">access to the rest of your Drive.</text>
-      <rect x="42" y="402" width="306" height="48" rx="9" fill="#16679A" />
-      <text x="195" y="431" class="button">Connect Google</text>
-
-      <rect x="24" y="486" width="342" height="74" rx="10" fill="#F4FAFB" stroke="#C9E2E5" />
-      <text x="42" y="511" class="body" font-size="11.5" font-weight="700">Manual authoring remains available</text>
-      <text x="42" y="531" class="secondary" font-size="10">Connection failure never blocks workout logging.</text>
-      <text x="42" y="548" fill="#16679A" font-size="10" font-weight="700">Open manual program editor</text>
-      <use href="#phone-footer" />
-    </g>
-
-    <!-- 02 Picker handoff -->
+    <!-- 02 Picker opens after the import branch is chosen -->
     <g transform="translate(495 230)">
       <use href="#phone-base" />
       <text x="24" y="142" class="eyebrow">GOOGLE-PROVIDED PICKER</text>
@@ -370,8 +345,8 @@
       <g transform="translate(326 382) scale(.72)" color="#16679A"><use href="#edit-icon" /></g>
 
       <rect x="24" y="447" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="42" y="472" class="heading" font-size="12">Enter this workout manually</text>
-      <text x="42" y="492" class="secondary" font-size="9.5">Keep Week 5 and use the normal authoring fields.</text>
+      <text x="42" y="472" class="heading" font-size="12">Cancel this import</text>
+      <text x="42" y="492" class="secondary" font-size="9.5">Return without changing training data.</text>
 
       <rect x="24" y="529" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <text x="42" y="554" class="heading" font-size="12">Mark Full Body 2 absent</text>
@@ -402,24 +377,27 @@
       <rect x="322" y="241" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <path d="m340 254 9 11-9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 
-      <text x="24" y="326" class="heading" font-size="16">Week 5 workouts</text>
-      <text x="366" y="326" class="secondary" font-size="10" text-anchor="end">0 of 2 resolved</text>
-      <rect x="24" y="342" width="342" height="120" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
-      <rect x="42" y="360" width="92" height="24" rx="12" fill="#F4FAFB" />
-      <text x="88" y="376" class="chip" text-anchor="middle">NOT STARTED</text>
-      <text x="42" y="414" class="heading" font-size="17">Full Body 1</text>
-      <text x="42" y="438" class="secondary" font-size="10">7 prescribed movements · from JUNDA – M1</text>
-      <rect x="278" y="391" width="70" height="44" rx="9" fill="#16679A" /><text x="313" y="418" class="button" font-size="10.5">Open</text>
+      <rect x="24" y="305" width="342" height="42" rx="9" fill="#16679A" />
+      <path d="M46 318v16m-8-8h16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+      <text x="205" y="331" class="button">Add workout</text>
 
-      <rect x="24" y="476" width="342" height="110" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
-      <rect x="42" y="494" width="92" height="24" rx="12" fill="#F4FAFB" />
-      <text x="88" y="510" class="chip" text-anchor="middle">NOT STARTED</text>
-      <text x="42" y="548" class="heading" font-size="17">Full Body 2</text>
-      <text x="42" y="572" class="secondary" font-size="10">6 prescribed movements · from JUNDA – M1</text>
-      <rect x="278" y="525" width="70" height="44" rx="9" fill="#FFFFFF" stroke="#16679A" /><text x="313" y="552" class="button-secondary" font-size="10.5">Open</text>
+      <text x="24" y="378" class="heading" font-size="16">Week 5 workouts</text>
+      <text x="366" y="378" class="secondary" font-size="10" text-anchor="end">0 of 2 resolved</text>
+      <rect x="24" y="394" width="342" height="102" rx="12" fill="#FFFFFF" stroke="#3FC1C0" />
+      <rect x="42" y="410" width="92" height="24" rx="12" fill="#F4FAFB" />
+      <text x="88" y="426" class="chip" text-anchor="middle">NOT STARTED</text>
+      <text x="42" y="466" class="heading" font-size="17">Full Body 1</text>
+      <text x="42" y="486" class="secondary" font-size="10">7 movements · from JUNDA – M1</text>
+      <rect x="278" y="443" width="70" height="42" rx="9" fill="#16679A" /><text x="313" y="469" class="button" font-size="10.5">Open</text>
 
-      <text x="24" y="626" class="secondary" font-size="10">Full Body 3 was absent and has no Week 5 row.</text>
-      <text x="24" y="649" fill="#16679A" font-size="10.5" font-weight="700">View import details</text>
+      <rect x="24" y="508" width="342" height="102" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="42" y="524" width="92" height="24" rx="12" fill="#F4FAFB" />
+      <text x="88" y="540" class="chip" text-anchor="middle">NOT STARTED</text>
+      <text x="42" y="580" class="heading" font-size="17">Full Body 2</text>
+      <text x="42" y="600" class="secondary" font-size="10">6 movements · from JUNDA – M1</text>
+      <rect x="278" y="557" width="70" height="42" rx="9" fill="#FFFFFF" stroke="#16679A" /><text x="313" y="583" class="button-secondary" font-size="10.5">Open</text>
+
+      <text x="24" y="642" fill="#16679A" font-size="10.5" font-weight="700">View import details</text>
       <use href="#phone-footer" />
     </g>
 
@@ -518,6 +496,44 @@
       </g>
     </g>
 
-    <text x="690" y="3624" class="secondary" font-size="12" text-anchor="middle">Mobile keeps scope and review sequential. Desktop expands comparison density without widening the import beyond the one selected week.</text>
+    <text x="690" y="3624" class="secondary" font-size="12" text-anchor="middle">The import changes workouts in M1 only. Program creation and activation are outside this flow.</text>
+
+    <!-- 01 Shared Add workout branch. The manual board shows how the member reaches it. -->
+    <g transform="translate(35 230)">
+      <use href="#phone-base" />
+      <text x="24" y="145" class="heading" font-size="30">Training</text>
+      <rect x="277" y="122" width="89" height="25" rx="12.5" fill="#DFF4F4" />
+      <circle cx="290" cy="134.5" r="3.5" fill="#16679A" />
+      <text x="301" y="138" class="chip">M1 · ACTIVE</text>
+
+      <rect x="24" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m50 182-9 11 9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="76" y="169" width="238" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="195" y="188" class="eyebrow" text-anchor="middle">CURRENT WEEK</text>
+      <text x="195" y="207" class="heading" font-size="15" text-anchor="middle">Week 5</text>
+      <rect x="322" y="169" width="44" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m340 182 9 11-9 11" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <rect x="24" y="233" width="342" height="48" rx="9" fill="#16679A" />
+      <path d="M46 249v16m-8-8h16" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+      <text x="205" y="262" class="button">Add workout</text>
+      <text x="24" y="321" class="heading" font-size="16">Week 5 workouts</text>
+      <text x="24" y="357" class="secondary" font-size="11.5">No workouts yet</text>
+      <text x="24" y="380" class="secondary" font-size="10">Add workout is available only on the current week.</text>
+      <use href="#phone-footer" />
+
+      <rect x="8" y="104" width="374" height="584" fill="#17312E" fill-opacity=".24" />
+      <g transform="translate(0 350)" filter="url(#panel-shadow)">
+        <path d="M8 18q0-18 18-18h338q18 0 18 18v320H8Z" fill="#FFFFFF" />
+        <rect x="177" y="10" width="36" height="4" rx="2" fill="#C9E2E5" />
+        <text x="28" y="57" class="heading" font-size="20">Add workout</text>
+        <text x="28" y="81" class="secondary" font-size="10.5">Current · Week 5</text>
+        <line x1="8" y1="101" x2="382" y2="101" stroke="#C9E2E5" />
+        <rect x="28" y="125" width="334" height="58" rx="9" fill="#16679A" />
+        <text x="195" y="160" class="button">Import from Google Sheet</text>
+        <rect x="28" y="197" width="334" height="58" rx="9" fill="#FFFFFF" stroke="#16679A" />
+        <text x="195" y="232" class="button-secondary">Create manually</text>
+        <text x="28" y="292" class="secondary" font-size="10">Both paths add workouts to Week 5. Neither creates a program.</text>
+      </g>
+    </g>
   </g>
 </svg>

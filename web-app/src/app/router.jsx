@@ -12,6 +12,7 @@ import WalletsPage from '@/wallets/WalletsPage'
 import TrainingPage from '@/training/TrainingPage'
 import TrainingProgramPage from '@/training/TrainingProgramPage'
 import WorkoutPage from '@/training/WorkoutPage'
+import TrainingImportPage from '@/training/TrainingImportPage'
 
 export const routes = [
   { path: '/enter', element: <EnterPage /> },
@@ -34,6 +35,8 @@ export const routes = [
           { path: 'training/weeks/:weekNumber', element: <TrainingPage /> },
           { path: 'training/weeks/:weekNumber/workouts/:workoutId', element: <WorkoutPage /> },
           { path: 'training/program', element: <TrainingProgramPage /> },
+          { path: 'training/program/import', element: <TrainingImportPage /> },
+          { path: 'training/program/import/:importId', element: <TrainingImportPage /> },
         ],
       },
     ],

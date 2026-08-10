@@ -11,6 +11,7 @@ import io.ktor.server.testing.testApplication
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -51,8 +52,35 @@ class OpenRouterClientTest {
             "expense_extraction",
             requestBody["response_format"]!!.jsonObject["json_schema"]!!.jsonObject["name"]!!.jsonPrimitive.content,
         )
+        assertNull(requestBody["reasoning"])
         assertEquals("{\"amount\":1500}", result.content)
         assertEquals("resolved/model-version", result.model)
+    }
+
+    @Test
+    fun `chat sends high reasoning effort when configured`() = testApplication {
+        lateinit var requestBody: JsonObject
+        application {
+            configureSerialization()
+            routing {
+                post("/api/v1/chat/completions") {
+                    requestBody = call.receive()
+                    call.respond(chatResponse(model = "resolved/model-version"))
+                }
+            }
+        }
+
+        client(reasoningEffort = OpenRouterReasoningEffort.HIGH).chat(
+            userMessage = "training cells",
+            systemPrompt = "extract a prescription",
+            schema = schema(),
+            schemaName = "training_prescription_extraction",
+        )
+
+        assertEquals(
+            "high",
+            requestBody["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
+        )
     }
 
     @Test
@@ -92,6 +120,7 @@ class OpenRouterClientTest {
 
     private fun io.ktor.server.testing.ApplicationTestBuilder.client(
         model: String = "requested/model",
+        reasoningEffort: OpenRouterReasoningEffort? = null,
     ) = OpenRouterClient(
         http = createClient {
             install(ContentNegotiation) { json() }
@@ -99,6 +128,7 @@ class OpenRouterClientTest {
         apiKey = "test-key",
         model = model,
         apiBaseUrl = "/api/v1",
+        reasoningEffort = reasoningEffort,
     )
 
     private fun schema() = buildJsonObject { put("type", "object") }

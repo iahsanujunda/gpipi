@@ -37,11 +37,16 @@ data class ChatResult(
     val model: String,
 )
 
+enum class OpenRouterReasoningEffort(val apiValue: String) {
+    HIGH("high"),
+}
+
 class OpenRouterClient(
     private val http: HttpClient,
     private val apiKey: String,
     private val model: String,
     apiBaseUrl: String = "https://openrouter.ai/api/v1",
+    private val reasoningEffort: OpenRouterReasoningEffort? = null,
 ) {
     private val apiBaseUrl = apiBaseUrl.trimEnd('/')
 
@@ -69,6 +74,9 @@ class OpenRouterClient(
             }
             putJsonObject("provider") { put("require_parameters", true) }
             putJsonArray("plugins") { addJsonObject { put("id", "response-healing") } }
+            reasoningEffort?.let { effort ->
+                putJsonObject("reasoning") { put("effort", effort.apiValue) }
+            }
             put("temperature", 0)
         }
 

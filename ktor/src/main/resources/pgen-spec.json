@@ -566,6 +566,84 @@
           ]
         },
         {
+          "name": "public.google_credential",
+          "columns": [
+            {
+              "name": "user_id",
+              "type": "text"
+            },
+            {
+              "name": "encrypted_refresh_token",
+              "type": "text"
+            },
+            {
+              "name": "scope",
+              "type": "text"
+            },
+            {
+              "name": "connected_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "revoked_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "google_credential_pkey",
+            "columns": [
+              "user_id"
+            ]
+          },
+          "checkConstraints": [
+            {
+              "name": "google_credential_token_not_blank"
+            },
+            {
+              "name": "google_credential_user_not_blank"
+            }
+          ]
+        },
+        {
+          "name": "public.google_oauth_state",
+          "columns": [
+            {
+              "name": "state_hash",
+              "type": "text"
+            },
+            {
+              "name": "user_id",
+              "type": "text"
+            },
+            {
+              "name": "return_path",
+              "type": "text"
+            },
+            {
+              "name": "expires_at",
+              "type": "pg_catalog.timestamptz"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "google_oauth_state_pkey",
+            "columns": [
+              "state_hash"
+            ]
+          },
+          "checkConstraints": [
+            {
+              "name": "google_oauth_state_return_path"
+            }
+          ]
+        },
+        {
           "name": "public.inbound_message",
           "columns": [
             {
@@ -1146,6 +1224,209 @@
           ]
         },
         {
+          "name": "public.sheet_link",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "program_id",
+              "type": "uuid"
+            },
+            {
+              "name": "spreadsheet_id",
+              "type": "text"
+            },
+            {
+              "name": "spreadsheet_title",
+              "type": "text"
+            },
+            {
+              "name": "connected_by_user_id",
+              "type": "text"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "updated_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "replaced_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "sheet_link_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "sheet_link_program_id_fkey",
+              "targetTable": "public.program",
+              "references": [
+                {
+                  "sourceColumn": "program_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "public.sheet_prescription_link",
+          "columns": [
+            {
+              "name": "prescription_id",
+              "type": "uuid"
+            },
+            {
+              "name": "sheet_week_id",
+              "type": "uuid"
+            },
+            {
+              "name": "movement_address",
+              "type": "text"
+            },
+            {
+              "name": "movement_text",
+              "type": "text"
+            },
+            {
+              "name": "source_cells",
+              "type": "jsonb"
+            },
+            {
+              "name": "execution_cells",
+              "type": "jsonb"
+            }
+          ],
+          "primaryKey": {
+            "name": "sheet_prescription_link_pkey",
+            "columns": [
+              "prescription_id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "sheet_prescription_link_prescription_id_fkey",
+              "targetTable": "public.prescription",
+              "references": [
+                {
+                  "sourceColumn": "prescription_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "sheet_prescription_link_sheet_week_id_fkey",
+              "targetTable": "public.sheet_week_link",
+              "references": [
+                {
+                  "sourceColumn": "sheet_week_id",
+                  "targetColumn": "week_id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "sheet_prescription_link_sheet_week_id_movement_address_key"
+            }
+          ]
+        },
+        {
+          "name": "public.sheet_week_link",
+          "columns": [
+            {
+              "name": "week_id",
+              "type": "uuid"
+            },
+            {
+              "name": "sheet_link_id",
+              "type": "uuid"
+            },
+            {
+              "name": "google_sheet_id",
+              "type": "int8"
+            },
+            {
+              "name": "tab_title",
+              "type": "text"
+            },
+            {
+              "name": "week_start_row",
+              "type": "int4"
+            },
+            {
+              "name": "week_end_row",
+              "type": "int4"
+            },
+            {
+              "name": "execution_boundary_col",
+              "type": "int4"
+            },
+            {
+              "name": "execution_header_address",
+              "type": "text"
+            },
+            {
+              "name": "execution_header_value",
+              "type": "text"
+            },
+            {
+              "name": "source_snapshot",
+              "type": "jsonb"
+            },
+            {
+              "name": "source_hash",
+              "type": "text"
+            }
+          ],
+          "primaryKey": {
+            "name": "sheet_week_link_pkey",
+            "columns": [
+              "week_id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "sheet_week_link_sheet_link_id_fkey",
+              "targetTable": "public.sheet_link",
+              "references": [
+                {
+                  "sourceColumn": "sheet_link_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "sheet_week_link_week_id_fkey",
+              "targetTable": "public.workout_week",
+              "references": [
+                {
+                  "sourceColumn": "week_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "sheet_week_link_sheet_link_id_google_sheet_id_week_start_ro_key"
+            }
+          ]
+        },
+        {
           "name": "public.shopping_add_draft",
           "columns": [
             {
@@ -1496,6 +1777,402 @@
                   "targetColumn": "id"
                 }
               ]
+            }
+          ]
+        },
+        {
+          "name": "public.training_import",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "program_id",
+              "type": "uuid"
+            },
+            {
+              "name": "spreadsheet_id",
+              "type": "text"
+            },
+            {
+              "name": "spreadsheet_title",
+              "type": "text"
+            },
+            {
+              "name": "selected_week_number",
+              "type": "int4",
+              "nullable": true
+            },
+            {
+              "name": "state",
+              "type": "text"
+            },
+            {
+              "name": "error_detail",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "updated_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            },
+            {
+              "name": "applied_at",
+              "type": "pg_catalog.timestamptz",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "training_import_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "training_import_program_id_fkey",
+              "targetTable": "public.program",
+              "references": [
+                {
+                  "sourceColumn": "program_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "training_import_selected_week_positive"
+            },
+            {
+              "name": "training_import_spreadsheet_not_blank"
+            },
+            {
+              "name": "training_import_state_valid"
+            },
+            {
+              "name": "training_import_title_not_blank"
+            }
+          ]
+        },
+        {
+          "name": "public.training_import_exercise_match",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "import_week_id",
+              "type": "uuid"
+            },
+            {
+              "name": "source_movement_key",
+              "type": "text"
+            },
+            {
+              "name": "source_text",
+              "type": "text"
+            },
+            {
+              "name": "decision",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "exercise_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "new_exercise_name",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "execution_type",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "remember_as_alias",
+              "type": "bool",
+              "defaultExpr": "true"
+            }
+          ],
+          "primaryKey": {
+            "name": "training_import_exercise_match_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "training_import_exercise_match_exercise_id_fkey",
+              "targetTable": "public.exercise",
+              "references": [
+                {
+                  "sourceColumn": "exercise_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "training_import_exercise_match_import_week_id_fkey",
+              "targetTable": "public.training_import_week",
+              "references": [
+                {
+                  "sourceColumn": "import_week_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "training_import_exercise_matc_import_week_id_source_movemen_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "training_import_match_decision_valid"
+            },
+            {
+              "name": "training_import_match_execution_type_valid"
+            },
+            {
+              "name": "training_import_match_source_not_blank"
+            },
+            {
+              "name": "training_import_match_target_valid"
+            }
+          ]
+        },
+        {
+          "name": "public.training_import_tab",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "import_id",
+              "type": "uuid"
+            },
+            {
+              "name": "google_sheet_id",
+              "type": "int8"
+            },
+            {
+              "name": "tab_title",
+              "type": "text"
+            },
+            {
+              "name": "decision",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "target_workout_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "new_workout_name",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "position",
+              "type": "int4"
+            }
+          ],
+          "primaryKey": {
+            "name": "training_import_tab_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "training_import_tab_import_id_fkey",
+              "targetTable": "public.training_import",
+              "references": [
+                {
+                  "sourceColumn": "import_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "training_import_tab_target_workout_id_fkey",
+              "targetTable": "public.workout",
+              "references": [
+                {
+                  "sourceColumn": "target_workout_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "training_import_tab_import_id_google_sheet_id_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "training_import_tab_decision_valid"
+            },
+            {
+              "name": "training_import_tab_new_name_not_blank"
+            },
+            {
+              "name": "training_import_tab_position_positive"
+            },
+            {
+              "name": "training_import_tab_target_valid"
+            },
+            {
+              "name": "training_import_tab_title_not_blank"
+            }
+          ]
+        },
+        {
+          "name": "public.training_import_week",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "import_tab_id",
+              "type": "uuid"
+            },
+            {
+              "name": "target_week_id",
+              "type": "uuid",
+              "nullable": true
+            },
+            {
+              "name": "week_number",
+              "type": "int4"
+            },
+            {
+              "name": "start_row",
+              "type": "int4"
+            },
+            {
+              "name": "end_row",
+              "type": "int4"
+            },
+            {
+              "name": "execution_boundary_col",
+              "type": "int4"
+            },
+            {
+              "name": "execution_header_address",
+              "type": "text"
+            },
+            {
+              "name": "execution_header_value",
+              "type": "text"
+            },
+            {
+              "name": "decision",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "extracted_draft",
+              "type": "jsonb",
+              "nullable": true
+            },
+            {
+              "name": "extraction_contract_version",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "extraction_model",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "name": "base_source_snapshot",
+              "type": "jsonb",
+              "nullable": true
+            },
+            {
+              "name": "source_snapshot",
+              "type": "jsonb",
+              "nullable": true
+            },
+            {
+              "name": "source_hash",
+              "type": "text",
+              "nullable": true
+            }
+          ],
+          "primaryKey": {
+            "name": "training_import_week_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "training_import_week_import_tab_id_fkey",
+              "targetTable": "public.training_import_tab",
+              "references": [
+                {
+                  "sourceColumn": "import_tab_id",
+                  "targetColumn": "id"
+                }
+              ]
+            },
+            {
+              "name": "training_import_week_target_week_id_fkey",
+              "targetTable": "public.workout_week",
+              "references": [
+                {
+                  "sourceColumn": "target_week_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "training_import_week_import_tab_id_week_number_key"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "training_import_week_boundary_positive"
+            },
+            {
+              "name": "training_import_week_decision_valid"
+            },
+            {
+              "name": "training_import_week_header_not_blank"
+            },
+            {
+              "name": "training_import_week_number_positive"
+            },
+            {
+              "name": "training_import_week_rows_valid"
             }
           ]
         },

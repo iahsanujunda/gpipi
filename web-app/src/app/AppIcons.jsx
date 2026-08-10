@@ -115,6 +115,29 @@ export function TrainingIcon(props) {
   )
 }
 
+export function DriveIcon(props) {
+  return (
+    <SvgIcon viewBox="0 0 24 24" {...props}>
+      <path
+        d="m12 3 5 8.5H7L12 3Zm5 8.5 4.5 8H12l5-8Zm-10 0 5 8H2.5l4.5-8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </SvgIcon>
+  )
+}
+
+export function SheetIcon(props) {
+  return (
+    <SvgIcon viewBox="0 0 24 24" {...props}>
+      <rect x="4" y="2.5" width="16" height="19" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 8h8M8 12h8M8 16h8M12 8v8" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    </SvgIcon>
+  )
+}
+
 export function SwapIcon(props) {
   return (
     <SvgIcon viewBox="0 0 24 24" {...props}>

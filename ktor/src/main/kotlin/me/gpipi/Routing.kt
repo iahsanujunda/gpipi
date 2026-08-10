@@ -12,6 +12,7 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
 import me.gpipi.ai.OpenRouterClient
+import me.gpipi.ai.OpenRouterReasoningEffort
 import me.gpipi.account.AccountRepository
 import me.gpipi.account.AccountService
 import me.gpipi.account.accountApiRoutes
@@ -48,6 +49,16 @@ import me.gpipi.shopping.shoppingApiRoutes
 import me.gpipi.training.TrainingRepository
 import me.gpipi.training.TrainingService
 import me.gpipi.training.trainingApiRoutes
+import me.gpipi.training.google.GoogleConnectionService
+import me.gpipi.training.google.GoogleCredentialCipher
+import me.gpipi.training.google.GoogleCredentialRepository
+import me.gpipi.training.google.GoogleOAuthClient
+import me.gpipi.training.google.GoogleTrainingSheetGateway
+import me.gpipi.training.google.googleSettings
+import me.gpipi.training.imports.TrainingImportRepository
+import me.gpipi.training.imports.TrainingImportService
+import me.gpipi.training.imports.TrainingPrescriptionExtractionService
+import me.gpipi.training.imports.trainingImportApiRoutes
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -76,9 +87,11 @@ fun Application.configureRouting() {
 
     val slackHttpClient = HttpClient(CIO) { configureSlackHttpClient() }
     val openRouterHttpClient = HttpClient(CIO) { configureOpenRouterHttpClient() }
+    val googleHttpClient = HttpClient(CIO) { configureGoogleHttpClient() }
     monitor.subscribe(ApplicationStopped) {
         slackHttpClient.close()
         openRouterHttpClient.close()
+        googleHttpClient.close()
     }
 
     val slack = SlackClient(slackHttpClient, botToken)
@@ -87,6 +100,12 @@ fun Application.configureRouting() {
         openRouterHttpClient,
         openRouterKey,
         cfg.property("openrouter.model").getString()
+    )
+    val trainingExtractionClient = OpenRouterClient(
+        openRouterHttpClient,
+        openRouterKey,
+        cfg.property("openrouter.trainingExtractionModel").getString(),
+        reasoningEffort = OpenRouterReasoningEffort.HIGH,
     )
 
     val categoryRepo = CategoryRepository()
@@ -118,6 +137,25 @@ fun Application.configureRouting() {
     val shoppingService = ShoppingService(db, shoppingRepository)
     val shoppingExtractionService = ShoppingExtractionService(orClient)
     val trainingService = TrainingService(db, TrainingRepository())
+    val googleSettings = cfg.googleSettings()
+    val googleCipher = googleSettings.credentialEncryptionKey.takeIf(String::isNotBlank)?.let(::GoogleCredentialCipher)
+    val googleOAuth = googleSettings.takeIf { it.configured }?.let {
+        GoogleOAuthClient(googleHttpClient, it)
+    }
+    val googleConnectionService = GoogleConnectionService(
+        db = db,
+        repository = GoogleCredentialRepository(),
+        oauth = googleOAuth,
+        cipher = googleCipher,
+        settings = googleSettings,
+    )
+    val trainingImportService = TrainingImportService(
+        db = db,
+        repository = TrainingImportRepository(),
+        google = googleConnectionService,
+        sheets = GoogleTrainingSheetGateway(googleHttpClient),
+        extractor = TrainingPrescriptionExtractionService(trainingExtractionClient),
+    )
 
     val webBaseUrl = cfg.property("web.baseUrl").getString()
     val eventHandler = SlackEventHandler(
@@ -176,6 +214,7 @@ fun Application.configureRouting() {
             budgetApiRoutes(budgetService)
             shoppingApiRoutes(shoppingService)
             trainingApiRoutes(trainingService)
+            trainingImportApiRoutes(googleConnectionService, trainingImportService, webBaseUrl)
         }
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")

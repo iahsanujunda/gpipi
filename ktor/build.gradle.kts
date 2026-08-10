@@ -46,6 +46,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-core:1.3.1")
     implementation("org.jetbrains.exposed:exposed-jdbc:1.3.1")
     implementation("org.jetbrains.exposed:exposed-java-time:1.3.1")
+    implementation("org.jetbrains.exposed:exposed-json:1.3.1")
     implementation("de.quati.pgen:jdbc:0.49.0")
     implementation("de.quati:kotlin-util:2.0.0")   // generated code needs this
     implementation("org.flywaydb:flyway-core:12.10.0")
@@ -123,6 +124,15 @@ pgen {
             addTable("public", "training_session")
             addTable("public", "performed_exercise")
             addTable("public", "performed_set")
+            addTable("public", "google_credential")
+            addTable("public", "google_oauth_state")
+            addTable("public", "training_import")
+            addTable("public", "training_import_tab")
+            addTable("public", "training_import_week")
+            addTable("public", "training_import_exercise_match")
+            addTable("public", "sheet_link")
+            addTable("public", "sheet_week_link")
+            addTable("public", "sheet_prescription_link")
         }
         columnTypeMappings {
             add(

@@ -821,7 +821,7 @@ Structure:
 Do not explain your answer and do not include properties outside the schema.
 ```
 
-The variable data is only the sanitized JSON user message. We do not interpolate sheet values into the system prompt. Temperature remains `0`, and OpenRouter strict structured output supplies the schema exactly as the existing expense extractor does.
+The variable data is only the sanitized JSON user message. We do not interpolate sheet values into the system prompt. Temperature remains `0`, and OpenRouter strict structured output supplies the schema exactly as the existing expense extractor does. The dedicated training client also sends `reasoning: { "effort": "high" }`; expense and shopping extraction remain unchanged. High reasoning is part of this extraction contract, so the configured training model/provider must support it rather than falling back to a non-reasoning request.
 
 #### Structured output
 

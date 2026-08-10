@@ -12,6 +12,7 @@ import {
 } from '@mui/material'
 import { Link, useNavigate } from 'react-router'
 import { AddIcon, ArrowBackIcon, RemoveIcon } from '@/app/AppIcons'
+import { DriveIcon } from '@/app/AppIcons'
 import {
   useActivateTrainingProgram,
   useCreateTrainingProgram,
@@ -203,6 +204,22 @@ export default function TrainingProgramPage() {
         <Alert severity="info">
           {overview.data.program.name} is active. Saving this form starts another program and makes it active.
         </Alert>
+      )}
+
+      {overview.data && (
+        <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}>
+            <Stack spacing={0.5}>
+              <Typography component="h2" variant="h6">Google Sheet import</Typography>
+              <Typography color="text.secondary" variant="body2">
+                Choose exactly one trainer-authored week, review it, then apply it to {overview.data.program.name}.
+              </Typography>
+            </Stack>
+            <Button component={Link} startIcon={<DriveIcon />} to="/training/program/import" variant="outlined">
+              Import one week
+            </Button>
+          </Stack>
+        </Paper>
       )}
       {error && <Alert severity="error">{error}</Alert>}
       {exercises.isError && <Alert severity="error">Existing exercises could not be loaded.</Alert>}

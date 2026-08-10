@@ -8,6 +8,7 @@ import io.ktor.serialization.kotlinx.json.json
 
 internal const val SLACK_REQUEST_TIMEOUT_MILLIS = 30_000L
 internal const val OPENROUTER_REQUEST_TIMEOUT_MILLIS = 90_000L
+internal const val GOOGLE_REQUEST_TIMEOUT_MILLIS = 30_000L
 
 internal fun HttpClientConfig<*>.configureSlackHttpClient() {
     install(ContentNegotiation) { json() }
@@ -33,5 +34,13 @@ internal fun HttpClientConfig<*>.configureOpenRouterHttpClient(
     install(HttpTimeout) {
         requestTimeoutMillis = timeoutMillis
         socketTimeoutMillis = timeoutMillis
+    }
+}
+
+internal fun HttpClientConfig<*>.configureGoogleHttpClient() {
+    install(ContentNegotiation) { json() }
+    install(HttpTimeout) {
+        requestTimeoutMillis = GOOGLE_REQUEST_TIMEOUT_MILLIS
+        socketTimeoutMillis = GOOGLE_REQUEST_TIMEOUT_MILLIS
     }
 }

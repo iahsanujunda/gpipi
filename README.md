@@ -151,4 +151,4 @@ The system separates fast acknowledgement from slow AI and database work. Slack 
 
 There is intentionally no claim of end-to-end exactly-once delivery. Because Slack is acknowledged before work is durably queued, a process crash in that window can lose the event; because there is no transactional outbox, a committed change can outlive its Slack confirmation. A durable inbox/outbox worker would be the next step if those remaining windows need at-least-once processing and replayable delivery.
 
-See the [design system](docs/design-system.md), [backend notes](ktor/README.md), and [frontend notes](web-app/README.md) for deeper product and implementation detail.
+See the [design system](docs/design-system.md), [training Sheet import setup](docs/training-import-setup.md), [backend notes](ktor/README.md), and [frontend notes](web-app/README.md) for deeper product and implementation detail.

@@ -90,6 +90,21 @@ async function expectNoHorizontalOverflow(page) {
   })
 }
 
+test('disconnected import page has one clear Google connection action', async ({ page }) => {
+  await page.route('**/api/training/google/status', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ configured: true, connected: false, connectedAt: null, missingConfiguration: [] }),
+  }))
+
+  await page.goto('/training/program/import')
+
+  await expect(page.getByRole('heading', { name: 'Import from Google Sheet' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Connect Google' })).toBeVisible()
+  await expect(page.getByText('Connect your Google account')).toHaveCount(0)
+  await expect(page.getByText(/The app receives access only/)).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('one explicit week crosses Picker, mapping, extraction, review, and Apply', async ({ page }) => {
   let currentImport = mappedImport()
   currentImport.selectedWeekNumber = null

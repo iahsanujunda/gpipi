@@ -184,6 +184,7 @@ Also prove the new-program path with a disposable Sheet: begin from **Training â
 
 | Symptom | Check |
 | --- | --- |
+| Google says `response_type` is missing | The deployed backend must generate a URL containing `response_type=code`. This is produced by Ktor, not configured in Google Cloud. Deploy a version containing the OAuth URL-builder fix, then press **Connect Google** again to create a fresh one-use state. |
 | `redirect_uri_mismatch` | `GOOGLE_OAUTH_REDIRECT_URI` must exactly match an authorized redirect URI, including scheme, host, port, path, and trailing-slash absence. |
 | Callback returns signed out | Use one hostname consistently; confirm the browser retained the Ktor session cookie and production uses HTTPS. |
 | Google returns no refresh token | Disconnect/revoke the app from the Google account, then connect again. The authorization request uses offline access and explicit consent. |

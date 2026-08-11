@@ -19,7 +19,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
-import { ArrowBackIcon, DriveIcon, SheetIcon } from '@/app/AppIcons'
+import { ArrowBackIcon, SheetIcon } from '@/app/AppIcons'
 import {
   getGooglePickerToken,
   useApplyTrainingImport,
@@ -108,27 +108,14 @@ function GoogleConnection({ status, onConnect, onDisconnect, pending }) {
       </Alert>
     )
   }
-  return (
-    <Paper component="section" variant="outlined" sx={{ p: { xs: 2.25, sm: 3 } }}>
-      <Stack spacing={2} sx={{ alignItems: 'flex-start' }}>
-        <Box sx={{ width: 54, height: 54, borderRadius: '50%', bgcolor: 'highlight.main', color: 'primary.main', display: 'grid', placeItems: 'center' }}>
-          <DriveIcon />
-        </Box>
-        <Stack spacing={0.5}>
-          <Typography component="h2" variant="h6">
-            {status.connected ? 'Google account connected' : 'Connect your Google account'}
-          </Typography>
-          <Typography color="text.secondary" variant="body2" sx={{ maxWidth: 620 }}>
-            The app receives access only to the Sheet you explicitly select. Nothing is imported until you review and apply one chosen week.
-          </Typography>
-        </Stack>
-        {status.connected ? (
-          <Button color="inherit" disabled={pending} onClick={onDisconnect} variant="text">Disconnect Google</Button>
-        ) : (
-          <Button disabled={pending} onClick={onConnect} startIcon={<DriveIcon />} variant="contained">Connect Google</Button>
-        )}
-      </Stack>
-    </Paper>
+  return status.connected ? (
+    <Button color="inherit" disabled={pending} onClick={onDisconnect} variant="text">
+      Disconnect Google
+    </Button>
+  ) : (
+    <Button disabled={pending} onClick={onConnect} variant="contained" size="large">
+      Connect Google
+    </Button>
   )
 }
 
@@ -517,7 +504,7 @@ export default function TrainingImportPage({ newProgram = false }) {
   const title = useMemo(
     () => data
       ? `${data.programName} · Week ${data.selectedWeekNumber ?? '—'}`
-      : creatingNewProgram ? 'Import a new training program' : 'Import one training week',
+      : creatingNewProgram ? 'Import a new training program' : 'Import from Google Sheet',
     [creatingNewProgram, data],
   )
 
@@ -620,16 +607,16 @@ export default function TrainingImportPage({ newProgram = false }) {
 
   return (
     <Stack spacing={3} sx={{ containerType: 'inline-size' }}>
-      <Button component={Link} startIcon={<ArrowBackIcon />} sx={{ alignSelf: 'flex-start' }} to="/training/program">Program settings</Button>
+      <Button
+        component={Link}
+        startIcon={<ArrowBackIcon />}
+        sx={{ alignSelf: 'flex-start' }}
+        to={`/training/weeks/${overview.data?.currentWeekNumber ?? overview.data?.selectedWeekNumber ?? 1}`}
+      >
+        Training
+      </Button>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'space-between' }}>
-        <Stack spacing={0.5}>
-          <Typography component="h1" variant="h4">{title}</Typography>
-          <Typography color="text.secondary">
-            {creatingNewProgram
-              ? 'The program stays a draft until one selected week has been reviewed and applied.'
-              : 'Choose the boundary first, then review only what crossed it.'}
-          </Typography>
-        </Stack>
+        <Typography component="h1" variant="h4">{title}</Typography>
         {data && <Chip label={stepLabel(data.state, hasMapping)} sx={{ alignSelf: 'flex-start' }} />}
       </Stack>
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
@@ -641,19 +628,17 @@ export default function TrainingImportPage({ newProgram = false }) {
 
       {status.data.connected && !data && (
         <Stack spacing={2.5}>
-          <GoogleConnection
-            status={status.data}
-            onConnect={connectGoogle}
-            onDisconnect={async () => { await disconnect.mutateAsync(); status.refetch() }}
-            pending={disconnect.isPending}
-          />
-          <Paper component="section" variant="outlined" sx={{ p: { xs: 2.25, sm: 3 } }}>
-            <Stack spacing={1.75} sx={{ alignItems: 'flex-start' }}>
-              <Typography component="h2" variant="h6">Select the trainer’s Sheet</Typography>
-              <Typography color="text.secondary" variant="body2">Google renders the file chooser. The app receives only the selected spreadsheet ID.</Typography>
-              <Button disabled={pending} onClick={chooseSheet} startIcon={<SheetIcon />} variant="contained">Choose Google Sheet</Button>
-            </Stack>
-          </Paper>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'center' } }}>
+            <Button disabled={pending} onClick={chooseSheet} variant="contained" size="large">
+              Choose Google Sheet
+            </Button>
+            <GoogleConnection
+              status={status.data}
+              onConnect={connectGoogle}
+              onDisconnect={async () => { await disconnect.mutateAsync(); status.refetch() }}
+              pending={disconnect.isPending}
+            />
+          </Stack>
           {selection?.targetType === 'NEW_PROGRAM' && !programDetailsConfirmed && (
             <ProgramDraftEditor
               key={selection.importId}

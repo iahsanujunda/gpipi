@@ -94,6 +94,9 @@ describe('training iteration 1 pages', () => {
     )
 
     expect(screen.getByRole('heading', { name: 'Week 2' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'M1' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Edit M1 program' })).toHaveAttribute('href', '/training/program')
+    expect(screen.queryByText('Program settings')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Current · Week 3' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Review' })).toHaveAttribute(
       'href',

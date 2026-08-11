@@ -62,11 +62,17 @@ test('navigation opens the derived current week and preserves week history retur
   await page.getByRole('link', { name: 'Training' }).click()
 
   await expect(page).toHaveURL(/\/training\/weeks\/3$/)
-  await expect(page.getByRole('heading', { name: 'Training', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'M1', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Edit M1 program' })).toBeVisible()
+  await expect(page.getByText('Program settings')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Week 3', exact: true })).toBeVisible()
   await expect(page.getByText('0 of 2 resolved')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Add workout' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
+
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  await expect(page.getByRole('button', { name: 'Add Program' })).toBeVisible()
+  await page.getByRole('button', { name: 'Close navigation' }).click()
 
   await page.getByRole('button', { name: 'Previous authored week' }).click()
   await expect(page).toHaveURL(/\/training\/weeks\/2$/)
@@ -198,7 +204,7 @@ test('manual flow creates program details, then adds a workout from empty curren
   await expect(page.getByRole('heading', { name: 'No Active Program' })).toBeVisible()
   await expect(page.getByText(/author the prescribed/i)).toHaveCount(0)
   await page.getByRole('button', { name: 'Open navigation' }).click()
-  await page.getByRole('button', { name: 'Create Program' }).click()
+  await page.getByRole('button', { name: 'Add Program' }).click()
 
   await expect(page.getByRole('heading', { name: 'Create Program' })).toBeVisible()
   await expect(page.getByText('Import from Google Sheet')).toHaveCount(0)

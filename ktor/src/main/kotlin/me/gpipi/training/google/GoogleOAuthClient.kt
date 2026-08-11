@@ -5,8 +5,6 @@ import io.ktor.client.call.body
 import io.ktor.client.request.forms.submitForm
 import io.ktor.http.Parameters
 import io.ktor.http.URLBuilder
-import io.ktor.http.appendPathSegments
-import io.ktor.http.parameters
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -33,16 +31,14 @@ class GoogleOAuthClient(
     fun authorizationUrl(state: String): String {
         require(settings.configured) { "Google integration is not configured." }
         return URLBuilder(authorizationEndpoint).apply {
-            parameters {
-                append("client_id", settings.clientId)
-                append("redirect_uri", settings.redirectUri)
-                append("response_type", "code")
-                append("scope", DRIVE_FILE_SCOPE)
-                append("access_type", "offline")
-                append("include_granted_scopes", "false")
-                append("prompt", "consent")
-                append("state", state)
-            }
+            parameters.append("client_id", settings.clientId)
+            parameters.append("redirect_uri", settings.redirectUri)
+            parameters.append("response_type", "code")
+            parameters.append("scope", DRIVE_FILE_SCOPE)
+            parameters.append("access_type", "offline")
+            parameters.append("include_granted_scopes", "false")
+            parameters.append("prompt", "consent")
+            parameters.append("state", state)
         }.buildString()
     }
 

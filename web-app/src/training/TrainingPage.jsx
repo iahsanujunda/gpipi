@@ -11,7 +11,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Link, useNavigate, useParams } from 'react-router'
-import { AddIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '@/app/AppIcons'
+import { AddIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, EditIcon } from '@/app/AppIcons'
 import { usePageAction } from '@/app/pageActions'
 import AnimatedBottomSheet from '@/components/AnimatedBottomSheet'
 import { useTrainingLifecycle, useTrainingOverview } from './queries'
@@ -104,19 +104,9 @@ function TrainingLoading() {
 }
 
 function NoActiveProgram() {
-  const navigate = useNavigate()
-  const createProgram = useCallback(() => navigate('/training/program'), [navigate])
-  usePageAction(useMemo(() => ({
-    id: 'create-training-program',
-    label: 'Create Program',
-    icon: AddIcon,
-    onSelect: createProgram,
-  }), [createProgram]))
-
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 620 }}>
-      <Typography component="h1" variant="h4">Training</Typography>
-      <Typography component="h2" variant="h6">No Active Program</Typography>
+      <Typography component="h1" variant="h4">No Active Program</Typography>
     </Stack>
   )
 }
@@ -130,6 +120,14 @@ export default function TrainingPage() {
   const restore = useTrainingLifecycle('restore')
   const [notice, setNotice] = useState(null)
   const [addWorkoutOpen, setAddWorkoutOpen] = useState(false)
+  const addProgram = useCallback(() => navigate('/training/program'), [navigate])
+
+  usePageAction(useMemo(() => ({
+    id: 'add-training-program',
+    label: 'Add Program',
+    icon: AddIcon,
+    onSelect: addProgram,
+  }), [addProgram]))
 
   useEffect(() => {
     if (!routeWeek && overview.data?.selectedWeekNumber) {
@@ -164,12 +162,19 @@ export default function TrainingPage() {
 
   return (
     <Stack spacing={3}>
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <Stack spacing={0.75} sx={{ minWidth: 0 }}>
-          <Typography component="h1" variant="h4">Training</Typography>
-          <Typography color="text.secondary" variant="body2">{data.program.name}</Typography>
-        </Stack>
-        <Chip label={`${data.program.name} · active`} sx={{ textTransform: 'uppercase' }} />
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+        <Typography component="h1" variant="h4" sx={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+          {data.program.name}
+        </Typography>
+        <Button
+          aria-label={`Edit ${data.program.name} program`}
+          component={Link}
+          startIcon={<EditIcon />}
+          to="/training/program"
+          variant="text"
+        >
+          Edit
+        </Button>
       </Stack>
 
       {notice && <Alert role="status" severity="info" onClose={() => setNotice(null)}>{notice}</Alert>}
@@ -248,10 +253,6 @@ export default function TrainingPage() {
       {!data.currentWeekNumber && (
         <Alert severity="info">No next week is authored. Your training history remains available.</Alert>
       )}
-
-      <Button component={Link} to="/training/program" variant="text" sx={{ alignSelf: 'flex-start' }}>
-        Program settings
-      </Button>
 
       <AnimatedBottomSheet
         aria-labelledby="add-workout-title"

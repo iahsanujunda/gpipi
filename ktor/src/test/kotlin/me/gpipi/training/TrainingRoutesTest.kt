@@ -182,6 +182,28 @@ class TrainingRoutesTest {
     }
 
     @Test
+    fun `PUT program updates only the authenticated program details`() = testApplication {
+        val programId = UUID.randomUUID()
+        val input = ProgramAuthoringInput(
+            name = "M1 updated",
+            note = "Adjusted block",
+            startsOn = LocalDate.parse("2026-08-11"),
+        )
+        coEvery { service.updateProgram("U-web", programId, input) } returns TrainingMutationResult.Updated
+        boot()
+        val client = apiClient()
+        client.post("/test/login")
+
+        val response = client.put("/api/training/programs/$programId") {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProgramRequest("M1 updated", "Adjusted block", "2026-08-11"))
+        }
+
+        assertEquals(HttpStatusCode.NoContent, response.status)
+        coVerify(exactly = 1) { service.updateProgram("U-web", programId, input) }
+    }
+
+    @Test
     fun `foreign records remain indistinguishable from missing records at HTTP boundary`() =
         testApplication {
             val workoutId = UUID.randomUUID()

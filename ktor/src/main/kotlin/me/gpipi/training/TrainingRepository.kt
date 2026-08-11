@@ -87,6 +87,20 @@ class TrainingRepository {
         return true
     }
 
+    fun updateProgram(
+        ownerUserId: String,
+        programId: UUID,
+        input: ProgramAuthoringInput,
+        now: OffsetDateTime,
+    ): Boolean = Program.update({
+        (Program.id eq programId) and (Program.ownerUserId eq ownerUserId)
+    }) {
+        it[Program.name] = input.name
+        it[Program.note] = input.note
+        it[Program.startsOn] = input.startsOn
+        it[Program.updatedAt] = now
+    } == 1
+
     fun weekNumbers(programId: UUID): List<Int> =
         (Workout innerJoin WorkoutWeek)
             .select(WorkoutWeek.weekNumber)

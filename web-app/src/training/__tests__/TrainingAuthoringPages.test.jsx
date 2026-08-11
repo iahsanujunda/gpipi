@@ -7,6 +7,7 @@ import TrainingWorkoutAuthoringPage from '@/training/TrainingWorkoutAuthoringPag
 import { renderWithProviders } from '@/test/renderWithProviders'
 
 const mockCreateProgram = vi.fn()
+const mockUpdateProgram = vi.fn()
 const mockCreateWorkout = vi.fn()
 const mockOverview = vi.fn()
 const mockExercises = vi.fn()
@@ -15,6 +16,7 @@ const mockActivate = vi.fn()
 
 vi.mock('@/training/queries', () => ({
   useCreateTrainingProgram: () => mockCreateProgram(),
+  useUpdateTrainingProgram: () => mockUpdateProgram(),
   useCreateTrainingWorkout: () => mockCreateWorkout(),
   useTrainingOverview: (week) => mockOverview(week),
   useTrainingExercises: () => mockExercises(),
@@ -30,6 +32,7 @@ describe('training manual authoring flow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateProgram.mockReturnValue(mutation())
+    mockUpdateProgram.mockReturnValue(mutation())
     mockCreateWorkout.mockReturnValue(mutation())
     mockOverview.mockReturnValue({ data: null, isPending: false, isError: false })
     mockExercises.mockReturnValue({ data: [], isPending: false, isError: false })
@@ -58,6 +61,47 @@ describe('training manual authoring flow', () => {
       startsOn: null,
       note: 'Pregnancy strength block',
     })
+  })
+
+  it('loads an existing program into the edit form and updates only its details', async () => {
+    const user = userEvent.setup()
+    const update = mutation()
+    mockUpdateProgram.mockReturnValue(update)
+    mockPrograms.mockReturnValue({
+      data: [{
+        id: 'program-1',
+        name: 'M1',
+        startsOn: '2026-08-01',
+        note: 'Strength block',
+        active: true,
+      }],
+      isPending: false,
+      isError: false,
+    })
+
+    renderWithProviders(
+      <Routes><Route path="training/program/:programId" element={<TrainingProgramPage />} /></Routes>,
+      { route: '/training/program/program-1' },
+    )
+
+    expect(screen.getByRole('heading', { name: 'Edit Program' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Program name/ })).toHaveValue('M1')
+    expect(screen.getByLabelText('Start date (optional)')).toHaveValue('2026-08-01')
+    expect(screen.getByRole('textbox', { name: 'Program note (optional)' })).toHaveValue('Strength block')
+
+    await user.clear(screen.getByRole('textbox', { name: /Program name/ }))
+    await user.type(screen.getByRole('textbox', { name: /Program name/ }), 'M1 updated')
+    await user.click(screen.getByRole('button', { name: 'Save Program' }))
+
+    expect(update.mutateAsync).toHaveBeenCalledWith({
+      programId: 'program-1',
+      program: {
+        name: 'M1 updated',
+        startsOn: '2026-08-01',
+        note: 'Strength block',
+      },
+    })
+    expect(screen.queryByRole('heading', { name: 'Saved programs' })).not.toBeInTheDocument()
   })
 
   it('adds one reviewed workout to the routed current week', async () => {

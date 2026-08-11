@@ -171,7 +171,7 @@ test('one explicit week crosses Sheet selection, mapping, extraction, review, an
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ importId, spreadsheetTitle: 'JUNDA – M1', availableWeekNumbers: [3, 4, 5, 6] }),
+      body: JSON.stringify({ importId, spreadsheetTitle: 'JUNDA – M1', availableWeekNumbers: [6, 3, 5, 4] }),
     })
   })
   await page.route(`**/api/training/imports/${importId}`, (route) => route.fulfill({
@@ -251,6 +251,16 @@ test('one explicit week crosses Sheet selection, mapping, extraction, review, an
   await expect(page.getByLabel('Search Sheets')).toBeVisible()
   await expect(page.getByText('JUNDA – M1')).toBeVisible()
   await page.getByRole('button', { name: 'Choose JUNDA – M1' }).click()
+  const weekButtons = page.getByLabel('Weeks available to import').getByRole('button')
+  await expect(weekButtons).toHaveText(['Week 3', 'Week 4', 'Week 5', 'Week 6'])
+  const weekButtonPositions = await weekButtons.evaluateAll((buttons) => buttons.map((button) => ({
+    left: button.getBoundingClientRect().left,
+    top: button.getBoundingClientRect().top,
+  })))
+  expect(new Set(weekButtonPositions.map(({ left }) => Math.round(left))).size).toBe(1)
+  expect(weekButtonPositions.map(({ top }) => top)).toEqual(
+    [...weekButtonPositions.map(({ top }) => top)].sort((left, right) => left - right),
+  )
   await page.getByRole('button', { name: 'Week 5' }).click()
   await expect(page.getByText('Only Week 5 will cross into the app')).toBeVisible()
   await expect(page.getByText('Warming Up')).toBeVisible()

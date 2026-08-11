@@ -53,6 +53,21 @@ class TrainingService(
             }
         }
 
+    suspend fun updateProgram(
+        ownerUserId: String,
+        programId: UUID,
+        input: ProgramAuthoringInput,
+    ): TrainingMutationResult {
+        validateProgram(input)?.let { return TrainingMutationResult.Invalid(it) }
+        return dbQuery(db) {
+            if (repository.updateProgram(ownerUserId, programId, input.normalized(), now())) {
+                TrainingMutationResult.Updated
+            } else {
+                TrainingMutationResult.NotFound
+            }
+        }
+    }
+
     suspend fun overview(
         ownerUserId: String,
         selectedWeekNumber: Int?,

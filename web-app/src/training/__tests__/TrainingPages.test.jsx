@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router'
 import TrainingPage from '@/training/TrainingPage'
@@ -95,7 +95,7 @@ describe('training iteration 1 pages', () => {
 
     expect(screen.getByRole('heading', { name: 'Week 2' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'M1' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Edit M1 program' })).toHaveAttribute('href', '/training/program')
+    expect(screen.getByRole('link', { name: 'Edit M1 program' })).toHaveAttribute('href', '/training/program/program-1')
     expect(screen.queryByText('Program settings')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Current · Week 3' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Review' })).toHaveAttribute(
@@ -192,5 +192,87 @@ describe('training iteration 1 pages', () => {
         note: null,
       },
     })
+  })
+
+  it('renders labelled prescriptions, verbatim cues, and compact demo fallbacks', () => {
+    const youtubeExercise = {
+      ...exercise,
+      prescriptionId: 'prescription-youtube',
+      exerciseName: 'Goblet squat',
+      demoUrl: 'https://www.youtube.com/shorts/jO2Jl9eZpXk',
+      executionType: 'REPS',
+      targetSets: '3',
+      targetReps: '12',
+      targetLoad: '15 kg dumbbell\n1 pc',
+      targetRest: '45–60 sec',
+      targetRir: null,
+      targetTempo: null,
+      targetNote: 'Set-up:\n- Keep the whole foot planted\n\nDuring the rep:\n- Control the descent',
+      sets: [],
+    }
+    const fallbackExercise = {
+      ...exercise,
+      prescriptionId: 'prescription-fallback',
+      exerciseName: 'DB Romanian deadlift',
+      demoUrl: 'https://trainer.example/rdl-demo',
+      targetRir: null,
+      targetTempo: null,
+      targetNote: null,
+      sets: [],
+    }
+    mockUseWorkoutDetail.mockReturnValue({
+      data: {
+        program,
+        currentWeekNumber: 3,
+        weekId: 'week-3-a',
+        weekNumber: 3,
+        skipped: false,
+        workoutId: 'workout-a',
+        workoutName: 'Full Body 1',
+        workoutNote: null,
+        session: null,
+        groups: [{
+          position: 1,
+          label: 'A',
+          kind: 'STRAIGHT_SET',
+          exercises: [youtubeExercise, fallbackExercise],
+        }],
+      },
+      isPending: false,
+      isError: false,
+    })
+
+    renderWithProviders(
+      <Routes><Route path="training/weeks/:weekNumber/workouts/:workoutId" element={<WorkoutPage />} /></Routes>,
+      { route: '/training/weeks/3/workouts/workout-a' },
+    )
+
+    const thumbnail = screen.getByRole('img', { name: 'Video thumbnail for Goblet squat' })
+    expect(thumbnail).toHaveAttribute('src', 'https://i.ytimg.com/vi/jO2Jl9eZpXk/hqdefault.jpg')
+    expect(screen.getByRole('link', { name: 'Open demo video for Goblet squat' })).toHaveAttribute(
+      'href',
+      'https://www.youtube.com/shorts/jO2Jl9eZpXk',
+    )
+
+    const prescription = screen.getByRole('region', { name: 'Prescription for Goblet squat' })
+    expect(within(prescription).getByText('Sets')).toBeInTheDocument()
+    expect(within(prescription).getByText('3')).toBeInTheDocument()
+    expect(within(prescription).getByText('Reps')).toBeInTheDocument()
+    expect(within(prescription).getByText('12')).toBeInTheDocument()
+    expect(within(prescription).getByText((_, element) => element.textContent === '15 kg dumbbell\n1 pc')).toHaveStyle({ whiteSpace: 'pre-wrap' })
+    expect(within(prescription).queryByText('RIR')).not.toBeInTheDocument()
+    expect(within(prescription).queryByText('Tempo')).not.toBeInTheDocument()
+    expect(screen.queryByText(/3 sets · 12/)).not.toBeInTheDocument()
+
+    expect(within(prescription).getByText((_, element) => (
+      element.children.length === 0 && element.textContent === youtubeExercise.targetNote
+    ))).toHaveStyle({ whiteSpace: 'pre-wrap' })
+    const fallback = screen.getByRole('link', { name: 'Open demo video for DB Romanian deadlift' })
+    expect(within(fallback).getByText('Demo video')).toBeInTheDocument()
+    expect(screen.queryByText(/Preview unavailable/i)).not.toBeInTheDocument()
+
+    fireEvent.error(thumbnail)
+    expect(screen.queryByRole('img', { name: 'Video thumbnail for Goblet squat' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('link', { name: 'Open demo video for Goblet squat' })).getByText('Demo video')).toBeInTheDocument()
   })
 })

@@ -104,10 +104,31 @@ export function useTrainingLifecycle(action) {
 }
 
 export function useCreateTrainingProgram() {
-  return useTrainingMutation((program) => apiFetch('/api/training/programs', {
-    method: 'POST',
-    body: program,
-  }))
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (program) => apiFetch('/api/training/programs', {
+      method: 'POST',
+      body: program,
+    }),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: [...trainingKeys.all, 'overview'] })
+      await queryClient.invalidateQueries({ queryKey: [...trainingKeys.all, 'programs'] })
+    },
+  })
+}
+
+export function useUpdateTrainingProgram() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ programId, program }) => apiFetch(`/api/training/programs/${programId}`, {
+      method: 'PUT',
+      body: program,
+    }),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: [...trainingKeys.all, 'overview'] })
+      await queryClient.invalidateQueries({ queryKey: [...trainingKeys.all, 'programs'] })
+    },
+  })
 }
 
 export function useCreateTrainingWorkout() {

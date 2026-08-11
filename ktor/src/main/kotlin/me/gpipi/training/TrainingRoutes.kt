@@ -198,6 +198,21 @@ fun Route.trainingApiRoutes(service: TrainingService) {
             call.respondMutation(service.activateProgram(actorId, programId))
         }
 
+        put("/programs/{programId}") {
+            val actorId = call.actorId() ?: return@put
+            val programId = call.uuid("programId") ?: return@put
+            val request = call.receive<CreateProgramRequest>()
+            val startsOn = request.startsOn?.let {
+                try {
+                    LocalDate.parse(it)
+                } catch (_: DateTimeParseException) {
+                    call.respond(HttpStatusCode.BadRequest, TrainingApiError("'startsOn' must be YYYY-MM-DD."))
+                    return@put
+                }
+            }
+            call.respondMutation(service.updateProgram(actorId, programId, request.toInput(startsOn)))
+        }
+
         get {
             val actorId = call.actorId() ?: return@get
             val week = call.request.queryParameters["week"]?.toIntOrNull()

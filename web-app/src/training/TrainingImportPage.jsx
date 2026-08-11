@@ -371,13 +371,30 @@ function ReviewEditor({ data, exercises, onSave, onApply, saving, applying }) {
                               <TextField
                                 key={field}
                                 label={field[0].toUpperCase() + field.slice(1)}
+                                maxRows={4}
+                                minRows={1}
+                                multiline
                                 onChange={(event) => updateMovement(workoutIndex, groupIndex, movementIndex, { [field]: event.target.value || null })}
                                 size="small"
                                 value={movement[field] ?? ''}
                               />
                             ))}
                           </Box>
-                          <TextField label="Prescription note" onChange={(event) => updateMovement(workoutIndex, groupIndex, movementIndex, { note: event.target.value || null })} size="small" value={movement.note ?? ''} />
+                          <TextField
+                            label="Demo URL"
+                            onChange={(event) => updateMovement(workoutIndex, groupIndex, movementIndex, { demoUrl: event.target.value || null })}
+                            size="small"
+                            type="url"
+                            value={movement.demoUrl ?? ''}
+                          />
+                          <TextField
+                            label="Prescription note"
+                            minRows={4}
+                            multiline
+                            onChange={(event) => updateMovement(workoutIndex, groupIndex, movementIndex, { note: event.target.value || null })}
+                            size="small"
+                            value={movement.note ?? ''}
+                          />
                           <TextField
                             helperText={suggested ? `Suggested match: ${suggested}. Choose it explicitly if correct.` : 'Every movement requires an explicit decision.'}
                             label="Exercise decision"
@@ -594,11 +611,18 @@ export default function TrainingImportPage() {
                   </Alert>
                 )}
                 <Typography component="h2" variant="h6">Choose one week from {selection.spreadsheetTitle}</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))', gap: 1 }}>
-                  {selection.availableWeekNumbers.map((week) => (
-                    <Button key={week} onClick={() => chooseWeek(week)} variant="outlined">Week {week}</Button>
+                <Stack aria-label="Weeks available to import" spacing={0.75}>
+                  {[...selection.availableWeekNumbers].sort((left, right) => left - right).map((week) => (
+                    <Button
+                      key={week}
+                      onClick={() => chooseWeek(week)}
+                      sx={{ justifyContent: 'flex-start', minHeight: 44, px: 2 }}
+                      variant="outlined"
+                    >
+                      Week {week}
+                    </Button>
                   ))}
-                </Box>
+                </Stack>
               </Stack>
             </Paper>
           )}

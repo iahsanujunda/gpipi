@@ -13,7 +13,7 @@ import {
   Typography,
 } from '@mui/material'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowBackIcon, EditIcon, RemoveIcon } from '@/app/AppIcons'
+import { ArrowBackIcon, EditIcon, ExternalLinkIcon, PlayIcon, RemoveIcon } from '@/app/AppIcons'
 import {
   useDeleteTrainingSet,
   usePutTrainingSet,
@@ -42,20 +42,151 @@ function formatPerformedDate(value) {
   }).format(new Date(`${value}T00:00:00Z`))
 }
 
-function targetSummary(exercise) {
-  return [
-    exercise.targetSets ? `${exercise.targetSets} sets` : null,
-    exercise.targetReps,
-    exercise.targetLoad,
-    exercise.targetRir ? `RIR ${exercise.targetRir}` : null,
-    exercise.targetRest ? `${exercise.targetRest} rest` : null,
-  ].filter(Boolean).join(' · ')
-}
-
 function executionLabel(type) {
   if (type === 'DURATION') return 'Seconds'
   if (type === 'REPS_PER_SIDE') return 'Reps / side'
   return 'Reps'
+}
+
+function safeDemoUrl(value) {
+  if (!value) return null
+  try {
+    const url = new URL(value.trim())
+    return ['http:', 'https:'].includes(url.protocol) ? url : null
+  } catch {
+    return null
+  }
+}
+
+function youtubeVideoId(url) {
+  if (!url) return null
+  const hostname = url.hostname.toLowerCase().replace(/^www\./, '')
+  let candidate = null
+  if (hostname === 'youtu.be') {
+    candidate = url.pathname.split('/').filter(Boolean)[0]
+  } else if (['youtube.com', 'm.youtube.com', 'youtube-nocookie.com'].includes(hostname)) {
+    const path = url.pathname.split('/').filter(Boolean)
+    candidate = url.pathname === '/watch' ? url.searchParams.get('v') :
+      ['shorts', 'embed'].includes(path[0]) ? path[1] : null
+  }
+  return /^[A-Za-z0-9_-]{11}$/.test(candidate ?? '') ? candidate : null
+}
+
+function DemoMedia({ exerciseName, value }) {
+  const [previewFailed, setPreviewFailed] = useState(false)
+  const url = safeDemoUrl(value)
+  if (!url) return null
+  const videoId = youtubeVideoId(url)
+  const label = `Open demo video for ${exerciseName}`
+
+  if (!videoId || previewFailed) {
+    return (
+      <Paper
+        aria-label={label}
+        component="a"
+        href={url.href}
+        rel="noreferrer"
+        target="_blank"
+        variant="outlined"
+        sx={{
+          alignItems: 'center',
+          color: 'text.primary',
+          display: 'flex',
+          justifyContent: 'space-between',
+          minHeight: 48,
+          px: 1.5,
+          textDecoration: 'none',
+          transition: 'transform 160ms ease, border-color 160ms ease',
+          '&:active': { transform: 'scale(0.98)' },
+          '&:hover': { borderColor: 'primary.main' },
+        }}
+      >
+        <Typography sx={{ fontSize: '0.875rem', fontWeight: 700 }}>Demo video</Typography>
+        <ExternalLinkIcon color="primary" fontSize="small" />
+      </Paper>
+    )
+  }
+
+  return (
+    <Box
+      aria-label={label}
+      component="a"
+      href={url.href}
+      rel="noreferrer"
+      target="_blank"
+      sx={{
+        aspectRatio: '16 / 9',
+        bgcolor: 'background.default',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 2,
+        display: 'block',
+        overflow: 'hidden',
+        position: 'relative',
+        transition: 'transform 160ms ease, border-color 160ms ease',
+        '&:active': { transform: 'scale(0.98)' },
+        '&:hover': { borderColor: 'primary.main' },
+      }}
+    >
+      <Box
+        alt={`Video thumbnail for ${exerciseName}`}
+        component="img"
+        loading="lazy"
+        onError={() => setPreviewFailed(true)}
+        referrerPolicy="no-referrer"
+        src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+        sx={{ display: 'block', height: '100%', objectFit: 'cover', width: '100%' }}
+      />
+      <Box sx={{ bgcolor: 'rgba(22, 103, 154, 0.94)', borderRadius: '50%', color: 'primary.contrastText', display: 'grid', height: 52, left: '50%', placeItems: 'center', position: 'absolute', top: '50%', transform: 'translate(-50%, -50%)', width: 52 }}>
+        <PlayIcon sx={{ fontSize: 31 }} />
+      </Box>
+    </Box>
+  )
+}
+
+function Prescription({ exercise }) {
+  const fields = [
+    ['Sets', exercise.targetSets],
+    ['Reps', exercise.targetReps],
+    ['Load', exercise.targetLoad],
+    ['Rest', exercise.targetRest],
+    ['RIR', exercise.targetRir],
+    ['Tempo', exercise.targetTempo],
+  ].filter(([, value]) => value != null && String(value).trim() !== '')
+
+  return (
+    <Stack aria-label={`Prescription for ${exercise.exerciseName}`} component="section" spacing={1.25}>
+      <Typography color="text.secondary" sx={{ fontSize: '0.6875rem', fontWeight: 750, letterSpacing: '0.09em', textTransform: 'uppercase' }}>
+        Prescribed
+      </Typography>
+      {fields.length > 0 && (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1 }}>
+          {fields.map(([label, value]) => (
+            <Paper key={label} variant="outlined" sx={{ minHeight: 70, p: 1.25 }}>
+              <Typography color="text.secondary" sx={{ fontSize: '0.625rem', fontWeight: 750, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {label}
+              </Typography>
+              <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, lineHeight: 1.4, mt: 0.6, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
+                {value}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
+      )}
+      {exercise.targetNote && (
+        <Box component="details">
+          <Typography component="summary" sx={{ color: 'primary.main', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 700 }}>
+            Cues
+          </Typography>
+          <Paper variant="outlined" sx={{ mt: 1, p: 1.5 }}>
+            <Typography color="text.secondary" component="div" variant="body2" sx={{ lineHeight: 1.65, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
+              {exercise.targetNote}
+            </Typography>
+          </Paper>
+        </Box>
+      )}
+    </Stack>
+  )
 }
 
 function emptyFields() {
@@ -357,27 +488,16 @@ export default function WorkoutPage() {
             <Stack divider={<Divider flexItem />}>
               {group.exercises.map((exercise) => (
                 <Stack key={exercise.prescriptionId} spacing={1.75} sx={{ p: { xs: 2, sm: 2.5 } }}>
-                  <Stack spacing={0.6}>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography component="h3" variant="h6">{exercise.exerciseName}</Typography>
-                      {exercise.demoUrl && (
-                        <Button component="a" href={exercise.demoUrl} rel="noreferrer" size="small" target="_blank">
-                          Demo
-                        </Button>
-                      )}
-                    </Stack>
-                    <Typography color="text.secondary" variant="body2">{targetSummary(exercise) || 'Prescribed movement'}</Typography>
-                    <Chip label={executionLabel(exercise.executionType)} size="small" sx={{ alignSelf: 'flex-start', textTransform: 'uppercase' }} />
-                    {exercise.targetTempo && <Typography variant="body2">Tempo {exercise.targetTempo}</Typography>}
-                    {exercise.targetNote && (
-                      <Box component="details">
-                        <Typography component="summary" sx={{ color: 'primary.main', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 700 }}>
-                          Cues
-                        </Typography>
-                        <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>{exercise.targetNote}</Typography>
-                      </Box>
-                    )}
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography component="h3" variant="h6">{exercise.exerciseName}</Typography>
+                    <Chip label={executionLabel(exercise.executionType)} size="small" sx={{ flexShrink: 0, textTransform: 'uppercase' }} />
                   </Stack>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: safeDemoUrl(exercise.demoUrl) ? 'minmax(220px, 0.8fr) minmax(0, 1.6fr)' : 'minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+                    {safeDemoUrl(exercise.demoUrl) && (
+                      <DemoMedia key={exercise.demoUrl} exerciseName={exercise.exerciseName} value={exercise.demoUrl} />
+                    )}
+                    <Prescription exercise={exercise} />
+                  </Box>
                   <SetEditor
                     key={`${exercise.prescriptionId}:${setsVersion(exercise)}`}
                     exercise={exercise}

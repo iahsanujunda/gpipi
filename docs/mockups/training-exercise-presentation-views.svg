@@ -1,0 +1,353 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="2200" viewBox="0 0 1380 2200" role="img" aria-labelledby="title description">
+  <title id="title">Phase 5 prescribed exercise presentation mockups</title>
+  <desc id="description">Mobile and desktop workout views with a YouTube thumbnail, separately labelled prescription fields, verbatim multiline cues, execution logging, and a non-YouTube fallback.</desc>
+
+  <defs>
+    <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#1D4E89" flood-opacity=".16" />
+    </filter>
+    <filter id="panel-shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#1D4E89" flood-opacity=".12" />
+    </filter>
+    <style>
+      .app { font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .board-title { fill: #1D4E89; font-size: 28px; font-weight: 760; letter-spacing: -.6px; }
+      .board-copy { fill: #526966; font-size: 14px; }
+      .board-label { fill: #1D4E89; font-size: 12px; font-weight: 760; letter-spacing: 1.2px; }
+      .heading { fill: #1D4E89; font-weight: 720; letter-spacing: -.3px; }
+      .body { fill: #17312E; }
+      .secondary { fill: #526966; }
+      .eyebrow { fill: #526966; font-size: 9px; font-weight: 750; letter-spacing: .75px; }
+      .chip { fill: #526966; font-size: 9px; font-weight: 720; letter-spacing: .45px; }
+      .button { fill: #FFFFFF; font-size: 12px; font-weight: 720; text-anchor: middle; }
+      .button-secondary { fill: #16679A; font-size: 12px; font-weight: 720; text-anchor: middle; }
+      .tiny { fill: #526966; font-size: 9.5px; }
+      .metric { fill: #17312E; font-size: 15px; font-weight: 720; }
+    </style>
+
+    <g id="phone-base">
+      <rect width="390" height="1200" rx="50" fill="#1D4E89" filter="url(#phone-shadow)" />
+      <rect x="8" y="8" width="374" height="1184" rx="40" fill="#F4FAFB" />
+      <rect x="8" y="8" width="374" height="38" rx="40" fill="#FFFFFF" />
+      <rect x="8" y="32" width="374" height="14" fill="#FFFFFF" />
+      <text x="28" y="33" class="heading" font-size="13">9:41</text>
+      <g fill="none" stroke="#1D4E89" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M328 28c4-5 9-5 13 0" />
+        <path d="M331 31c2-3 5-3 7 0" />
+        <circle cx="334.5" cy="34" r="1" fill="#1D4E89" stroke="none" />
+        <rect x="350" y="23" width="18" height="10" rx="2" />
+        <path d="M369 26v4" />
+      </g>
+      <rect x="352.5" y="25.5" width="12.5" height="5" rx="1" fill="#1D4E89" />
+      <rect x="8" y="46" width="374" height="58" fill="#FFFFFF" />
+      <rect x="16" y="53" width="44" height="44" rx="10" fill="#FFFFFF" />
+      <path d="M39 65 29 75l10 10M30 75h18" fill="none" stroke="#1D4E89" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="68" y="81" class="heading" font-size="17">gpipi</text>
+      <line x1="8" y1="103.5" x2="382" y2="103.5" stroke="#C9E2E5" />
+      <rect x="146" y="17" width="98" height="20" rx="10" fill="#1D4E89" />
+      <rect x="139" y="1170" width="112" height="5" rx="2.5" fill="#1D4E89" fill-opacity=".72" />
+    </g>
+
+    <g id="youtube-preview">
+      <rect width="326" height="174" rx="12" fill="#17312E" />
+      <rect x="1" y="1" width="324" height="172" rx="11" fill="#DCE9E8" stroke="#C9E2E5" />
+      <path d="M0 130 92 66l70 35 58-54 106 70v56H0Z" fill="#AFCFCE" />
+      <circle cx="241" cy="42" r="24" fill="#F4FAFB" opacity=".6" />
+      <g stroke="#17312E" stroke-width="6" stroke-linecap="round" fill="none" opacity=".78">
+        <path d="M141 67c7-15 28-16 36-1" />
+        <path d="m159 79-8 31 20 22" />
+        <path d="m151 110-24 22M171 132l26 7" />
+        <path d="m142 89-23 3M176 88l23-5" />
+        <path d="M111 83v18M207 74v18M104 87h14M200 78h14" stroke-width="4" />
+      </g>
+      <circle cx="163" cy="87" r="29" fill="#16679A" opacity=".96" />
+      <path d="m156 73 22 14-22 14Z" fill="#FFFFFF" />
+      <rect x="14" y="139" width="112" height="24" rx="12" fill="#17312E" opacity=".82" />
+      <text x="70" y="155" fill="#FFFFFF" font-size="10" font-weight="700" text-anchor="middle">YOUTUBE · 00:42</text>
+      <rect x="239" y="139" width="72" height="24" rx="12" fill="#FFFFFF" opacity=".92" />
+      <text x="275" y="155" fill="#16679A" font-size="10" font-weight="700" text-anchor="middle">OPEN</text>
+    </g>
+
+    <g id="external-icon">
+      <path d="M4 19 18 5m-8 0h8v8M16 17v5H2V8h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+
+    <g id="edit-icon">
+      <path d="m4 20 2-6L16 4l5 5-10 10-7 1Zm10-13 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+    </g>
+
+    <g id="remove-icon">
+      <path d="M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </g>
+
+    <g id="check-icon">
+      <path d="m2 9 5 5L17 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+  </defs>
+
+  <rect width="1380" height="2200" fill="#E7F5F7" />
+  <g class="app">
+    <text x="52" y="58" class="board-title">TRAINING · PRESCRIBED EXERCISE PRESENTATION</text>
+    <text x="52" y="87" class="board-copy">Make the trainer's target readable at a glance, keep cues verbatim, and let the demo video support form review without taking over the logging flow.</text>
+    <rect x="52" y="112" width="1276" height="62" rx="12" fill="#FFFFFF" stroke="#C9E2E5" />
+    <circle cx="82" cy="143" r="13" fill="#DFF4F4" />
+    <g transform="translate(74 135) scale(.8)" color="#16679A"><use href="#check-icon" /></g>
+    <text x="106" y="139" class="body" font-size="13" font-weight="700">Presentation rule</text>
+    <text x="106" y="158" class="secondary" font-size="12">Labels clarify meaning; values remain the trainer's exact strings. No parsing “12 · 15 kg · 45–60 sec” back out of a combined sentence.</text>
+
+    <text x="245" y="215" class="board-label" text-anchor="middle">01 · MOBILE · VIDEO + PRESCRIPTION + LOGGING</text>
+    <text x="685" y="215" class="board-label" text-anchor="middle">02 · MOBILE · NO THUMBNAIL + OPTIONAL FIELDS</text>
+    <text x="1130" y="215" class="board-label" text-anchor="middle">DESIGN CONTRACT</text>
+
+    <!-- Primary mobile treatment -->
+    <g transform="translate(50 240)">
+      <use href="#phone-base" />
+      <text x="24" y="137" class="eyebrow">M1 · WEEK 5</text>
+      <text x="24" y="169" class="heading" font-size="26">Full Body 1</text>
+      <rect x="282" y="135" width="84" height="25" rx="12.5" fill="#DFF4F4" />
+      <text x="324" y="151" class="chip" text-anchor="middle">IN PROGRESS</text>
+
+      <rect x="24" y="193" width="342" height="40" rx="10" fill="#16679A" />
+      <text x="42" y="218" fill="#FFFFFF" font-size="10.5" font-weight="750" letter-spacing=".8">STRAIGHT SET</text>
+      <text x="348" y="218" fill="#FFFFFF" font-size="10.5" font-weight="650" text-anchor="end">1 OF 4</text>
+
+      <text x="32" y="270" class="heading" font-size="20">Goblet squat</text>
+      <rect x="287" y="249" width="71" height="25" rx="12.5" fill="#DFF4F4" />
+      <text x="322.5" y="265" class="chip" text-anchor="middle">REPS</text>
+      <g transform="translate(32 289)"><use href="#youtube-preview" /></g>
+
+      <text x="32" y="492" class="eyebrow">PRESCRIBED</text>
+      <rect x="32" y="504" width="157" height="69" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="46" y="525" class="eyebrow">SETS</text>
+      <text x="46" y="552" class="metric">3</text>
+      <rect x="201" y="504" width="157" height="69" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="215" y="525" class="eyebrow">REPS</text>
+      <text x="215" y="552" class="metric">12</text>
+      <rect x="32" y="585" width="157" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="46" y="606" class="eyebrow">LOAD</text>
+      <text x="46" y="633" class="body" font-size="13.5" font-weight="700">15 kg dumbbell</text>
+      <text x="46" y="651" class="secondary" font-size="10.5">1 pc</text>
+      <rect x="201" y="585" width="157" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="215" y="606" class="eyebrow">REST</text>
+      <text x="215" y="633" class="metric">45–60 sec</text>
+
+      <text x="32" y="699" class="eyebrow">CUES</text>
+      <rect x="32" y="711" width="326" height="169" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="49" cy="735" r="3" fill="#3FC1C0" />
+      <text x="62" y="739" class="body" font-size="11.5">Pakai dumbbell 1 pc, dipegang di tengah</text>
+      <circle cx="49" cy="765" r="3" fill="#3FC1C0" />
+      <text x="62" y="769" class="body" font-size="11.5">Jarak kaki masih bisa ditambah</text>
+      <circle cx="49" cy="795" r="3" fill="#3FC1C0" />
+      <text x="62" y="799" class="body" font-size="11.5">Jari kaki menghadap ke dalam</text>
+      <circle cx="49" cy="825" r="3" fill="#3FC1C0" />
+      <text x="62" y="829" class="body" font-size="11.5">Bangun menggunakan outer sole dan</text>
+      <text x="62" y="848" class="body" font-size="11.5">ball of foot</text>
+      <text x="62" y="868" class="secondary" font-size="9.5">Line breaks and bullets preserved from the Sheet</text>
+
+      <line x1="32" y1="908" x2="358" y2="908" stroke="#C9E2E5" />
+      <text x="32" y="937" class="eyebrow">EXECUTION</text>
+      <rect x="32" y="950" width="326" height="69" rx="10" fill="#FFFFFF" stroke="#3FC1C0" />
+      <circle cx="56" cy="984" r="17" fill="#DFF4F4" />
+      <text x="56" y="989" class="heading" font-size="14" text-anchor="middle">1</text>
+      <text x="86" y="978" class="body" font-size="13" font-weight="720">14 reps</text>
+      <text x="86" y="998" class="secondary" font-size="11">14 kg · RIR 2</text>
+      <g transform="translate(286 970) scale(.75)" color="#526966"><use href="#edit-icon" /></g>
+      <g transform="translate(329 972) scale(.75)" color="#526966"><use href="#remove-icon" /></g>
+
+      <text x="32" y="1054" class="heading" font-size="13">Set 2</text>
+      <text x="358" y="1054" class="secondary" font-size="10" text-anchor="end">Empty until logged</text>
+      <rect x="32" y="1068" width="157" height="57" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="46" y="1090" class="eyebrow">REPS</text>
+      <text x="46" y="1114" class="secondary" font-size="12">Enter reps</text>
+      <rect x="201" y="1068" width="157" height="57" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="215" y="1090" class="eyebrow">LOAD · KG</text>
+      <text x="215" y="1114" class="secondary" font-size="12">Enter load</text>
+      <rect x="222" y="1138" width="136" height="39" rx="9" fill="#16679A" />
+      <text x="290" y="1162" class="button">Log Set 2</text>
+    </g>
+
+    <!-- Optional fields and no-thumbnail fallback -->
+    <g transform="translate(490 240)">
+      <use href="#phone-base" />
+      <text x="24" y="137" class="eyebrow">M1 · WEEK 5</text>
+      <text x="24" y="169" class="heading" font-size="26">Full Body 1</text>
+      <rect x="24" y="193" width="342" height="40" rx="10" fill="#16679A" />
+      <text x="42" y="218" fill="#FFFFFF" font-size="10.5" font-weight="750" letter-spacing=".8">STRAIGHT SET</text>
+      <text x="348" y="218" fill="#FFFFFF" font-size="10.5" font-weight="650" text-anchor="end">2 OF 4</text>
+
+      <text x="32" y="270" class="heading" font-size="19">DB Romanian deadlift</text>
+      <rect x="282" y="249" width="76" height="25" rx="12.5" fill="#DFF4F4" />
+      <text x="320" y="265" class="chip" text-anchor="middle">REPS / SIDE</text>
+
+      <rect x="32" y="289" width="326" height="48" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="48" y="319" class="body" font-size="12" font-weight="700">Demo video</text>
+      <g transform="translate(326 303) scale(.7)" color="#16679A"><use href="#external-icon" /></g>
+
+      <text x="32" y="382" class="eyebrow">PRESCRIBED</text>
+      <rect x="32" y="394" width="99" height="69" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="45" y="415" class="eyebrow">SETS</text>
+      <text x="45" y="442" class="metric">3</text>
+      <rect x="145" y="394" width="99" height="69" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="158" y="415" class="eyebrow">REPS</text>
+      <text x="158" y="442" class="metric">8 each</text>
+      <rect x="258" y="394" width="100" height="69" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="271" y="415" class="eyebrow">RIR</text>
+      <text x="271" y="442" class="metric">2</text>
+
+      <rect x="32" y="475" width="157" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="46" y="496" class="eyebrow">LOAD</text>
+      <text x="46" y="523" class="body" font-size="13.5" font-weight="700">6–7 kg each</text>
+      <rect x="201" y="475" width="157" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="215" y="496" class="eyebrow">REST</text>
+      <text x="215" y="523" class="metric">60 sec</text>
+
+      <rect x="32" y="565" width="326" height="69" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="46" y="586" class="eyebrow">TEMPO</text>
+      <text x="46" y="613" class="metric">3–1–1</text>
+      <text x="124" y="613" class="secondary" font-size="10.5">lower · pause · rise</text>
+
+      <text x="32" y="670" class="eyebrow">CUES</text>
+      <rect x="32" y="682" width="326" height="218" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="47" y="708" class="body" font-size="11.5">Set-up</text>
+      <text x="47" y="732" class="body" font-size="11.5">• Pinggul mundur sebelum lutut menekuk</text>
+      <text x="47" y="755" class="body" font-size="11.5">• Dumbbell dekat paha</text>
+      <text x="47" y="790" class="body" font-size="11.5">During the rep</text>
+      <text x="47" y="814" class="body" font-size="11.5">  • Stop saat hamstring terasa penuh</text>
+      <text x="47" y="837" class="body" font-size="11.5">  • Leher tetap panjang</text>
+      <text x="47" y="872" class="body" font-size="11.5">Trainer note: jangan mengejar lantai.</text>
+      <text x="47" y="891" class="secondary" font-size="9.5">Blank lines and indentation remain visible</text>
+
+      <rect x="32" y="932" width="326" height="90" rx="10" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="48" y="955" class="eyebrow">ABSENT VALUES</text>
+      <text x="48" y="980" class="body" font-size="11.5">Fields that were not prescribed are omitted.</text>
+      <text x="48" y="1001" class="secondary" font-size="10.5">No empty “Note”, “RIR”, or “Tempo” placeholders.</text>
+
+      <text x="32" y="1063" class="eyebrow">EXECUTION</text>
+      <rect x="32" y="1076" width="157" height="61" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="46" y="1098" class="eyebrow">REPS / SIDE</text>
+      <text x="46" y="1123" class="secondary" font-size="12">Enter reps</text>
+      <rect x="201" y="1076" width="157" height="61" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="215" y="1098" class="eyebrow">LOAD · KG</text>
+      <text x="215" y="1123" class="secondary" font-size="12">Enter load</text>
+    </g>
+
+    <!-- Rationale / implementation contract -->
+    <g transform="translate(930 240)">
+      <rect width="400" height="1200" rx="22" fill="#FFFFFF" stroke="#C9E2E5" filter="url(#panel-shadow)" />
+      <text x="28" y="48" class="heading" font-size="22">What changes</text>
+      <text x="28" y="75" class="secondary" font-size="12">One visual hierarchy across current and historical sessions.</text>
+
+      <line x1="28" y1="104" x2="372" y2="104" stroke="#C9E2E5" />
+      <text x="28" y="138" class="eyebrow">1 · VIDEO IS SUPPORTING MATERIAL</text>
+      <rect x="28" y="154" width="344" height="130" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <circle cx="77" cy="219" r="27" fill="#16679A" />
+      <path d="m70 206 20 13-20 13Z" fill="#FFFFFF" />
+      <text x="121" y="195" class="body" font-size="12.5" font-weight="700">Recognized YouTube URL</text>
+      <text x="121" y="216" class="secondary" font-size="11">Derive a thumbnail from its video ID.</text>
+      <text x="121" y="240" class="body" font-size="12.5" font-weight="700">Anything else</text>
+      <text x="121" y="261" class="secondary" font-size="11">Show a compact “Open demo” row.</text>
+
+      <text x="28" y="328" class="eyebrow">2 · PRESCRIPTION FIELDS NEVER BLUR TOGETHER</text>
+      <rect x="28" y="344" width="344" height="171" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="44" y="372" class="body" font-size="11.5">The database already keeps separate strings:</text>
+      <text x="44" y="400" class="heading" font-size="12.5">Sets · Reps · Load · Rest · RIR · Tempo</text>
+      <text x="44" y="431" class="secondary" font-size="11">Render each string under its own label.</text>
+      <text x="44" y="453" class="secondary" font-size="11">Do not infer units, ranges, or equipment.</text>
+      <text x="44" y="475" class="secondary" font-size="11">Omit null fields instead of showing empty boxes.</text>
+      <text x="44" y="497" class="secondary" font-size="11">Execution inputs stay separate and empty.</text>
+
+      <text x="28" y="561" class="eyebrow">3 · CUES ARE VERBATIM TEXT</text>
+      <rect x="28" y="577" width="344" height="178" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <text x="44" y="606" class="body" font-size="11.5" font-weight="700">Display with white-space: pre-wrap</text>
+      <text x="44" y="635" class="secondary" font-size="11">Preserve:</text>
+      <circle cx="49" cy="657" r="2.5" fill="#3FC1C0" />
+      <text x="61" y="661" class="secondary" font-size="11">newlines and blank lines</text>
+      <circle cx="49" cy="682" r="2.5" fill="#3FC1C0" />
+      <text x="61" y="686" class="secondary" font-size="11">bullet and dash characters</text>
+      <circle cx="49" cy="707" r="2.5" fill="#3FC1C0" />
+      <text x="61" y="711" class="secondary" font-size="11">leading indentation</text>
+      <text x="44" y="738" class="secondary" font-size="10">No Markdown/HTML interpretation is required.</text>
+
+      <text x="28" y="801" class="eyebrow">4 · STATES THAT MUST EXIST</text>
+      <rect x="28" y="817" width="344" height="189" rx="12" fill="#F4FAFB" stroke="#C9E2E5" />
+      <rect x="44" y="836" width="104" height="63" rx="9" fill="#E2EEEE" />
+      <rect x="55" y="848" width="82" height="9" rx="4.5" fill="#C9E2E5" />
+      <rect x="55" y="866" width="61" height="7" rx="3.5" fill="#C9E2E5" />
+      <text x="96" y="921" class="chip" text-anchor="middle">LOADING</text>
+      <rect x="160" y="836" width="96" height="63" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <g transform="translate(196 851) scale(.8)" color="#16679A"><use href="#external-icon" /></g>
+      <text x="208" y="921" class="chip" text-anchor="middle">NO PREVIEW</text>
+      <rect x="268" y="836" width="88" height="63" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <path d="m291 880 15-22 15 22Z" fill="none" stroke="#526966" stroke-width="1.7" />
+      <text x="312" y="921" class="chip" text-anchor="middle">ERROR</text>
+      <text x="44" y="953" class="secondary" font-size="11">The exercise remains usable when thumbnail</text>
+      <text x="44" y="973" class="secondary" font-size="11">loading fails; the demo link is never the only</text>
+      <text x="44" y="993" class="secondary" font-size="11">way to understand the prescription.</text>
+
+      <text x="28" y="1052" class="eyebrow">5 · INTERACTION</text>
+      <rect x="28" y="1068" width="344" height="92" rx="12" fill="#DFF4F4" stroke="#3FC1C0" />
+      <text x="44" y="1096" class="body" font-size="11.5">Tap thumbnail → open YouTube in a new tab.</text>
+      <text x="44" y="1120" class="body" font-size="11.5">Set editing remains immediate and unchanged.</text>
+      <text x="44" y="1144" class="secondary" font-size="10.5">Buttons retain the existing pressed-state feedback.</text>
+    </g>
+
+    <text x="52" y="1511" class="board-label">03 · DESKTOP · MEDIA, PRESCRIPTION, AND CUES REMAIN DISTINCT</text>
+
+    <!-- Desktop treatment -->
+    <g transform="translate(50 1540)">
+      <rect width="1280" height="590" rx="22" fill="#F4FAFB" stroke="#C9E2E5" filter="url(#panel-shadow)" />
+      <rect width="1280" height="74" rx="22" fill="#FFFFFF" />
+      <rect y="52" width="1280" height="22" fill="#FFFFFF" />
+      <text x="30" y="31" class="eyebrow">M1 · WEEK 5</text>
+      <text x="30" y="58" class="heading" font-size="23">Full Body 1</text>
+      <rect x="1148" y="24" width="101" height="28" rx="14" fill="#DFF4F4" />
+      <text x="1198.5" y="42" class="chip" text-anchor="middle">IN PROGRESS</text>
+
+      <rect x="30" y="100" width="1220" height="42" rx="10" fill="#16679A" />
+      <text x="48" y="126" fill="#FFFFFF" font-size="10.5" font-weight="750" letter-spacing=".8">STRAIGHT SET · 1 OF 4</text>
+
+      <text x="48" y="184" class="heading" font-size="22">Goblet squat</text>
+      <rect x="195" y="164" width="67" height="25" rx="12.5" fill="#DFF4F4" />
+      <text x="228.5" y="180" class="chip" text-anchor="middle">REPS</text>
+
+      <g transform="translate(48 211) scale(1.08)"><use href="#youtube-preview" /></g>
+
+      <text x="432" y="215" class="eyebrow">PRESCRIBED</text>
+      <rect x="432" y="230" width="166" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="448" y="252" class="eyebrow">SETS</text>
+      <text x="448" y="282" class="metric">3</text>
+      <rect x="610" y="230" width="166" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="626" y="252" class="eyebrow">REPS</text>
+      <text x="626" y="282" class="metric">12</text>
+      <rect x="788" y="230" width="204" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="804" y="252" class="eyebrow">LOAD</text>
+      <text x="804" y="280" class="body" font-size="14" font-weight="720">15 kg dumbbell · 1 pc</text>
+      <rect x="1004" y="230" width="198" height="78" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="1020" y="252" class="eyebrow">REST</text>
+      <text x="1020" y="282" class="metric">45–60 sec</text>
+
+      <text x="432" y="352" class="eyebrow">CUES</text>
+      <rect x="432" y="367" width="770" height="150" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <circle cx="454" cy="395" r="3" fill="#3FC1C0" />
+      <text x="468" y="399" class="body" font-size="12">Pakai dumbbell 1 pc, dipegang di tengah</text>
+      <circle cx="454" cy="424" r="3" fill="#3FC1C0" />
+      <text x="468" y="428" class="body" font-size="12">Jarak kaki masih bisa ditambah</text>
+      <circle cx="454" cy="453" r="3" fill="#3FC1C0" />
+      <text x="468" y="457" class="body" font-size="12">Jari kaki menghadap ke dalam</text>
+      <circle cx="454" cy="482" r="3" fill="#3FC1C0" />
+      <text x="468" y="486" class="body" font-size="12">Bangun menggunakan outer sole dan ball of foot</text>
+      <text x="1184" y="502" class="secondary" font-size="9.5" text-anchor="end">Verbatim from trainer Sheet</text>
+
+      <rect x="48" y="440" width="350" height="77" rx="10" fill="#FFFFFF" stroke="#3FC1C0" />
+      <text x="64" y="461" class="eyebrow">LATEST SET</text>
+      <circle cx="80" cy="488" r="17" fill="#DFF4F4" />
+      <text x="80" y="493" class="heading" font-size="14" text-anchor="middle">1</text>
+      <text x="110" y="483" class="body" font-size="13" font-weight="720">14 reps</text>
+      <text x="110" y="503" class="secondary" font-size="11">14 kg · RIR 2</text>
+      <g transform="translate(327 470) scale(.75)" color="#526966"><use href="#edit-icon" /></g>
+
+      <line x1="30" y1="548" x2="1250" y2="548" stroke="#C9E2E5" />
+      <text x="48" y="577" class="secondary" font-size="10.5">On desktop, the video and the prescription sit side by side; execution remains below the exact same exercise identity.</text>
+    </g>
+  </g>
+</svg>

@@ -134,6 +134,36 @@ test('blank execution, stable slot repair, finish, and completed edits work in t
   await expectNoHorizontalOverflow(page)
 })
 
+test('exercise prescriptions stay readable with video and cue fallbacks on a phone', async ({ page }) => {
+  await page.route('https://i.ytimg.com/**', (route) => route.fulfill({
+    contentType: 'image/svg+xml',
+    body: '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270"><rect width="480" height="270" fill="#b7d7d7"/></svg>',
+  }))
+
+  await page.goto('/training/weeks/3/workouts/61000000-0000-0000-0000-000000000001')
+
+  const thumbnail = page.getByRole('img', { name: 'Video thumbnail for Goblet squat' })
+  await expect(thumbnail).toBeVisible()
+  await expect(thumbnail).toHaveAttribute('src', 'https://i.ytimg.com/vi/jO2Jl9eZpXk/hqdefault.jpg')
+
+  const prescription = page.getByRole('region', { name: 'Prescription for Goblet squat' })
+  await expect(prescription.getByText('Sets').locator('..').getByText('3', { exact: true })).toBeVisible()
+  await expect(prescription.getByText('Reps').locator('..').getByText('10–12')).toBeVisible()
+  await expect(prescription.getByText('Load').locator('..').getByText('20–25 kg')).toBeVisible()
+  await expect(prescription.getByText('Rest').locator('..').getByText('60 sec')).toBeVisible()
+
+  await prescription.getByText('Cues').click()
+  const cues = prescription.getByText(/Set-up:/)
+  await expect(cues).toBeVisible()
+  await expect(cues).toHaveCSS('white-space', 'pre-wrap')
+  expect(await cues.textContent()).toContain('\n\nDuring the rep:\n- Control the descent.')
+
+  const fallback = page.getByRole('link', { name: 'Open demo video for Suitcase carry' })
+  await expect(fallback.getByText('Demo video')).toBeVisible()
+  await expect(page.getByText(/Preview unavailable/i)).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+})
+
 test('manual flow creates program details, then adds a workout from empty current Week 1', async ({ page }) => {
   const programId = '60000000-0000-0000-0000-000000000099'
   const workoutId = '61000000-0000-0000-0000-000000000099'
@@ -167,6 +197,12 @@ test('manual flow creates program details, then adds a workout from empty curren
     })
     activeProgram = { id: programId, name: 'M2', startsOn: null, note: 'Pregnancy strength block', active: true }
     return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: programId }) })
+  })
+  await page.route(`**/api/training/programs/${programId}`, async (route) => {
+    expect(route.request().method()).toBe('PUT')
+    const input = await route.request().postDataJSON()
+    activeProgram = { ...activeProgram, ...input }
+    return route.fulfill({ status: 204 })
   })
   await page.route('**/api/training/exercises', (route) => route.fulfill({
     contentType: 'application/json',
@@ -214,6 +250,15 @@ test('manual flow creates program details, then adds a workout from empty curren
 
   await expect(page).toHaveURL(/\/training\/weeks\/1$/)
   await expect(page.getByText('No workouts yet')).toBeVisible()
+  await page.getByRole('link', { name: 'Edit M2 program' }).click()
+  await expect(page.getByRole('heading', { name: 'Edit Program' })).toBeVisible()
+  await expect(page.getByLabel('Program name')).toHaveValue('M2')
+  await expect(page.getByLabel('Program note (optional)')).toHaveValue('Pregnancy strength block')
+  await page.getByLabel('Program name').fill('M2 revised')
+  await page.getByRole('button', { name: 'Save Program' }).click()
+
+  await expect(page).toHaveURL(/\/training\/weeks\/1$/)
+  await expect(page.getByRole('heading', { name: 'M2 revised' })).toBeVisible()
   await page.getByRole('button', { name: 'Add workout' }).click()
   await page.getByRole('link', { name: 'Create manually' }).click()
 

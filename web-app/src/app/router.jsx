@@ -37,6 +37,7 @@ export const routes = [
           { path: 'training/weeks/:weekNumber/workouts/new', element: <TrainingWorkoutAuthoringPage /> },
           { path: 'training/weeks/:weekNumber/workouts/:workoutId', element: <WorkoutPage /> },
           { path: 'training/program', element: <TrainingProgramPage /> },
+          { path: 'training/program/:programId', element: <TrainingProgramPage /> },
           { path: 'training/program/import', element: <TrainingImportPage /> },
           { path: 'training/program/import/:importId', element: <TrainingImportPage /> },
         ],

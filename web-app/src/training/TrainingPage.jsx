@@ -170,7 +170,7 @@ export default function TrainingPage() {
           aria-label={`Edit ${data.program.name} program`}
           component={Link}
           startIcon={<EditIcon />}
-          to="/training/program"
+          to={`/training/program/${data.program.id}`}
           variant="text"
         >
           Edit

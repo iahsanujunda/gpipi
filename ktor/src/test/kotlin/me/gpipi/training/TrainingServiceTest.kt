@@ -56,6 +56,39 @@ class TrainingServiceTest : PersistenceTest() {
     }
 
     @Test
+    fun `program details can be edited without replacing workouts or crossing owners`() = runBlocking {
+        val program = assertIs<ProgramCreateResult.Created>(
+            service.createProgram(OWNER, ProgramAuthoringInput(name = "M2", workouts = emptyList())),
+        )
+        assertIs<WorkoutCreateResult.Created>(
+            service.createWorkout(OWNER, program.id, 1, workoutInput()),
+        )
+
+        assertEquals(
+            TrainingMutationResult.Updated,
+            service.updateProgram(
+                OWNER,
+                program.id,
+                ProgramAuthoringInput(
+                    name = "  M2 revised  ",
+                    note = "  Return to running  ",
+                    startsOn = java.time.LocalDate.parse("2026-08-12"),
+                ),
+            ),
+        )
+        assertEquals(
+            TrainingMutationResult.NotFound,
+            service.updateProgram("U-other", program.id, ProgramAuthoringInput(name = "Hijacked")),
+        )
+
+        val updated = found(service.overview(OWNER, 1))
+        assertEquals("M2 revised", updated.program.name)
+        assertEquals("Return to running", updated.program.note)
+        assertEquals(java.time.LocalDate.parse("2026-08-12"), updated.program.startsOn)
+        assertEquals(listOf("Full Body 1"), updated.workouts.map { it.workoutName })
+    }
+
+    @Test
     fun `manual workout creation is restricted to the active current week`() = runBlocking {
         val program = assertIs<ProgramCreateResult.Created>(
             service.createProgram(OWNER, ProgramAuthoringInput(name = "M2", workouts = emptyList())),

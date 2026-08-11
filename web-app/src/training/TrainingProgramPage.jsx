@@ -7,12 +7,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowBackIcon } from '@/app/AppIcons'
 import {
   useActivateTrainingProgram,
   useCreateTrainingProgram,
   useTrainingPrograms,
+  useUpdateTrainingProgram,
 } from './queries'
 
 function nullable(value) {
@@ -20,22 +21,36 @@ function nullable(value) {
 }
 
 export default function TrainingProgramPage() {
+  const { programId } = useParams()
   const navigate = useNavigate()
   const create = useCreateTrainingProgram()
+  const update = useUpdateTrainingProgram()
   const activate = useActivateTrainingProgram()
   const programs = useTrainingPrograms()
   const [error, setError] = useState(null)
-  const [program, setProgram] = useState({ name: '', startsOn: '', note: '' })
+  const [draft, setDraft] = useState(null)
+  const editing = Boolean(programId)
+  const existing = programs.data?.find((item) => item.id === programId)
+  const program = draft ?? {
+    name: existing?.name ?? '',
+    startsOn: existing?.startsOn ?? '',
+    note: existing?.note ?? '',
+  }
 
   async function submit(event) {
     event.preventDefault()
     setError(null)
     try {
-      await create.mutateAsync({
+      const input = {
         name: program.name.trim(),
         startsOn: program.startsOn || null,
         note: nullable(program.note),
-      })
+      }
+      if (editing) {
+        await update.mutateAsync({ programId, program: input })
+      } else {
+        await create.mutateAsync(input)
+      }
       navigate('/training')
     } catch (requestError) {
       setError(requestError.message)
@@ -52,13 +67,19 @@ export default function TrainingProgramPage() {
     }
   }
 
+  if (editing && programs.isPending) return <Typography role="status">Loading program…</Typography>
+  if (editing && programs.isError) return <Alert severity="error">{programs.error.message}</Alert>
+  if (editing && !existing) return <Alert severity="error">Training program not found.</Alert>
+
+  const mutationPending = create.isPending || update.isPending
+
   return (
     <Stack spacing={3} sx={{ maxWidth: 760 }}>
       <Button component={Link} startIcon={<ArrowBackIcon />} sx={{ alignSelf: 'flex-start' }} to="/training">
         Training
       </Button>
 
-      <Typography component="h1" variant="h4">Create Program</Typography>
+      <Typography component="h1" variant="h4">{editing ? 'Edit Program' : 'Create Program'}</Typography>
 
       {error && <Alert severity="error">{error}</Alert>}
 
@@ -67,13 +88,13 @@ export default function TrainingProgramPage() {
           <TextField
             autoFocus
             label="Program name"
-            onChange={(event) => setProgram((current) => ({ ...current, name: event.target.value }))}
+            onChange={(event) => setDraft({ ...program, name: event.target.value })}
             required
             value={program.name}
           />
           <TextField
             label="Start date (optional)"
-            onChange={(event) => setProgram((current) => ({ ...current, startsOn: event.target.value }))}
+            onChange={(event) => setDraft({ ...program, startsOn: event.target.value })}
             slotProps={{ inputLabel: { shrink: true } }}
             type="date"
             value={program.startsOn}
@@ -81,17 +102,17 @@ export default function TrainingProgramPage() {
           <TextField
             label="Program note (optional)"
             multiline
-            onChange={(event) => setProgram((current) => ({ ...current, note: event.target.value }))}
+            onChange={(event) => setDraft({ ...program, note: event.target.value })}
             rows={3}
             value={program.note}
           />
-          <Button disabled={create.isPending} type="submit" variant="contained" size="large">
-            {create.isPending ? 'Creating…' : 'Create Program'}
+          <Button disabled={mutationPending} type="submit" variant="contained" size="large">
+            {mutationPending ? (editing ? 'Saving…' : 'Creating…') : (editing ? 'Save Program' : 'Create Program')}
           </Button>
         </Stack>
       </Paper>
 
-      {(programs.data?.length ?? 0) > 0 && (
+      {!editing && (programs.data?.length ?? 0) > 0 && (
         <Paper component="section" variant="outlined" sx={{ p: { xs: 2.25, sm: 3 } }}>
           <Stack spacing={1.5}>
             <Typography component="h2" variant="h6">Saved programs</Typography>

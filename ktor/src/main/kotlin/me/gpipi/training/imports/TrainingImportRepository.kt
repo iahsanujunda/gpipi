@@ -4,42 +4,57 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import me.gpipi.generated.db.base.public1.Exercise
+import me.gpipi.generated.db.base.public1.Program
+import me.gpipi.generated.db.base.public1.SheetLink
+import me.gpipi.generated.db.base.public1.TrainingImport
+import me.gpipi.generated.db.base.public1.TrainingImportExerciseMatch
+import me.gpipi.generated.db.base.public1.TrainingImportTab
+import me.gpipi.generated.db.base.public1.TrainingImportWeek
+import me.gpipi.generated.db.base.public1.Workout
 import org.jetbrains.exposed.v1.core.BooleanColumnType
 import org.jetbrains.exposed.v1.core.IColumnType
 import org.jetbrains.exposed.v1.core.IntegerColumnType
 import org.jetbrains.exposed.v1.core.LongColumnType
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.TextColumnType
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.java.UUIDColumnType
 import org.jetbrains.exposed.v1.core.statements.StatementType
 import org.jetbrains.exposed.v1.javatime.JavaOffsetDateTimeColumnType
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
+import org.jetbrains.exposed.v1.jdbc.update
 
 class TrainingImportRepository {
-    fun ownsProgram(ownerUserId: String, programId: UUID): Boolean = rows(
-        "select exists(select 1 from program where id = ? and owner_user_id = ?) as owned",
-        listOf(uuid(programId), text(ownerUserId)),
-    ) { it.getBoolean("owned") }.single()
+    fun ownsProgram(ownerUserId: String, programId: UUID): Boolean =
+        Program
+            .select(Program.id)
+            .where { (Program.id eq programId) and (Program.ownerUserId eq ownerUserId) }
+            .any()
 
-    fun workouts(ownerUserId: String, programId: UUID): List<WorkoutOption> = rows(
-        """
-        select w.id, w.name
-        from workout w
-        join program p on p.id = w.program_id
-        where p.owner_user_id = ? and p.id = ?
-        order by w.position
-        """.trimIndent(),
-        listOf(text(ownerUserId), uuid(programId)),
-    ) { WorkoutOption(it.getObject("id", UUID::class.java), it.getString("name")) }
+    fun workouts(ownerUserId: String, programId: UUID): List<WorkoutOption> =
+        (Workout innerJoin Program)
+            .select(Workout.id, Workout.name)
+            .where { (Program.ownerUserId eq ownerUserId) and (Program.id eq programId) }
+            .orderBy(Workout.position)
+            .map { WorkoutOption(it[Workout.id], it[Workout.name]) }
 
-    fun linkedSheet(ownerUserId: String, programId: UUID): LinkedTrainingSheet? = rows(
-        """
-        select sl.spreadsheet_id, sl.spreadsheet_title
-        from sheet_link sl
-        join program p on p.id = sl.program_id
-        where sl.program_id = ? and p.owner_user_id = ? and sl.replaced_at is null
-        """.trimIndent(),
-        listOf(uuid(programId), text(ownerUserId)),
-    ) { LinkedTrainingSheet(it.getString("spreadsheet_id"), it.getString("spreadsheet_title")) }.singleOrNull()
+    fun linkedSheet(ownerUserId: String, programId: UUID): LinkedTrainingSheet? =
+        (SheetLink innerJoin Program)
+            .select(SheetLink.spreadsheetId, SheetLink.spreadsheetTitle)
+            .where {
+                (SheetLink.programId eq programId) and
+                    (Program.ownerUserId eq ownerUserId) and
+                    SheetLink.replacedAt.isNull()
+            }
+            .map { LinkedTrainingSheet(it[SheetLink.spreadsheetId], it[SheetLink.spreadsheetTitle]) }
+            .singleOrNull()
 
     fun createImport(
         ownerUserId: String,
@@ -61,16 +76,19 @@ class TrainingImportRepository {
         now: OffsetDateTime,
     ): UUID {
         if (!ownsProgram(ownerUserId, programId)) throw NoSuchElementException("Training program not found.")
-        return insertId(
-            """
-            insert into training_import (
-                owner_user_id, target_type, program_id, spreadsheet_id,
-                spreadsheet_title, state, created_at, updated_at
-            ) values (?, 'EXISTING_PROGRAM', ?, ?, 'Reading selected Google Sheet', 'READING', ?, ?)
-            returning id
-            """.trimIndent(),
-            listOf(text(ownerUserId), uuid(programId), text(spreadsheetId), timestamp(now), timestamp(now)),
-        )
+        val id = UUID.randomUUID()
+        TrainingImport.insert {
+            it[TrainingImport.id] = id
+            it[TrainingImport.ownerUserId] = ownerUserId
+            it[TrainingImport.targetType] = "EXISTING_PROGRAM"
+            it[TrainingImport.programId] = programId
+            it[TrainingImport.spreadsheetId] = spreadsheetId
+            it[TrainingImport.spreadsheetTitle] = "Reading selected Google Sheet"
+            it[TrainingImport.state] = "READING"
+            it[TrainingImport.createdAt] = now
+            it[TrainingImport.updatedAt] = now
+        }
+        return id
     }
 
     fun completeDiscovery(
@@ -79,23 +97,19 @@ class TrainingImportRepository {
         tabs: List<me.gpipi.training.google.SheetTabGrid>,
         now: OffsetDateTime,
     ) {
-        execute(
-            """
-            update training_import
-            set spreadsheet_title = ?, state = 'NEEDS_MAPPING', error_detail = null, updated_at = ?
-            where id = ? and state = 'READING'
-            """.trimIndent(),
-            listOf(text(spreadsheetTitle), timestamp(now), uuid(importId)),
-        )
+        TrainingImport.update({ (TrainingImport.id eq importId) and (TrainingImport.state eq "READING") }) {
+            it[TrainingImport.spreadsheetTitle] = spreadsheetTitle
+            it[TrainingImport.state] = "NEEDS_MAPPING"
+            it[TrainingImport.errorDetail] = null
+            it[TrainingImport.updatedAt] = now
+        }
         tabs.forEach { tab ->
-            execute(
-                """
-                insert into training_import_tab (
-                    import_id, google_sheet_id, tab_title, position
-                ) values (?, ?, ?, ?)
-                """.trimIndent(),
-                listOf(uuid(importId), long(tab.sheetId), text(tab.title), integer(tab.position)),
-            )
+            TrainingImportTab.insert {
+                it[TrainingImportTab.importId] = importId
+                it[TrainingImportTab.googleSheetId] = tab.sheetId
+                it[TrainingImportTab.tabTitle] = tab.title
+                it[TrainingImportTab.position] = tab.position
+            }
         }
     }
 
@@ -127,27 +141,23 @@ class TrainingImportRepository {
         )
     }.singleOrNull()
 
-    fun tabs(importId: UUID): List<TrainingImportTabRecord> = rows(
-        """
-        select id, import_id, google_sheet_id, tab_title, decision,
-               target_workout_id, new_workout_name, position
-        from training_import_tab
-        where import_id = ?
-        order by position
-        """.trimIndent(),
-        listOf(uuid(importId)),
-    ) { rs ->
-        TrainingImportTabRecord(
-            id = rs.getObject("id", UUID::class.java),
-            importId = rs.getObject("import_id", UUID::class.java),
-            googleSheetId = rs.getLong("google_sheet_id"),
-            tabTitle = rs.getString("tab_title"),
-            decision = rs.getString("decision"),
-            targetWorkoutId = rs.getObject("target_workout_id", UUID::class.java),
-            newWorkoutName = rs.getString("new_workout_name"),
-            position = rs.getInt("position"),
-        )
-    }
+    fun tabs(importId: UUID): List<TrainingImportTabRecord> =
+        TrainingImportTab
+            .selectAll()
+            .where { TrainingImportTab.importId eq importId }
+            .orderBy(TrainingImportTab.position)
+            .map { row ->
+                TrainingImportTabRecord(
+                    id = row[TrainingImportTab.id],
+                    importId = row[TrainingImportTab.importId],
+                    googleSheetId = row[TrainingImportTab.googleSheetId],
+                    tabTitle = row[TrainingImportTab.tabTitle],
+                    decision = row[TrainingImportTab.decision],
+                    targetWorkoutId = row[TrainingImportTab.targetWorkoutId],
+                    newWorkoutName = row[TrainingImportTab.newWorkoutName],
+                    position = row[TrainingImportTab.position],
+                )
+            }
 
     fun weeks(importId: UUID): List<TrainingImportWeekRecord> = rows(
         """
@@ -177,28 +187,26 @@ class TrainingImportRepository {
         )
     }
 
-    fun matches(importId: UUID): List<TrainingImportMatchRecord> = rows(
-        """
-        select im.*
-        from training_import_exercise_match im
-        join training_import_week iw on iw.id = im.import_week_id
-        join training_import_tab it on it.id = iw.import_tab_id
-        where it.import_id = ?
-        order by it.position, im.source_movement_key
-        """.trimIndent(),
-        listOf(uuid(importId)),
-    ) { rs ->
-        TrainingImportMatchRecord(
-            importWeekId = rs.getObject("import_week_id", UUID::class.java),
-            sourceMovementKey = rs.getString("source_movement_key"),
-            sourceText = rs.getString("source_text"),
-            decision = rs.getString("decision"),
-            exerciseId = rs.getObject("exercise_id", UUID::class.java),
-            newExerciseName = rs.getString("new_exercise_name"),
-            executionType = rs.getString("execution_type"),
-            rememberAsAlias = rs.getBoolean("remember_as_alias"),
-        )
-    }
+    fun matches(importId: UUID): List<TrainingImportMatchRecord> =
+        (TrainingImportExerciseMatch innerJoin TrainingImportWeek innerJoin TrainingImportTab)
+            .selectAll()
+            .where { TrainingImportTab.importId eq importId }
+            .orderBy(
+                TrainingImportTab.position to SortOrder.ASC,
+                TrainingImportExerciseMatch.sourceMovementKey to SortOrder.ASC,
+            )
+            .map { row ->
+                TrainingImportMatchRecord(
+                    importWeekId = row[TrainingImportExerciseMatch.importWeekId],
+                    sourceMovementKey = row[TrainingImportExerciseMatch.sourceMovementKey],
+                    sourceText = row[TrainingImportExerciseMatch.sourceText],
+                    decision = row[TrainingImportExerciseMatch.decision],
+                    exerciseId = row[TrainingImportExerciseMatch.exerciseId],
+                    newExerciseName = row[TrainingImportExerciseMatch.newExerciseName],
+                    executionType = row[TrainingImportExerciseMatch.executionType],
+                    rememberAsAlias = row[TrainingImportExerciseMatch.rememberAsAlias],
+                )
+            }
 
     fun chooseWeek(importId: UUID, weekNumber: Int, now: OffsetDateTime) {
         execute(
@@ -296,16 +304,13 @@ class TrainingImportRepository {
     }
 
     fun initializeMatches(importWeekId: UUID, draft: TrainingPrescriptionExtraction) {
-        execute("delete from training_import_exercise_match where import_week_id = ?", listOf(uuid(importWeekId)))
+        TrainingImportExerciseMatch.deleteWhere { TrainingImportExerciseMatch.importWeekId eq importWeekId }
         draft.groups.flatMap(ExtractedTrainingGroup::prescriptions).forEach { movement ->
-            execute(
-                """
-                insert into training_import_exercise_match (
-                    import_week_id, source_movement_key, source_text
-                ) values (?, ?, ?)
-                """.trimIndent(),
-                listOf(uuid(importWeekId), text(movement.movementAddress), text(movement.movement)),
-            )
+            TrainingImportExerciseMatch.insert {
+                it[TrainingImportExerciseMatch.importWeekId] = importWeekId
+                it[TrainingImportExerciseMatch.sourceMovementKey] = movement.movementAddress
+                it[TrainingImportExerciseMatch.sourceText] = movement.movement
+            }
         }
     }
 
@@ -366,10 +371,11 @@ class TrainingImportRepository {
     }
 
     fun transition(importId: UUID, state: String, error: String?, now: OffsetDateTime) {
-        execute(
-            "update training_import set state = ?, error_detail = ?, updated_at = ? where id = ?",
-            listOf(text(state), nullableText(error), timestamp(now), uuid(importId)),
-        )
+        TrainingImport.update({ TrainingImport.id eq importId }) {
+            it[TrainingImport.state] = state
+            it[TrainingImport.errorDetail] = error
+            it[TrainingImport.updatedAt] = now
+        }
     }
 
     fun cancel(importId: UUID, now: OffsetDateTime) = transition(importId, "CANCELLED", null, now)
@@ -632,16 +638,18 @@ class TrainingImportRepository {
     ) { it.getObject("id", UUID::class.java) }.single()
 
     private fun requireOwnedExercise(ownerUserId: String, exerciseId: UUID) {
-        require(rows(
-            "select exists(select 1 from exercise where id = ? and owner_user_id = ?) as owned",
-            listOf(uuid(exerciseId), text(ownerUserId)),
-        ) { it.getBoolean("owned") }.single()) { "Selected exercise is not in this member's catalog." }
+        val owned = Exercise
+            .select(Exercise.id)
+            .where { (Exercise.id eq exerciseId) and (Exercise.ownerUserId eq ownerUserId) }
+            .any()
+        require(owned) { "Selected exercise is not in this member's catalog." }
     }
 
-    private fun exerciseName(exerciseId: UUID): String = rows(
-        "select name from exercise where id = ?",
-        listOf(uuid(exerciseId)),
-    ) { it.getString("name") }.single()
+    private fun exerciseName(exerciseId: UUID): String =
+        Exercise
+            .select(Exercise.name)
+            .where { Exercise.id eq exerciseId }
+            .single()[Exercise.name]
 
     private fun executionDestinations(
         layout: List<ExecutionLayoutCell>,
@@ -668,9 +676,6 @@ class TrainingImportRepository {
             )
         }
     }
-
-    private fun insertId(statement: String, args: List<Pair<IColumnType<*>, Any?>>): UUID =
-        rows(statement, args) { it.getObject("id", UUID::class.java) }.single()
 
     private fun execute(statement: String, args: List<Pair<IColumnType<*>, Any?>>) {
         transaction().exec(statement, args, StatementType.UPDATE)

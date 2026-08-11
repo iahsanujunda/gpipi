@@ -53,6 +53,7 @@ class OpenRouterClientTest {
             requestBody["response_format"]!!.jsonObject["json_schema"]!!.jsonObject["name"]!!.jsonPrimitive.content,
         )
         assertNull(requestBody["reasoning"])
+        assertEquals(0, requestBody["temperature"]!!.jsonPrimitive.content.toInt())
         assertEquals("{\"amount\":1500}", result.content)
         assertEquals("resolved/model-version", result.model)
     }
@@ -81,6 +82,7 @@ class OpenRouterClientTest {
             "high",
             requestBody["reasoning"]!!.jsonObject["effort"]!!.jsonPrimitive.content,
         )
+        assertNull(requestBody["temperature"])
     }
 
     @Test
@@ -121,6 +123,7 @@ class OpenRouterClientTest {
     private fun io.ktor.server.testing.ApplicationTestBuilder.client(
         model: String = "requested/model",
         reasoningEffort: OpenRouterReasoningEffort? = null,
+        temperature: Int? = if (reasoningEffort == null) 0 else null,
     ) = OpenRouterClient(
         http = createClient {
             install(ContentNegotiation) { json() }
@@ -129,6 +132,7 @@ class OpenRouterClientTest {
         model = model,
         apiBaseUrl = "/api/v1",
         reasoningEffort = reasoningEffort,
+        temperature = temperature,
     )
 
     private fun schema() = buildJsonObject { put("type", "object") }

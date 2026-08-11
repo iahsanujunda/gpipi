@@ -107,6 +107,7 @@ fun Application.configureRouting() {
         openRouterKey,
         cfg.property("openrouter.trainingExtractionModel").getString(),
         reasoningEffort = OpenRouterReasoningEffort.HIGH,
+        temperature = null,
     )
 
     val categoryRepo = CategoryRepository()

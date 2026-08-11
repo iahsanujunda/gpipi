@@ -27,7 +27,7 @@ OPENROUTER_TRAINING_EXTRACTION_MODEL=provider/model-slug
 
 Do not use `openrouter/auto` or a `:free` variant for this workflow. Use an explicit, stable model slug whose OpenRouter model page lists `structured_outputs`, `response_format`, and `reasoning` support, including the `high` effort level. The training client always sends `reasoning: { "effort": "high" }`; this is intentionally part of the extraction contract rather than another deployment setting. Expense and shopping extraction do not receive this parameter.
 
-The client also sends strict JSON Schema, `require_parameters: true`, and temperature `0`; a provider that cannot honor those parameters will be rejected rather than silently receiving a weaker request. High reasoning can increase latency and output-token cost, but import makes only one reviewed extraction call per included workout tab and prioritizes transcription accuracy. See OpenRouter's [reasoning guide](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [structured output guide](https://openrouter.ai/docs/guides/features/structured-outputs), and [model metadata guide](https://openrouter.ai/docs/guides/overview/models).
+The client sends strict JSON Schema and `require_parameters: true`; a provider that cannot honor the schema and reasoning parameters is rejected rather than silently receiving a weaker request. Training extraction deliberately omits `temperature` because current GPT reasoning models such as `openai/gpt-5.6-luna` do not advertise that parameter. Expense and shopping extraction retain temperature `0`. High reasoning can increase latency and output-token cost, but import makes only one reviewed extraction call per included workout tab and prioritizes transcription accuracy. See OpenRouter's [reasoning guide](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens), [structured output guide](https://openrouter.ai/docs/guides/features/structured-outputs), and [model metadata guide](https://openrouter.ai/docs/guides/overview/models).
 
 The model needs these capabilities:
 
@@ -39,7 +39,7 @@ The model needs these capabilities:
 | Indonesian and English text fidelity | Real prescriptions mix both languages, abbreviations, units, and trainer notes. |
 | At least the largest one-week context | One request contains one sanitized workout range, with coordinates and merged-range metadata. Start with at least 32k context unless fixture measurements prove less is safe. |
 | Reliable nullable fields | Missing columns must stay null instead of being inferred. |
-| Low hallucination at temperature `0` | Invented text or an incorrect A1 citation rejects the entire workout draft. |
+| Reliable schema adherence | Invented text or an incorrect A1 citation rejects the entire workout draft; deterministic server validation remains the safety boundary. |
 
 Vision, image understanding, Google Drive access, and XLSX upload support are not needed. The model receives coordinate-preserving JSON containing only the selected prescription-side cells. It never receives the file, a Google URL, OAuth token, spreadsheet ID, member identity, or execution values.
 
@@ -183,6 +183,7 @@ For a database-level check, the selected import should have `training_import.sta
 | Execution boundary is ambiguous | In Step 2, supply the first execution column and the exact execution-header cell/value. Extraction does not guess. |
 | OpenRouter rejects `response_format` | The configured model/provider does not support strict structured output. Choose a model whose metadata lists `structured_outputs` and `response_format`. |
 | OpenRouter rejects `reasoning` | Choose a model/provider whose metadata lists `reasoning` and supports `high` effort. The training extraction contract does not fall back to a non-reasoning request. |
+| OpenRouter returns 404 “No endpoints found that can handle the requested parameters” | Confirm the model exists and compare the request with its `supported_parameters`. Training intentionally omits `temperature`; keep `require_parameters: true` so unsupported schema or reasoning parameters fail visibly. |
 | Extraction rejects apparently good output | Inspect the reviewed source fixture for punctuation, whitespace, unit, URL, or A1-citation differences. The server intentionally rejects “helpful” normalization. |
 | Server fails while constructing the cipher | Regenerate `GOOGLE_CREDENTIAL_ENCRYPTION_KEY` as standard Base64 for exactly 32 bytes. |
 | A testing connection stops working after several days | Google testing-mode authorizations currently expire after seven days. Reconnect or move the correctly configured app to production status. |

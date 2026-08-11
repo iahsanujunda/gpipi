@@ -47,6 +47,7 @@ class OpenRouterClient(
     private val model: String,
     apiBaseUrl: String = "https://openrouter.ai/api/v1",
     private val reasoningEffort: OpenRouterReasoningEffort? = null,
+    private val temperature: Int? = 0,
 ) {
     private val apiBaseUrl = apiBaseUrl.trimEnd('/')
 
@@ -77,7 +78,7 @@ class OpenRouterClient(
             reasoningEffort?.let { effort ->
                 putJsonObject("reasoning") { put("effort", effort.apiValue) }
             }
-            put("temperature", 0)
+            temperature?.let { put("temperature", it) }
         }
 
         log.info("Calling OpenRouter model={} schema={}", model, schemaName)

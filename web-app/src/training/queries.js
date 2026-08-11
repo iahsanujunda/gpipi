@@ -160,20 +160,6 @@ export function useStartTrainingImport() {
   ))
 }
 
-export function useStartNewProgramTrainingImport() {
-  return useTrainingImportMutation(({ spreadsheetId }) => apiFetch(
-    '/api/training/imports',
-    { method: 'POST', body: { spreadsheetId } },
-  ))
-}
-
-export function useSaveNewProgramImportDraft() {
-  return useTrainingImportMutation(({ importId, program }) => apiFetch(
-    `/api/training/imports/${importId}/program`,
-    { method: 'PUT', body: program },
-  ))
-}
-
 export function useChooseTrainingImportWeek() {
   return useTrainingImportMutation(({ importId, weekNumber }) => apiFetch(
     `/api/training/imports/${importId}/week`,

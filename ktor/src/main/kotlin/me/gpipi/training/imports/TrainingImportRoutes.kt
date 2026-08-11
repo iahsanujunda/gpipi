@@ -95,22 +95,10 @@ fun Route.trainingImportApiRoutes(
             call.respondImport(imports.start(actorId, programId, request.spreadsheetId), HttpStatusCode.Created)
         }
 
-        post("/imports") {
-            val actorId = call.importActorId() ?: return@post
-            val request = call.receive<StartTrainingImportRequest>()
-            call.respondImport(imports.startNewProgram(actorId, request.spreadsheetId), HttpStatusCode.Created)
-        }
-
         get("/imports/{importId}") {
             val actorId = call.importActorId() ?: return@get
             val importId = call.importUuid("importId") ?: return@get
             call.respondImport(imports.get(actorId, importId))
-        }
-
-        put("/imports/{importId}/program") {
-            val actorId = call.importActorId() ?: return@put
-            val importId = call.importUuid("importId") ?: return@put
-            call.respondImport(imports.saveNewProgramDraft(actorId, importId, call.receive()))
         }
 
         put("/imports/{importId}/week") {

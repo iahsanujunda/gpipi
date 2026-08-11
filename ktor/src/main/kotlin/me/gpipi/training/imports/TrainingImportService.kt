@@ -1,10 +1,8 @@
 package me.gpipi.training.imports
 
 import java.time.Clock
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.time.format.DateTimeParseException
 import java.util.UUID
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -51,14 +49,13 @@ class TrainingImportService(
             if (discovery.weekNumbers.isEmpty()) {
                 throw IllegalArgumentException("No visible Week or Minggu labels were found in the selected Sheet.")
             }
-            dbQuery(db) { repository.completeDiscovery(importId, discovery.spreadsheetTitle, null, discovery.tabs, now()) }
+            dbQuery(db) { repository.completeDiscovery(importId, discovery.spreadsheetTitle, discovery.tabs, now()) }
             TrainingImportResult.Ok(
                 StartTrainingImportResponse(
                     importId = importId.toString(),
                     spreadsheetTitle = discovery.spreadsheetTitle,
                     availableWeekNumbers = discovery.weekNumbers,
                     replacesLinkedSheet = linkedSheet != null && linkedSheet.spreadsheetId != spreadsheetId.trim(),
-                    targetType = "EXISTING_PROGRAM",
                 ),
             )
         } catch (ex: Exception) {
@@ -69,78 +66,6 @@ class TrainingImportService(
             dbQuery(db) { repository.transition(importId, "FAILED", detail, now()) }
             TrainingImportResult.Invalid(detail)
         }
-    }
-
-    suspend fun startNewProgram(
-        ownerUserId: String,
-        spreadsheetId: String,
-    ): TrainingImportResult<StartTrainingImportResponse> {
-        if (!spreadsheetId.matches(Regex("[A-Za-z0-9_-]{10,200}"))) {
-            return TrainingImportResult.Invalid("Choose a valid Google Sheet through Picker.")
-        }
-        val importId = dbQuery(db) {
-            repository.createReadingNewProgramImport(ownerUserId, spreadsheetId.trim(), now())
-        }
-        return try {
-            val access = google.accessToken(ownerUserId)
-            val discovery = sheets.discover(access.accessToken, spreadsheetId.trim())
-            if (discovery.tabs.isEmpty()) throw IllegalArgumentException("The selected spreadsheet has no tabs.")
-            if (discovery.weekNumbers.isEmpty()) {
-                throw IllegalArgumentException("No visible Week or Minggu labels were found in the selected Sheet.")
-            }
-            val suggestion = suggestedProgramName(discovery.spreadsheetTitle)
-            dbQuery(db) {
-                repository.completeDiscovery(importId, discovery.spreadsheetTitle, suggestion, discovery.tabs, now())
-            }
-            TrainingImportResult.Ok(
-                StartTrainingImportResponse(
-                    importId = importId.toString(),
-                    spreadsheetTitle = discovery.spreadsheetTitle,
-                    availableWeekNumbers = discovery.weekNumbers,
-                    replacesLinkedSheet = false,
-                    targetType = "NEW_PROGRAM",
-                    suggestedProgramName = suggestion,
-                ),
-            )
-        } catch (ex: Exception) {
-            val detail = when (ex) {
-                is IllegalArgumentException -> ex.message
-                else -> "The selected Google Sheet could not be read. Reconnect or choose it again."
-            }.orEmpty().take(500)
-            dbQuery(db) { repository.transition(importId, "FAILED", detail, now()) }
-            TrainingImportResult.Invalid(detail)
-        }
-    }
-
-    suspend fun saveNewProgramDraft(
-        ownerUserId: String,
-        importId: UUID,
-        request: SaveNewProgramDraftRequest,
-    ): TrainingImportResult<TrainingImportResponse> {
-        val header = dbQuery(db) { repository.header(ownerUserId, importId) }
-            ?: return TrainingImportResult.NotFound
-        if (header.targetType != "NEW_PROGRAM") {
-            return TrainingImportResult.Conflict("This import already targets an existing program.")
-        }
-        if (header.state in setOf("APPLIED", "CANCELLED")) {
-            return TrainingImportResult.Conflict("This import is already ${header.state.lowercase()}.")
-        }
-        val name = request.name.trim()
-        if (name.isEmpty()) return TrainingImportResult.Invalid("Program name must not be blank.")
-        if (name.length > 160) return TrainingImportResult.Invalid("Program name must be 160 characters or fewer.")
-        val note = request.note?.trim()?.takeIf(String::isNotEmpty)
-        if ((note?.length ?: 0) > 1000) {
-            return TrainingImportResult.Invalid("Program note must be 1000 characters or fewer.")
-        }
-        val startsOn = request.startsOn?.takeIf(String::isNotBlank)?.let {
-            try {
-                LocalDate.parse(it)
-            } catch (_: DateTimeParseException) {
-                return TrainingImportResult.Invalid("Program start date must use YYYY-MM-DD.")
-            }
-        }
-        dbQuery(db) { repository.saveNewProgramDraft(importId, name, note, startsOn, now()) }
-        return get(ownerUserId, importId)
     }
 
     suspend fun chooseWeek(
@@ -153,9 +78,6 @@ class TrainingImportService(
             ?: return TrainingImportResult.NotFound
         if (header.state in setOf("APPLIED", "CANCELLED")) {
             return TrainingImportResult.Conflict("This import is already ${header.state.lowercase()}.")
-        }
-        if (header.targetType == "NEW_PROGRAM" && header.newProgramConfirmedAt == null) {
-            return TrainingImportResult.Invalid("Confirm the new program details before choosing a week.")
         }
         val access = google.accessToken(ownerUserId)
         val discovery = sheets.discover(access.accessToken, header.spreadsheetId)
@@ -424,9 +346,6 @@ class TrainingImportService(
         if (header.state != "REVIEW") {
             return TrainingImportResult.Conflict("Finish human review before applying this week.")
         }
-        if (header.targetType == "NEW_PROGRAM" && header.newProgramConfirmedAt == null) {
-            return TrainingImportResult.Invalid("Confirm the new program details before applying this week.")
-        }
         val tabs = dbQuery(db) { repository.tabs(importId) }
         val weeks = dbQuery(db) { repository.weeks(importId) }
         val matches = dbQuery(db) { repository.matches(importId) }.groupBy { it.importWeekId }
@@ -475,11 +394,8 @@ class TrainingImportService(
         return TrainingImportResult.Ok(
             TrainingImportResponse(
                 id = importId.toString(),
-                targetType = header.targetType,
                 programId = header.programId?.toString(),
                 programName = header.programName,
-                programNote = header.newProgramNote,
-                programStartsOn = header.newProgramStartsOn?.toString(),
                 spreadsheetTitle = header.spreadsheetTitle,
                 selectedWeekNumber = header.selectedWeekNumber,
                 state = header.state,
@@ -537,14 +453,4 @@ class TrainingImportService(
     }
 
     private fun now(): OffsetDateTime = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
-
-    private fun suggestedProgramName(spreadsheetTitle: String): String {
-        val title = spreadsheetTitle.trim()
-        return title.split(Regex("\\s+[–—-]\\s+"))
-            .lastOrNull()
-            ?.trim()
-            ?.takeIf(String::isNotEmpty)
-            ?.take(160)
-            ?: title.take(160)
-    }
 }

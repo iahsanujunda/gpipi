@@ -6,10 +6,6 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   MenuItem,
   Paper,
@@ -30,8 +26,6 @@ import {
   useGoogleTrainingStatus,
   useSaveTrainingImportMapping,
   useSaveTrainingImportReview,
-  useSaveNewProgramImportDraft,
-  useStartNewProgramTrainingImport,
   useStartTrainingImport,
   useTrainingExercises,
   useTrainingImport,
@@ -116,71 +110,6 @@ function GoogleConnection({ status, onConnect, onDisconnect, pending }) {
     <Button disabled={pending} onClick={onConnect} variant="contained" size="large">
       Connect Google
     </Button>
-  )
-}
-
-function ProgramDraftEditor({ selection, onSubmit, pending }) {
-  const [program, setProgram] = useState({
-    name: selection.suggestedProgramName ?? selection.spreadsheetTitle,
-    startsOn: '',
-    note: '',
-  })
-
-  function submit(event) {
-    event.preventDefault()
-    onSubmit({
-      name: program.name,
-      startsOn: program.startsOn || null,
-      note: program.note.trim() || null,
-    })
-  }
-
-  return (
-    <Stack component="form" onSubmit={submit} spacing={2.5}>
-      <Alert severity="info">
-        This is still an import draft. No program, workout, or week exists until final Apply.
-      </Alert>
-      <Paper component="section" variant="outlined" sx={{ p: { xs: 2.25, sm: 3 } }}>
-        <Stack spacing={2}>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <SheetIcon color="primary" />
-              <Stack sx={{ minWidth: 0 }}>
-                <Typography component="h2" variant="h6">Name this program</Typography>
-                <Typography color="text.secondary" noWrap variant="body2">Source · {selection.spreadsheetTitle}</Typography>
-              </Stack>
-            </Stack>
-            <Chip color="warning" label="Draft only" size="small" />
-          </Stack>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '2fr 1fr' }, gap: 1.5 }}>
-            <TextField
-              helperText="Suggested from the Sheet title. Edit it before continuing."
-              label="Program name"
-              onChange={(event) => setProgram((current) => ({ ...current, name: event.target.value }))}
-              required
-              value={program.name}
-            />
-            <TextField
-              label="Starts on (optional)"
-              onChange={(event) => setProgram((current) => ({ ...current, startsOn: event.target.value }))}
-              slotProps={{ inputLabel: { shrink: true } }}
-              type="date"
-              value={program.startsOn}
-            />
-          </Box>
-          <TextField
-            label="Program note (optional)"
-            multiline
-            onChange={(event) => setProgram((current) => ({ ...current, note: event.target.value }))}
-            rows={2}
-            value={program.note}
-          />
-          <Button disabled={pending} type="submit" variant="contained" sx={{ alignSelf: { sm: 'flex-end' } }}>
-            Continue to week selection
-          </Button>
-        </Stack>
-      </Paper>
-    </Stack>
   )
 }
 
@@ -311,7 +240,7 @@ function reviewState(importData) {
   }))
 }
 
-function ReviewEditor({ data, exercises, onSave, onApply, saving, applying, newProgram }) {
+function ReviewEditor({ data, exercises, onSave, onApply, saving, applying }) {
   const [workouts, setWorkouts] = useState(() => reviewState(data))
   const allResolved = workouts.every((workout) => workout.groups.every((group) => group.prescriptions.every((movement) => (
     movement.decision === 'EXCLUDE'
@@ -366,9 +295,7 @@ function ReviewEditor({ data, exercises, onSave, onApply, saving, applying, newP
   return (
     <Stack spacing={2.5}>
       <Alert severity="info">
-        {newProgram
-          ? `No program exists yet. Applying creates ${data.programName} with Week ${data.selectedWeekNumber}; execution stays empty.`
-          : 'No session or performed set will be created. Confirm every movement before Apply.'}
+        No session or performed set will be created. Confirm every movement before Apply.
       </Alert>
       {workouts.map((workout, workoutIndex) => (
         <Paper key={workout.importWeekId} component="section" variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
@@ -462,14 +389,14 @@ function ReviewEditor({ data, exercises, onSave, onApply, saving, applying, newP
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ justifyContent: 'flex-end' }}>
         <Button disabled={!allResolved || saving} onClick={save} variant="outlined">Save reviewed week</Button>
         <Button disabled={!persisted || applying} onClick={onApply} variant="contained">
-          {newProgram ? `Create program & apply Week ${data.selectedWeekNumber}` : `Apply Week ${data.selectedWeekNumber}`}
+          Apply Week {data.selectedWeekNumber}
         </Button>
       </Stack>
     </Stack>
   )
 }
 
-export default function TrainingImportPage({ newProgram = false }) {
+export default function TrainingImportPage() {
   const navigate = useNavigate()
   const { importId } = useParams()
   const [searchParams] = useSearchParams()
@@ -480,17 +407,13 @@ export default function TrainingImportPage({ newProgram = false }) {
   const connect = useConnectGoogle('/training/program/import')
   const disconnect = useDisconnectGoogle()
   const start = useStartTrainingImport()
-  const startNewProgram = useStartNewProgramTrainingImport()
-  const saveProgramDraft = useSaveNewProgramImportDraft()
   const choose = useChooseTrainingImportWeek()
   const saveMapping = useSaveTrainingImportMapping()
   const extract = useExtractTrainingImport()
   const saveReview = useSaveTrainingImportReview()
   const apply = useApplyTrainingImport()
   const [selection, setSelection] = useState(null)
-  const [programDetailsConfirmed, setProgramDetailsConfirmed] = useState(false)
   const [choice, setChoice] = useState(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
   const [error, setError] = useState(searchParams.get('reason'))
 
   useEffect(() => {
@@ -498,21 +421,20 @@ export default function TrainingImportPage({ newProgram = false }) {
   }, [searchParams, status])
 
   const data = importQuery.data
-  const creatingNewProgram = newProgram || data?.targetType === 'NEW_PROGRAM' || selection?.targetType === 'NEW_PROGRAM'
   const hasMapping = data?.tabs.some((tab) => tab.decision === 'WORKOUT' && tab.importWeekId)
-  const pending = start.isPending || startNewProgram.isPending || saveProgramDraft.isPending || choose.isPending || saveMapping.isPending || extract.isPending || saveReview.isPending || apply.isPending
+  const pending = start.isPending || choose.isPending || saveMapping.isPending || extract.isPending || saveReview.isPending || apply.isPending
   const title = useMemo(
     () => data
       ? `${data.programName} · Week ${data.selectedWeekNumber ?? '—'}`
-      : creatingNewProgram ? 'Import a new training program' : 'Import from Google Sheet',
-    [creatingNewProgram, data],
+      : 'Import from Google Sheet',
+    [data],
   )
 
   if (status.isPending || overview.isPending || (importId && importQuery.isPending)) return <LoadingImport />
   if (status.isError || overview.isError || importQuery.isError) {
     return <Alert severity="error">{status.error?.message ?? overview.error?.message ?? importQuery.error?.message}</Alert>
   }
-  if (!overview.data && !creatingNewProgram) {
+  if (!overview.data) {
     return <Alert severity="info">Create or activate a training program before importing a Sheet.</Alert>
   }
 
@@ -531,21 +453,8 @@ export default function TrainingImportPage({ newProgram = false }) {
     try {
       const pickerToken = await getGooglePickerToken()
       const spreadsheetId = await openPicker(pickerToken)
-      const result = creatingNewProgram
-        ? await startNewProgram.mutateAsync({ spreadsheetId })
-        : await start.mutateAsync({ programId: overview.data.program.id, spreadsheetId })
+      const result = await start.mutateAsync({ programId: overview.data.program.id, spreadsheetId })
       setSelection(result)
-      setProgramDetailsConfirmed(result.targetType !== 'NEW_PROGRAM')
-    } catch (requestError) {
-      setError(requestError.message)
-    }
-  }
-
-  async function confirmProgramDetails(program) {
-    setError(null)
-    try {
-      await saveProgramDraft.mutateAsync({ importId: selection.importId, program })
-      setProgramDetailsConfirmed(true)
     } catch (requestError) {
       setError(requestError.message)
     }
@@ -598,7 +507,6 @@ export default function TrainingImportPage({ newProgram = false }) {
     setError(null)
     try {
       const result = await apply.mutateAsync(importId)
-      setConfirmOpen(false)
       navigate(`/training/weeks/${result.weekNumber}`)
     } catch (requestError) {
       setError(requestError.message)
@@ -639,15 +547,7 @@ export default function TrainingImportPage({ newProgram = false }) {
               pending={disconnect.isPending}
             />
           </Stack>
-          {selection?.targetType === 'NEW_PROGRAM' && !programDetailsConfirmed && (
-            <ProgramDraftEditor
-              key={selection.importId}
-              onSubmit={confirmProgramDetails}
-              pending={saveProgramDraft.isPending}
-              selection={selection}
-            />
-          )}
-          {selection && (selection.targetType !== 'NEW_PROGRAM' || programDetailsConfirmed) && (
+          {selection && (
             <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
               <Stack spacing={2}>
                 {selection.replacesLinkedSheet && (
@@ -704,34 +604,11 @@ export default function TrainingImportPage({ newProgram = false }) {
           applying={apply.isPending}
           data={data}
           exercises={exercises.data ?? []}
-          newProgram={creatingNewProgram}
-          onApply={() => creatingNewProgram ? setConfirmOpen(true) : applyWeek()}
+          onApply={applyWeek}
           onSave={saveReviewed}
           saving={saveReview.isPending}
         />
       )}
-
-      <Dialog fullWidth maxWidth="xs" onClose={() => setConfirmOpen(false)} open={confirmOpen}>
-        <DialogTitle>Create {data?.programName} and make it active?</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 0.5 }}>
-            <Typography color="text.secondary" variant="body2">
-              This is the first training-domain write. One transaction creates the program and applies only reviewed Week {data?.selectedWeekNumber}.
-            </Typography>
-            <Alert severity={overview.data ? 'warning' : 'info'}>
-              {overview.data
-                ? `${overview.data.program.name} will become inactive. Its workouts and execution history remain available.`
-                : 'This will become your first active training program.'}
-            </Alert>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button disabled={apply.isPending} onClick={() => setConfirmOpen(false)}>Back</Button>
-          <Button disabled={apply.isPending} onClick={applyWeek} variant="contained">
-            {apply.isPending ? 'Creating…' : 'Create & make active'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   )
 }

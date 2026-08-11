@@ -291,7 +291,7 @@ class TrainingRepository {
         performedOn: LocalDate,
         now: OffsetDateTime,
     ): UUID? {
-        val sessionId = rows(
+        val session = rows(
             """
             with owned_week as (
                 select ww.id
@@ -305,9 +305,9 @@ class TrainingRepository {
                 on conflict (week_id) do nothing
                 returning id
             )
-            select id from inserted
+            select id, true as created from inserted
             union all
-            select s.id
+            select s.id, false as created
             from training_session s
             join owned_week ow on ow.id = s.week_id
             limit 1
@@ -316,31 +316,39 @@ class TrainingRepository {
                 uuid(weekId), text(ownerUserId), uuid(UUID.randomUUID()),
                 localDate(performedOn), offsetDateTime(now), offsetDateTime(now),
             ),
-        ) { it.getObject("id", UUID::class.java) }.singleOrNull() ?: return null
+        ) { it.getObject("id", UUID::class.java) to it.getBoolean("created") }.singleOrNull() ?: return null
 
-        execute(
-            """
-            insert into performed_exercise (
-                id, session_id, exercise_id, prescription_id, position,
-                target_group_label, target_group_kind, target_exercise_name,
-                target_demo_url, target_execution_type, target_sets, target_rest,
-                target_reps, target_load, target_rir, target_tempo, target_note
+        val (sessionId, created) = session
+        // Snapshot exactly once, when the session is first created. Re-running on every
+        // action would renumber positions against already-snapshotted rows and collide on
+        // (session_id, position); it would also leak later-authored prescriptions into an
+        // already-started session. History renders from this frozen snapshot, so live
+        // prescriptions may still be edited freely afterwards.
+        if (created) {
+            execute(
+                """
+                insert into performed_exercise (
+                    id, session_id, exercise_id, prescription_id, position,
+                    target_group_label, target_group_kind, target_exercise_name,
+                    target_demo_url, target_execution_type, target_sets, target_rest,
+                    target_reps, target_load, target_rir, target_tempo, target_note
+                )
+                select
+                    gen_random_uuid(), ?, pr.exercise_id, pr.id,
+                    row_number() over (order by wg.position, pr.position)::integer,
+                    wg.label, wg.kind, e.name, e.demo_url, pr.execution_type,
+                    pr.sets, pr.rest, pr.reps, pr.load, pr.rir, pr.tempo, pr.note
+                from training_session s
+                join workout_week ww on ww.id = s.week_id
+                join workout_group wg on wg.week_id = ww.id
+                join prescription pr on pr.group_id = wg.id and pr.archived_at is null
+                join exercise e on e.id = pr.exercise_id
+                where s.id = ?
+                on conflict (session_id, prescription_id) do nothing
+                """.trimIndent(),
+                listOf(uuid(sessionId), uuid(sessionId)),
             )
-            select
-                gen_random_uuid(), ?, pr.exercise_id, pr.id,
-                row_number() over (order by wg.position, pr.position)::integer,
-                wg.label, wg.kind, e.name, e.demo_url, pr.execution_type,
-                pr.sets, pr.rest, pr.reps, pr.load, pr.rir, pr.tempo, pr.note
-            from training_session s
-            join workout_week ww on ww.id = s.week_id
-            join workout_group wg on wg.week_id = ww.id
-            join prescription pr on pr.group_id = wg.id and pr.archived_at is null
-            join exercise e on e.id = pr.exercise_id
-            where s.id = ?
-            on conflict (session_id, prescription_id) do nothing
-            """.trimIndent(),
-            listOf(uuid(sessionId), uuid(sessionId)),
-        )
+        }
         return sessionId
     }
 

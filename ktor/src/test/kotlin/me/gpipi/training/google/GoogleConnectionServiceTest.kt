@@ -33,13 +33,15 @@ class GoogleConnectionServiceTest : PersistenceTest() {
     )
 
     @Test
-    fun `oauth can return to either training import entry point`() = runBlocking {
-        listOf(
-            "/training/program/import",
-            "/training/program/import/new",
-        ).forEachIndexed { index, returnPath ->
-            val authorizationUrl = service.beginConnection("U-OAUTH-$index", returnPath)
-            assertTrue(authorizationUrl.startsWith("https://accounts.test/auth?state="))
+    fun `oauth can return to the training import entry point`() = runBlocking {
+        val authorizationUrl = service.beginConnection("U-OAUTH", "/training/program/import")
+        assertTrue(authorizationUrl.startsWith("https://accounts.test/auth?state="))
+    }
+
+    @Test
+    fun `oauth rejects the removed new-program import return path`() = runBlocking {
+        assertFailsWith<IllegalArgumentException> {
+            service.beginConnection("U-OAUTH", "/training/program/import/new")
         }
     }
 

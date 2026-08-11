@@ -146,6 +146,48 @@ class TrainingServiceTest : PersistenceTest() {
     }
 
     @Test
+    fun `a prescription inserted after logging starts neither crashes logging nor enters the frozen session`() = runBlocking {
+        createProgram()
+        val workout = found(service.overview(OWNER, 1)).workouts.single { it.workoutName == "Strength A" }
+        val exercises = detail(workout.workoutId).groups.flatMap { it.exercises }
+        val squat = exercises.single { it.exerciseName == "Squat" }
+        val carry = exercises.single { it.exerciseName == "Suitcase carry" }
+
+        // Start the session: this snapshots Squat (position 1) and Suitcase carry (position 2).
+        assertEquals(
+            TrainingMutationResult.Updated,
+            service.putSet(OWNER, workout.weekId, squat.prescriptionId, 1, reps(8)),
+        )
+
+        // A trainer fine-tune (or a sync) inserts a movement *between* the two existing ones
+        // after the session already exists. Re-deriving snapshot positions would have collided
+        // on (session_id, position); the movement must simply be ignored by the frozen session.
+        val newExerciseId = UUID.randomUUID()
+        val newPrescriptionId = UUID.randomUUID()
+        transaction(db) {
+            exec("insert into exercise (id, owner_user_id, name) values ('$newExerciseId', '$OWNER', 'Trainer added row')")
+            exec("update prescription set position = 3 where id = '${carry.prescriptionId}'")
+            exec(
+                """
+                insert into prescription (id, group_id, exercise_id, position, execution_type, reps)
+                select '$newPrescriptionId', group_id, '$newExerciseId', 2, 'REPS', '5'
+                from prescription where id = '${squat.prescriptionId}'
+                """.trimIndent(),
+            )
+        }
+
+        // Logging another set must still succeed rather than throwing a position collision.
+        assertEquals(
+            TrainingMutationResult.Updated,
+            service.putSet(OWNER, workout.weekId, squat.prescriptionId, 2, reps(9)),
+        )
+
+        val frozen = detail(workout.workoutId).groups.flatMap { it.exercises }
+        assertEquals(listOf("Squat", "Suitcase carry"), frozen.map { it.exerciseName })
+        assertNull(frozen.singleOrNull { it.prescriptionId == newPrescriptionId })
+    }
+
+    @Test
     fun `execution types accept only their matching primary measure`() = runBlocking {
         createProgram()
         val week = found(service.overview(OWNER, 1))

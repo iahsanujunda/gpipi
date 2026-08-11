@@ -25,6 +25,7 @@ class TrainingImportRoutesGuardTest {
         val id = UUID.randomUUID()
 
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/training/google/status").status)
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/api/training/google/sheets").status)
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/training/imports/$id").status)
     }
 
@@ -36,7 +37,7 @@ class TrainingImportRoutesGuardTest {
         val start = client.post("/api/training/programs/$id/imports") {
             header(HttpHeaders.Origin, "https://budget.test")
             contentType(ContentType.Application.Json)
-            setBody("""{"spreadsheetId":"spreadsheet01"}""")
+            setBody("""{"selectionToken":"opaque-selection"}""")
         }
         assertEquals(HttpStatusCode.Unauthorized, start.status)
 

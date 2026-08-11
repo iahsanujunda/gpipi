@@ -260,7 +260,7 @@
       <path d="M42 205h20m-8-8 8 8-8 8" fill="none" stroke="#16679A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
       <text x="28" y="264" class="heading" font-size="15">Import flow starts here</text>
       <text x="28" y="291" class="secondary" font-size="10.5">There is no second program-creation path.</text>
-      <text x="28" y="309" class="secondary" font-size="10.5">The Picker is the next screen after this branch.</text>
+      <text x="28" y="309" class="secondary" font-size="10.5">The app’s Sheet selector is the next screen after this branch.</text>
       <rect x="28" y="350" width="317" height="74" rx="10" fill="#F4FAFB" />
       <text x="46" y="378" class="body" font-size="11" font-weight="700">See training-import-flow.svg</text>
       <text x="46" y="400" class="secondary" font-size="10">One selected Sheet week · human reviewed</text>

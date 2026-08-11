@@ -36,6 +36,7 @@ fun Route.trainingImportApiRoutes(
                 GoogleConnectionStatusResponse(
                     configured = status.configured,
                     connected = status.connected,
+                    requiresReconnect = status.requiresReconnect,
                     connectedAt = status.connectedAt?.toString(),
                     missingConfiguration = status.missingConfiguration,
                 ),
@@ -72,11 +73,28 @@ fun Route.trainingImportApiRoutes(
             }
         }
 
-        get("/google/picker-token") {
+        get("/google/sheets") {
             val actorId = call.importActorId() ?: return@get
             try {
-                val token = google.pickerToken(actorId)
-                call.respond(GooglePickerTokenResponse(token.accessToken, token.expiresIn, token.apiKey, token.appId))
+                val page = google.listSheets(
+                    userId = actorId,
+                    query = call.request.queryParameters["query"].orEmpty(),
+                    pageToken = call.request.queryParameters["pageToken"],
+                )
+                call.respond(
+                    GoogleSheetListResponse(
+                        sheets = page.sheets.map {
+                            GoogleSheetOptionResponse(
+                                selectionToken = it.selectionToken,
+                                name = it.name,
+                                modifiedAt = it.modifiedAt.toString(),
+                            )
+                        },
+                        nextPageToken = page.nextPageToken,
+                    ),
+                )
+            } catch (ex: IllegalArgumentException) {
+                call.respond(HttpStatusCode.BadRequest, ImportApiError(ex.message ?: "Invalid Sheet search."))
             } catch (ex: GoogleIntegrationException) {
                 call.respond(HttpStatusCode.ServiceUnavailable, ImportApiError(ex.message.orEmpty()))
             }
@@ -92,7 +110,12 @@ fun Route.trainingImportApiRoutes(
             val actorId = call.importActorId() ?: return@post
             val programId = call.importUuid("programId") ?: return@post
             val request = call.receive<StartTrainingImportRequest>()
-            call.respondImport(imports.start(actorId, programId, request.spreadsheetId), HttpStatusCode.Created)
+            try {
+                val selected = google.resolveSheetSelection(actorId, request.selectionToken)
+                call.respondImport(imports.start(actorId, programId, selected.spreadsheetId), HttpStatusCode.Created)
+            } catch (ex: GoogleIntegrationException) {
+                call.respond(HttpStatusCode.BadRequest, ImportApiError(ex.message.orEmpty()))
+            }
         }
 
         get("/imports/{importId}") {

@@ -105,51 +105,69 @@ test('disconnected import page has one clear Google connection action', async ({
   await expectNoHorizontalOverflow(page)
 })
 
-test('one explicit week crosses Picker, mapping, extraction, review, and Apply', async ({ page }) => {
+test('Sheet selector searches and paginates backend results without Google browser APIs', async ({ page }) => {
+  await page.route('**/api/training/google/status', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ configured: true, connected: true, connectedAt: '2026-08-10T00:00:00Z', missingConfiguration: [] }),
+  }))
+  await page.route('**/api/training/google/sheets*', (route) => {
+    const url = new URL(route.request().url())
+    const query = url.searchParams.get('query')
+    const pageToken = url.searchParams.get('pageToken')
+    const response = query === 'Rehab'
+      ? {
+          sheets: [{ selectionToken: 'rehab-token', name: 'JUNDA – Rehab notes', modifiedAt: '2026-07-19T00:00:00Z' }],
+          nextPageToken: null,
+        }
+      : pageToken === 'next-page'
+        ? {
+            sheets: [{ selectionToken: 'archive-token', name: 'JUNDA – M2 archive', modifiedAt: '2026-07-27T00:00:00Z' }],
+            nextPageToken: null,
+          }
+        : {
+            sheets: [{ selectionToken: 'm1-token', name: 'JUNDA – M1', modifiedAt: '2026-08-08T00:00:00Z' }],
+            nextPageToken: 'next-page',
+          }
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(response) })
+  })
+
+  await page.goto('/training/program/import')
+  await expect(page.getByText('JUNDA – M1')).toBeVisible()
+  await page.getByRole('button', { name: 'Load more Sheets' }).click()
+  await expect(page.getByText('JUNDA – M2 archive')).toBeVisible()
+
+  await page.getByLabel('Search Sheets').fill('Rehab')
+  await expect(page.getByText('JUNDA – Rehab notes')).toBeVisible()
+  await expect(page.getByText('JUNDA – M1')).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+})
+
+test('one explicit week crosses Sheet selection, mapping, extraction, review, and Apply', async ({ page }) => {
   let currentImport = mappedImport()
   currentImport.selectedWeekNumber = null
   currentImport.tabs = []
-
-  await page.addInitScript(({ selectedId }) => {
-    class DocsView {
-      setMimeTypes() { return this }
-      setSelectFolderEnabled() { return this }
-    }
-    class PickerBuilder {
-      addView() { return this }
-      setOAuthToken() { return this }
-      setDeveloperKey() { return this }
-      setAppId() { return this }
-      setOrigin(origin) { window.__pickerOrigin = origin; return this }
-      setCallback(callback) { this.callback = callback; return this }
-      build() {
-        return { setVisible: () => this.callback({ action: 'picked', docs: [{ id: selectedId }] }) }
-      }
-    }
-    window.google = {
-      picker: {
-        Action: { PICKED: 'picked', CANCEL: 'cancel' },
-        DocsView,
-        PickerBuilder,
-        ViewId: { SPREADSHEETS: 'spreadsheets' },
-      },
-    }
-  }, { selectedId: 'sheet-selected-by-picker' })
 
   await page.route('**/api/training/google/status', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({ configured: true, connected: true, connectedAt: '2026-08-10T00:00:00Z', missingConfiguration: [] }),
   }))
-  await page.route('**/api/training/google/picker-token', (route) => route.fulfill({
+  await page.route('**/api/training/google/sheets*', (route) => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ accessToken: 'short-lived-picker-token', expiresIn: 3600, apiKey: 'picker-key', appId: '123456789' }),
+    body: JSON.stringify({
+      sheets: [{
+        selectionToken: 'opaque-selection-junda-m1',
+        name: 'JUNDA – M1',
+        modifiedAt: '2026-08-08T10:30:00Z',
+      }],
+      nextPageToken: null,
+    }),
   }))
   await page.route('**/api/training/exercises', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify([{ id: exerciseId, name: 'Romanian deadlift', demoUrl: null, aliases: [] }]),
   }))
   await page.route(`**/api/training/programs/${programId}/imports`, async (route) => {
-    expect((await route.request().postDataJSON()).spreadsheetId).toBe('sheet-selected-by-picker')
+    expect(await route.request().postDataJSON()).toEqual({ selectionToken: 'opaque-selection-junda-m1' })
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
@@ -229,8 +247,10 @@ test('one explicit week crosses Picker, mapping, extraction, review, and Apply',
   }))
 
   await page.goto('/training/program/import')
-  await page.getByRole('button', { name: 'Choose Google Sheet' }).click()
-  expect(await page.evaluate(() => window.__pickerOrigin)).toBe(await page.evaluate(() => window.location.origin))
+  await expect(page.getByRole('heading', { name: 'Choose a Sheet' })).toBeVisible()
+  await expect(page.getByLabel('Search Sheets')).toBeVisible()
+  await expect(page.getByText('JUNDA – M1')).toBeVisible()
+  await page.getByRole('button', { name: 'Choose JUNDA – M1' }).click()
   await page.getByRole('button', { name: 'Week 5' }).click()
   await expect(page.getByText('Only Week 5 will cross into the app')).toBeVisible()
   await expect(page.getByText('Warming Up')).toBeVisible()

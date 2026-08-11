@@ -34,7 +34,7 @@ class TrainingImportService(
         spreadsheetId: String,
     ): TrainingImportResult<StartTrainingImportResponse> {
         if (!spreadsheetId.matches(Regex("[A-Za-z0-9_-]{10,200}"))) {
-            return TrainingImportResult.Invalid("Choose a valid Google Sheet through Picker.")
+            return TrainingImportResult.Invalid("Choose a valid Google Sheet.")
         }
         val owned = dbQuery(db) { repository.ownsProgram(ownerUserId, programId) }
         if (!owned) return TrainingImportResult.NotFound

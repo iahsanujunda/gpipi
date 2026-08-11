@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch } from '@/api/http'
 
 export const trainingKeys = {
@@ -6,6 +6,7 @@ export const trainingKeys = {
   overview: (weekNumber) => ['training', 'overview', weekNumber ?? 'current'],
   workout: (weekNumber, workoutId) => ['training', 'workout', weekNumber, workoutId],
   google: ['training', 'google'],
+  googleSheets: (query) => ['training', 'google', 'sheets', query],
   import: (importId) => ['training', 'import', importId],
 }
 
@@ -149,14 +150,26 @@ export function useDisconnectGoogle() {
   })
 }
 
-export function getGooglePickerToken() {
-  return apiFetch('/api/training/google/picker-token')
+export function useGoogleSheets(query, enabled = true) {
+  return useInfiniteQuery({
+    queryKey: trainingKeys.googleSheets(query),
+    queryFn: ({ pageParam, signal }) => {
+      const params = new URLSearchParams()
+      if (query) params.set('query', query)
+      if (pageParam) params.set('pageToken', pageParam)
+      const suffix = params.size ? `?${params}` : ''
+      return apiFetch(`/api/training/google/sheets${suffix}`, { signal })
+    },
+    initialPageParam: null,
+    getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
+    enabled,
+  })
 }
 
 export function useStartTrainingImport() {
-  return useTrainingImportMutation(({ programId, spreadsheetId }) => apiFetch(
+  return useTrainingImportMutation(({ programId, selectionToken }) => apiFetch(
     `/api/training/programs/${programId}/imports`,
-    { method: 'POST', body: { spreadsheetId } },
+    { method: 'POST', body: { selectionToken } },
   ))
 }
 

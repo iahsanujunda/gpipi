@@ -6,9 +6,11 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import me.gpipi.config.dbQuery
 import me.gpipi.support.PersistenceTest
 
 class GoogleConnectionServiceTest : PersistenceTest() {
@@ -19,8 +21,6 @@ class GoogleConnectionServiceTest : PersistenceTest() {
         clientId = "client-id",
         clientSecret = "client-secret",
         redirectUri = "https://app.test/api/training/google/callback",
-        pickerApiKey = "picker-key",
-        appId = "123456789",
         credentialEncryptionKey = "configured-in-production",
     )
     private val service = GoogleConnectionService(
@@ -50,5 +50,22 @@ class GoogleConnectionServiceTest : PersistenceTest() {
         assertFailsWith<IllegalArgumentException> {
             service.beginConnection("U-OAUTH", "//attacker.test")
         }
+    }
+
+    @Test
+    fun `a legacy drive file connection requires reconnect`() = runBlocking {
+        dbQuery(db) {
+            GoogleCredentialRepository().saveCredential(
+                userId = "U-LEGACY",
+                encryptedRefreshToken = "encrypted-token",
+                scope = "https://www.googleapis.com/auth/drive.file",
+                now = java.time.OffsetDateTime.parse("2026-08-11T00:00:00Z"),
+            )
+        }
+
+        val status = service.status("U-LEGACY")
+
+        assertFalse(status.connected)
+        assertTrue(status.requiresReconnect)
     }
 }

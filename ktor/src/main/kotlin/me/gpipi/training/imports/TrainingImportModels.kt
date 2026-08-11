@@ -60,7 +60,7 @@ data class WorkoutOption(val id: UUID, val name: String)
 data class LinkedTrainingSheet(val spreadsheetId: String, val spreadsheetTitle: String)
 
 @Serializable
-data class StartTrainingImportRequest(val spreadsheetId: String)
+data class StartTrainingImportRequest(val selectionToken: String)
 
 @Serializable
 data class ChooseTrainingWeekRequest(val weekNumber: Int)
@@ -122,6 +122,7 @@ data class ReviewedTrainingPrescription(
 data class GoogleConnectionStatusResponse(
     val configured: Boolean,
     val connected: Boolean,
+    val requiresReconnect: Boolean = false,
     val connectedAt: String? = null,
     val missingConfiguration: List<String> = emptyList(),
 )
@@ -129,11 +130,16 @@ data class GoogleConnectionStatusResponse(
 @Serializable data class GoogleConnectResponse(val authorizationUrl: String)
 
 @Serializable
-data class GooglePickerTokenResponse(
-    val accessToken: String,
-    val expiresIn: Long,
-    val apiKey: String,
-    val appId: String,
+data class GoogleSheetOptionResponse(
+    val selectionToken: String,
+    val name: String,
+    val modifiedAt: String,
+)
+
+@Serializable
+data class GoogleSheetListResponse(
+    val sheets: List<GoogleSheetOptionResponse>,
+    val nextPageToken: String? = null,
 )
 
 @Serializable

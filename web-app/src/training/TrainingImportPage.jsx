@@ -17,13 +17,13 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ArrowBackIcon, SheetIcon } from '@/app/AppIcons'
 import {
-  getGooglePickerToken,
   useApplyTrainingImport,
   useChooseTrainingImportWeek,
   useConnectGoogle,
   useDisconnectGoogle,
   useExtractTrainingImport,
   useGoogleTrainingStatus,
+  useGoogleSheets,
   useSaveTrainingImportMapping,
   useSaveTrainingImportReview,
   useStartTrainingImport,
@@ -31,51 +31,6 @@ import {
   useTrainingImport,
   useTrainingOverview,
 } from './queries'
-
-const SHEETS_MIME_TYPE = 'application/vnd.google-apps.spreadsheet'
-let pickerLoader
-
-function loadGooglePicker() {
-  if (window.google?.picker) return Promise.resolve(window.google.picker)
-  if (pickerLoader) return pickerLoader
-  pickerLoader = new Promise((resolve, reject) => {
-    const finish = () => window.gapi.load('picker', {
-      callback: () => resolve(window.google.picker),
-      onerror: () => reject(new Error('Google Picker could not be loaded.')),
-    })
-    if (window.gapi) {
-      finish()
-      return
-    }
-    const script = document.createElement('script')
-    script.src = 'https://apis.google.com/js/api.js'
-    script.async = true
-    script.onload = finish
-    script.onerror = () => reject(new Error('Google Picker could not be loaded.'))
-    document.head.appendChild(script)
-  })
-  return pickerLoader
-}
-
-function openPicker(token) {
-  return loadGooglePicker().then((picker) => new Promise((resolve, reject) => {
-    const view = new picker.DocsView(picker.ViewId.SPREADSHEETS)
-      .setMimeTypes(SHEETS_MIME_TYPE)
-      .setSelectFolderEnabled(false)
-    const instance = new picker.PickerBuilder()
-      .addView(view)
-      .setOAuthToken(token.accessToken)
-      .setDeveloperKey(token.apiKey)
-      .setAppId(token.appId)
-      .setOrigin(window.location.origin)
-      .setCallback((data) => {
-        if (data.action === picker.Action.PICKED) resolve(data.docs[0].id)
-        if (data.action === picker.Action.CANCEL) reject(new Error('No Google Sheet was selected.'))
-      })
-      .build()
-    instance.setVisible(true)
-  }))
-}
 
 function stepLabel(state, hasMapping) {
   if (state === 'REVIEW') return 'Review extracted week'
@@ -109,8 +64,96 @@ function GoogleConnection({ status, onConnect, onDisconnect, pending }) {
     </Button>
   ) : (
     <Button disabled={pending} onClick={onConnect} variant="contained" size="large">
-      Connect Google
+      {status.requiresReconnect ? 'Reconnect Google' : 'Connect Google'}
     </Button>
+  )
+}
+
+function GoogleSheetSelector({ onChoose, onDisconnect, pending }) {
+  const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setQuery(search.trim()), 300)
+    return () => window.clearTimeout(timeout)
+  }, [search])
+
+  const sheetsQuery = useGoogleSheets(query)
+  const sheets = sheetsQuery.data?.pages.flatMap((page) => page.sheets) ?? []
+
+  return (
+    <Stack aria-label="Google Sheets" component="section" spacing={2}>
+      <TextField
+        label="Search Sheets"
+        onChange={(event) => setSearch(event.target.value)}
+        value={search}
+      />
+
+      {sheetsQuery.isPending && (
+        <Stack aria-label="Loading Google Sheets" role="status" spacing={1}>
+          {[1, 2, 3].map((row) => <Skeleton key={row} height={68} variant="rounded" />)}
+        </Stack>
+      )}
+
+      {sheetsQuery.isError && (
+        <Alert
+          action={<Button color="inherit" onClick={() => sheetsQuery.refetch()} size="small">Retry</Button>}
+          severity="error"
+        >
+          {sheetsQuery.error.message}
+        </Alert>
+      )}
+
+      {!sheetsQuery.isPending && !sheetsQuery.isError && sheets.length === 0 && (
+        <Typography color="text.secondary">
+          {query ? `No Google Sheets match “${query}”.` : 'No Google Sheets found.'}
+        </Typography>
+      )}
+
+      {sheets.length > 0 && (
+        <Stack spacing={1}>
+          <Typography color="text.secondary" sx={{ letterSpacing: '0.08em' }} variant="caption">
+            RECENTLY MODIFIED
+          </Typography>
+          {sheets.map((sheet) => (
+            <Paper key={sheet.selectionToken} variant="outlined" sx={{ p: 1.5 }}>
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                <SheetIcon color="primary" />
+                <Stack sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography noWrap>{sheet.name}</Typography>
+                  <Typography color="text.secondary" variant="caption">
+                    Modified {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(sheet.modifiedAt))}
+                  </Typography>
+                </Stack>
+                <Button
+                  aria-label={`Choose ${sheet.name}`}
+                  disabled={pending}
+                  onClick={() => onChoose(sheet.selectionToken)}
+                  sx={{ '&:active': { transform: 'scale(0.97)' } }}
+                  variant="outlined"
+                >
+                  Choose
+                </Button>
+              </Stack>
+            </Paper>
+          ))}
+        </Stack>
+      )}
+
+      {sheetsQuery.hasNextPage && (
+        <Button
+          disabled={sheetsQuery.isFetchingNextPage}
+          onClick={() => sheetsQuery.fetchNextPage()}
+          variant="outlined"
+        >
+          {sheetsQuery.isFetchingNextPage ? 'Loading Sheets…' : 'Load more Sheets'}
+        </Button>
+      )}
+      <Typography color="text.secondary" variant="caption">Google Sheets only · sorted by recently modified</Typography>
+      <Button color="inherit" disabled={pending} onClick={onDisconnect} sx={{ alignSelf: 'flex-start' }} variant="text">
+        Disconnect Google
+      </Button>
+    </Stack>
   )
 }
 
@@ -416,10 +459,11 @@ export default function TrainingImportPage() {
   const [selection, setSelection] = useState(null)
   const [choice, setChoice] = useState(null)
   const [error, setError] = useState(searchParams.get('reason'))
+  const refetchStatus = status.refetch
 
   useEffect(() => {
-    if (searchParams.get('google') === 'connected') status.refetch()
-  }, [searchParams, status])
+    if (searchParams.get('google') === 'connected') refetchStatus()
+  }, [searchParams, refetchStatus])
 
   const data = importQuery.data
   const hasMapping = data?.tabs.some((tab) => tab.decision === 'WORKOUT' && tab.importWeekId)
@@ -427,8 +471,8 @@ export default function TrainingImportPage() {
   const title = useMemo(
     () => data
       ? `${data.programName} · Week ${data.selectedWeekNumber ?? '—'}`
-      : 'Import from Google Sheet',
-    [data],
+      : status.data?.connected ? 'Choose a Sheet' : 'Import from Google Sheet',
+    [data, status.data?.connected],
   )
 
   if (status.isPending || overview.isPending || (importId && importQuery.isPending)) return <LoadingImport />
@@ -449,12 +493,10 @@ export default function TrainingImportPage() {
     }
   }
 
-  async function chooseSheet() {
+  async function chooseSheet(selectionToken) {
     setError(null)
     try {
-      const pickerToken = await getGooglePickerToken()
-      const spreadsheetId = await openPicker(pickerToken)
-      const result = await start.mutateAsync({ programId: overview.data.program.id, spreadsheetId })
+      const result = await start.mutateAsync({ programId: overview.data.program.id, selectionToken })
       setSelection(result)
     } catch (requestError) {
       setError(requestError.message)
@@ -537,18 +579,13 @@ export default function TrainingImportPage() {
 
       {status.data.connected && !data && (
         <Stack spacing={2.5}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'center' } }}>
-            <Button disabled={pending} onClick={chooseSheet} variant="contained" size="large">
-              Choose Google Sheet
-            </Button>
-            <GoogleConnection
-              status={status.data}
-              onConnect={connectGoogle}
+          {!selection ? (
+            <GoogleSheetSelector
+              onChoose={chooseSheet}
               onDisconnect={async () => { await disconnect.mutateAsync(); status.refetch() }}
-              pending={disconnect.isPending}
+              pending={pending || disconnect.isPending}
             />
-          </Stack>
-          {selection && (
+          ) : (
             <Paper component="section" variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
               <Stack spacing={2}>
                 {selection.replacesLinkedSheet && (

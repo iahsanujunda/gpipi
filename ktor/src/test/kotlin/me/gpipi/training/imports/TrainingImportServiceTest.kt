@@ -35,6 +35,7 @@ import me.gpipi.training.google.GoogleCredentialRepository
 import me.gpipi.training.google.GoogleOAuthClient
 import me.gpipi.training.google.GoogleSettings
 import me.gpipi.training.google.GoogleTokenResponse
+import me.gpipi.training.google.GOOGLE_TRAINING_SCOPES
 import me.gpipi.training.google.SheetCell
 import me.gpipi.training.google.SheetDiscovery
 import me.gpipi.training.google.SheetTabGrid
@@ -49,8 +50,6 @@ class TrainingImportServiceTest : PersistenceTest() {
         clientId = "client-id",
         clientSecret = "client-secret",
         redirectUri = "https://app.test/api/training/google/callback",
-        pickerApiKey = "picker-key",
-        appId = "123456789",
         credentialEncryptionKey = "unused-in-service",
     )
 
@@ -91,7 +90,7 @@ class TrainingImportServiceTest : PersistenceTest() {
             GoogleCredentialRepository().saveCredential(
                 owner,
                 credentialCipher().encrypt("refresh-token"),
-                "https://www.googleapis.com/auth/drive.file",
+                GOOGLE_TRAINING_SCOPES.joinToString(" "),
                 now,
             )
         }
@@ -270,7 +269,7 @@ class TrainingImportServiceTest : PersistenceTest() {
             GoogleCredentialRepository().saveCredential(
                 owner,
                 credentialCipher().encrypt("refresh-token"),
-                "https://www.googleapis.com/auth/drive.file",
+                GOOGLE_TRAINING_SCOPES.joinToString(" "),
                 now,
             )
         }

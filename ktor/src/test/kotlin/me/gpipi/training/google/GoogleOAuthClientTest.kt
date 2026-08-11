@@ -14,8 +14,6 @@ class GoogleOAuthClientTest {
                 clientId = "client-id.apps.googleusercontent.com",
                 clientSecret = "client-secret",
                 redirectUri = "https://api.example.test/api/training/google/callback",
-                pickerApiKey = "picker-key",
-                appId = "123456789",
                 credentialEncryptionKey = "configured-in-production",
             )
 
@@ -27,7 +25,7 @@ class GoogleOAuthClientTest {
             assertEquals("client-id.apps.googleusercontent.com", url.parameters["client_id"])
             assertEquals(settings.redirectUri, url.parameters["redirect_uri"])
             assertEquals("code", url.parameters["response_type"])
-            assertEquals("https://www.googleapis.com/auth/drive.file", url.parameters["scope"])
+            assertEquals(GOOGLE_TRAINING_SCOPES, url.parameters["scope"]?.split(' ')?.toSet())
             assertEquals("offline", url.parameters["access_type"])
             assertEquals("false", url.parameters["include_granted_scopes"])
             assertEquals("consent", url.parameters["prompt"])

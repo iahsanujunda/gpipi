@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1380" height="3650" viewBox="0 0 1380 3650" role="img" aria-labelledby="title description">
   <title id="title">Phase 5 complete Google Sheet training import flow</title>
-  <desc id="description">The import branch begins when Add workout is chosen on the current week, then covers Google file selection, one-week scope confirmation, bounded extraction, human review, conflict and failure handling, and final Apply to the active program.</desc>
+  <desc id="description">The import branch begins when Add workout is chosen on the current week, then covers app-owned Google Sheet selection, one-week scope confirmation, bounded extraction, human review, conflict and failure handling, and final Apply to the active program.</desc>
 
   <defs>
     <filter id="phone-shadow" x="-20%" y="-10%" width="140%" height="140%">
@@ -93,41 +93,48 @@
 
     <!-- Row 1 labels -->
     <text x="230" y="208" class="board-label" text-anchor="middle">01 · ADD WORKOUT · BRANCH</text>
-    <text x="690" y="208" class="board-label" text-anchor="middle">02 · GOOGLE FILE PICKER</text>
+    <text x="690" y="208" class="board-label" text-anchor="middle">02 · CHOOSE GOOGLE SHEET</text>
     <text x="1150" y="208" class="board-label" text-anchor="middle">03 · CHOOSE ONE WEEK</text>
 
-    <!-- 02 Picker opens after the import branch is chosen -->
+    <!-- 02 App-owned Sheet selector opens after the import branch is chosen -->
     <g transform="translate(495 230)">
       <use href="#phone-base" />
-      <text x="24" y="142" class="eyebrow">GOOGLE-PROVIDED PICKER</text>
+      <text x="24" y="142" class="eyebrow">GOOGLE SHEETS</text>
+      <circle cx="282" cy="138" r="3.5" fill="#3FC1C0" />
+      <text x="292" y="142" class="chip">CONNECTED</text>
       <text x="24" y="176" class="heading" font-size="27">Choose a Sheet</text>
       <rect x="24" y="201" width="342" height="50" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
       <path d="M44 220a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm6 14 6 6" fill="none" stroke="#526966" stroke-width="1.7" stroke-linecap="round" />
-      <text x="70" y="231" class="secondary" font-size="12">Search your files</text>
+      <text x="70" y="231" class="secondary" font-size="12">Search Sheets</text>
 
-      <text x="24" y="284" class="eyebrow">RECENT SPREADSHEETS</text>
-      <rect x="24" y="299" width="342" height="86" rx="10" fill="#DFF4F4" stroke="#3FC1C0" stroke-width="1.5" />
-      <rect x="42" y="317" width="46" height="50" rx="7" fill="#FFFFFF" />
-      <g transform="translate(54 330)" color="#16679A"><use href="#sheet-icon" /></g>
-      <text x="104" y="334" class="heading" font-size="14">JUNDA – M1</text>
-      <text x="104" y="355" class="secondary" font-size="10.5">Modified 8 Aug · Google Sheets</text>
-      <circle cx="342" cy="342" r="10" fill="#16679A" />
-      <g transform="translate(336 336) scale(.58)" color="#FFFFFF"><use href="#check-icon" /></g>
+      <text x="24" y="284" class="eyebrow">RECENTLY MODIFIED</text>
+      <rect x="24" y="299" width="342" height="76" rx="10" fill="#FFFFFF" stroke="#3FC1C0" stroke-width="1.5" />
+      <rect x="42" y="314" width="44" height="46" rx="7" fill="#DFF4F4" />
+      <g transform="translate(53 326)" color="#16679A"><use href="#sheet-icon" /></g>
+      <text x="100" y="328" class="heading" font-size="14">JUNDA – M1</text>
+      <text x="100" y="349" class="secondary" font-size="10.5">Modified 8 Aug</text>
+      <rect x="291" y="316" width="57" height="42" rx="9" fill="#16679A" />
+      <text x="319.5" y="342" class="button" font-size="10.5">Choose</text>
 
-      <rect x="24" y="399" width="342" height="70" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
-      <rect x="42" y="412" width="46" height="44" rx="7" fill="#F4FAFB" />
-      <g transform="translate(54 423)" color="#526966"><use href="#sheet-icon" /></g>
-      <text x="104" y="427" class="body" font-size="13" font-weight="650">JUNDA – M2 archive</text>
-      <text x="104" y="447" class="secondary" font-size="10">Modified 27 Jul</text>
+      <rect x="24" y="387" width="342" height="76" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="42" y="402" width="44" height="46" rx="7" fill="#F4FAFB" />
+      <g transform="translate(53 414)" color="#526966"><use href="#sheet-icon" /></g>
+      <text x="100" y="416" class="body" font-size="13" font-weight="650">JUNDA – M2 archive</text>
+      <text x="100" y="437" class="secondary" font-size="10">Modified 27 Jul</text>
+      <rect x="291" y="404" width="57" height="42" rx="9" fill="#FFFFFF" stroke="#16679A" />
+      <text x="319.5" y="430" class="button-secondary" font-size="10.5">Choose</text>
 
-      <rect x="24" y="501" width="342" height="54" rx="9" fill="#F4FAFB" />
-      <text x="42" y="523" class="body" font-size="10.5" font-weight="700">The app receives only the selected file.</text>
-      <text x="42" y="540" class="secondary" font-size="9.5">This surface is owned and rendered by Google.</text>
+      <rect x="24" y="475" width="342" height="76" rx="10" fill="#FFFFFF" stroke="#C9E2E5" />
+      <rect x="42" y="490" width="44" height="46" rx="7" fill="#F4FAFB" />
+      <g transform="translate(53 502)" color="#526966"><use href="#sheet-icon" /></g>
+      <text x="100" y="504" class="body" font-size="13" font-weight="650">JUNDA – Rehab notes</text>
+      <text x="100" y="525" class="secondary" font-size="10">Modified 19 Jul</text>
+      <rect x="291" y="492" width="57" height="42" rx="9" fill="#FFFFFF" stroke="#16679A" />
+      <text x="319.5" y="518" class="button-secondary" font-size="10.5">Choose</text>
 
-      <rect x="24" y="584" width="104" height="46" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
-      <text x="76" y="612" class="secondary" font-size="11" font-weight="700" text-anchor="middle">Cancel</text>
-      <rect x="140" y="584" width="226" height="46" rx="9" fill="#16679A" />
-      <text x="253" y="612" class="button">Choose JUNDA – M1</text>
+      <rect x="24" y="575" width="342" height="44" rx="9" fill="#FFFFFF" stroke="#C9E2E5" />
+      <text x="195" y="602" class="button-secondary" font-size="11">Load more Sheets</text>
+      <text x="24" y="649" class="secondary" font-size="9.5">Google Sheets only · sorted by recently modified</text>
     </g>
 
     <!-- 03 Choose week -->

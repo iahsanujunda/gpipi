@@ -15,15 +15,20 @@ private val ALLOWED_GOOGLE_OAUTH_RETURN_PATHS = setOf(
 data class GoogleConnectionStatus(
     val configured: Boolean,
     val connected: Boolean,
+    val requiresReconnect: Boolean,
     val connectedAt: OffsetDateTime?,
     val missingConfiguration: List<String>,
 )
 
-data class GooglePickerToken(
-    val accessToken: String,
-    val expiresIn: Long,
-    val apiKey: String,
-    val appId: String,
+data class GoogleSheetOption(
+    val selectionToken: String,
+    val name: String,
+    val modifiedAt: OffsetDateTime,
+)
+
+data class GoogleSheetOptionPage(
+    val sheets: List<GoogleSheetOption>,
+    val nextPageToken: String?,
 )
 
 class GoogleConnectionService(
@@ -34,12 +39,17 @@ class GoogleConnectionService(
     private val settings: GoogleSettings,
     private val clock: Clock = Clock.systemUTC(),
     private val random: SecureRandom = SecureRandom(),
+    private val drive: GoogleDriveSheetGateway? = null,
 ) {
+    private val sheetSelections = cipher?.let { GoogleSheetSelectionCodec(it, clock) }
+
     suspend fun status(userId: String): GoogleConnectionStatus {
         val credential = dbQuery(db) { repository.credential(userId) }
+        val hasCurrentScopes = credential?.scope?.let(::hasGoogleTrainingScopes) == true
         return GoogleConnectionStatus(
             configured = settings.configured,
-            connected = credential != null,
+            connected = settings.configured && credential != null && hasCurrentScopes,
+            requiresReconnect = credential != null && !hasCurrentScopes,
             connectedAt = credential?.connectedAt,
             missingConfiguration = settings.missingConfiguration(),
         )
@@ -79,21 +89,39 @@ class GoogleConnectionService(
             repository.saveCredential(
                 userId = authenticatedUserId,
                 encryptedRefreshToken = encrypted,
-                scope = tokens.scope.orEmpty(),
+                scope = tokens.scope?.takeIf(String::isNotBlank)
+                    ?: GOOGLE_TRAINING_SCOPES.joinToString(" "),
                 now = now(),
             )
         }
         return stateRecord.returnPath
     }
 
-    suspend fun pickerToken(userId: String): GooglePickerToken {
+    suspend fun listSheets(userId: String, query: String, pageToken: String?): GoogleSheetOptionPage {
         val access = accessToken(userId)
-        return GooglePickerToken(access.accessToken, access.expiresIn, settings.pickerApiKey, settings.appId)
+        val page = requireDrive().listSheets(access.accessToken, query.trim(), pageToken)
+        val codec = requireSheetSelections()
+        return GoogleSheetOptionPage(
+            sheets = page.sheets.map { sheet ->
+                GoogleSheetOption(
+                    selectionToken = codec.issue(userId, sheet.spreadsheetId),
+                    name = sheet.name,
+                    modifiedAt = sheet.modifiedAt,
+                )
+            },
+            nextPageToken = page.nextPageToken,
+        )
     }
+
+    fun resolveSheetSelection(userId: String, selectionToken: String): SelectedGoogleSheet =
+        requireSheetSelections().resolve(userId, selectionToken)
 
     suspend fun accessToken(userId: String): GoogleTokenResponse {
         val credential = dbQuery(db) { repository.credential(userId) }
             ?: throw GoogleIntegrationException("Connect Google before selecting or reading a Sheet.")
+        if (!hasGoogleTrainingScopes(credential.scope)) {
+            throw GoogleIntegrationException("Reconnect Google to approve Sheet search and read/write access.")
+        }
         return requireClient().refresh(requireCipher().decrypt(credential.encryptedRefreshToken))
     }
 
@@ -110,6 +138,12 @@ class GoogleConnectionService(
 
     private fun requireCipher(): GoogleCredentialCipher = cipher
         ?: throw GoogleIntegrationException("Google credential encryption is not configured.")
+
+    private fun requireDrive(): GoogleDriveSheetGateway = drive
+        ?: throw GoogleIntegrationException("Google Drive Sheet search is not configured.")
+
+    private fun requireSheetSelections(): GoogleSheetSelectionCodec = sheetSelections
+        ?: throw GoogleIntegrationException("Google Sheet selection encryption is not configured.")
 
     private fun now(): OffsetDateTime = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
 }

@@ -8,7 +8,15 @@ import io.ktor.http.URLBuilder
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-private const val DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
+const val DRIVE_METADATA_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly"
+const val SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets"
+val GOOGLE_TRAINING_SCOPES = setOf(DRIVE_METADATA_SCOPE, SHEETS_SCOPE)
+
+fun hasGoogleTrainingScopes(scope: String): Boolean = scope
+    .split(Regex("\\s+"))
+    .filter(String::isNotBlank)
+    .toSet()
+    .containsAll(GOOGLE_TRAINING_SCOPES)
 
 class GoogleIntegrationException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -34,7 +42,7 @@ class GoogleOAuthClient(
             parameters.append("client_id", settings.clientId)
             parameters.append("redirect_uri", settings.redirectUri)
             parameters.append("response_type", "code")
-            parameters.append("scope", DRIVE_FILE_SCOPE)
+            parameters.append("scope", GOOGLE_TRAINING_SCOPES.joinToString(" "))
             parameters.append("access_type", "offline")
             parameters.append("include_granted_scopes", "false")
             parameters.append("prompt", "consent")

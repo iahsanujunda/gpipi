@@ -4,7 +4,8 @@ This is the operator checklist for Phase 5 Iteration 2. It covers the changes th
 
 The import is intentionally narrow:
 
-- Google Picker gives the app one spreadsheet ID selected by the member.
+- Ktor lists native Google Sheets through the Drive API; the member selects one in the app-owned picker.
+- The browser receives an encrypted, member-bound selection token, never a Google access token or raw spreadsheet ID.
 - Import always targets the member's existing active program; program creation stays manual and is never part of import.
 - The member chooses exactly one week and confirms its workout ranges.
 - Ktor reads only those confirmed ranges for extraction.
@@ -54,21 +55,28 @@ The repository currently provides a fallback model in `application.conf`, but pr
 
 ## 2. Create the Google Cloud project
 
-Use a dedicated project for gpipi. Google recommends separate development/testing and production projects; that also prevents a local redirect URI, test users, or API-key referrer from leaking into the production setup.
+Use a dedicated project for gpipi. Google recommends separate development/testing and production projects; that also prevents a local redirect URI or test user from leaking into the production setup.
 
 In [Google Cloud Console](https://console.cloud.google.com/):
 
 1. Create or select the project.
-2. Record the numeric **project number**, not the project ID. It becomes `GOOGLE_CLOUD_PROJECT_NUMBER` and is passed to Picker as its app ID.
-3. Enable **Google Picker API**, **Google Drive API**, and **Google Sheets API** in APIs & Services → Library.
-4. Configure the Google Auth Platform consent screen.
-5. Request only this scope:
+2. Enable **Google Drive API** and **Google Sheets API** in APIs & Services → Library.
+3. Configure the Google Auth Platform consent screen.
+4. Add these scopes:
 
    ```text
-   https://www.googleapis.com/auth/drive.file
+   https://www.googleapis.com/auth/drive.metadata.readonly
+   https://www.googleapis.com/auth/spreadsheets
    ```
 
-`drive.file` is deliberate: Picker grants the app access to files the member explicitly selects, instead of broad Drive read access. The web Picker requires an OAuth access token and returns selected file metadata to its JavaScript callback; Google documents that flow in the [Picker overview](https://developers.google.com/workspace/drive/picker/guides/overview).
+There are two separate scope steps, and both use the same values:
+
+- **In code:** Ktor already puts both scopes in the OAuth authorization URL. You do not need to configure an environment variable or edit code.
+- **In Google Cloud:** open **Google Auth Platform → Data Access → Add or remove scopes**, select or manually add both scopes, then press **Update**. This declares what the consent screen and any verification submission are allowed to request; it does not replace the programmatic OAuth request.
+
+`drive.metadata.readonly` lets the backend search and list file metadata; the implementation filters the response to native Google Sheets. It does not grant Drive file-content access. `spreadsheets` lets the backend read the chosen Sheet now and supports planned write-back without another scope migration. It grants read/write access to spreadsheets the account can access, so only connect the intended household Google account and review Google's consent screen carefully. See Google's [Drive scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) and [Sheets authorization guide](https://developers.google.com/workspace/sheets/api/scopes).
+
+The app does not use Google Picker, an API key, or a Cloud project number. Sheet search happens from Ktor and the browser receives only display metadata plus a ten-minute encrypted selection token.
 
 For a household-only test deployment, keep the app in **Testing** and add each Google account under Test users. Google currently expires authorizations for testing users after seven days, so periodic reconnection is expected in that mode. Move to **In production** when persistent household authorization is required, and follow any consent-screen or brand verification instructions shown for the configured scope. See Google's [app audience documentation](https://support.google.com/cloud/answer/15549945).
 
@@ -88,32 +96,13 @@ Production:
 https://YOUR-KTOR-ORIGIN/api/training/google/callback
 ```
 
-Use the public Ktor origin, not the frontend origin, because Ktor exchanges the authorization code and encrypts the refresh token. Add the corresponding frontend origins under authorized JavaScript origins if the console requests them:
-
-```text
-http://localhost:5173
-https://YOUR-WEB-ORIGIN
-```
+Use the public Ktor origin, not the frontend origin, because Ktor exchanges the authorization code and encrypts the refresh token. No authorized JavaScript origin is required for training import: the browser never calls Google APIs. If the console shows that section, it can remain empty.
 
 Use `localhost` consistently during local testing. Switching between `localhost` and `127.0.0.1` changes the cookie and origin boundary and can make the authenticated callback appear signed out.
 
 Copy the client ID and client secret into the environment variables described below. Never commit the downloaded client-secret JSON. The implementation uses Google’s web-server authorization flow with a one-use, ten-minute state value, offline access, and explicit consent so Ktor can receive and securely retain a refresh token. Google’s current requirements are documented in the [OAuth web-server guide](https://developers.google.com/identity/protocols/oauth2/web-server).
 
-## 4. Create and restrict the Picker API key
-
-Create an API key for Google Picker. This key is intentionally sent to the browser, so it is not protected by secrecy; it is protected by restrictions.
-
-Configure:
-
-- Application restriction: **Websites / HTTP referrers**.
-- Local referrer: `http://localhost:5173/*`.
-- Production referrer: `https://YOUR-WEB-ORIGIN/*`.
-- API restriction: restrict the key to the **Google Picker API**.
-
-Store its value as `GOOGLE_PICKER_API_KEY`. The OAuth client, API key, and numeric project number must belong to the same Google Cloud project.
-The frontend passes its current `window.location.origin` to Picker explicitly. Production website restrictions must therefore name the public frontend origin, not the Ktor OAuth-callback origin.
-
-## 5. Configure local environment variables
+## 4. Configure local environment variables
 
 Copy `ktor/.env.example` to `ktor/.env` if needed, then set:
 
@@ -124,8 +113,6 @@ OPENROUTER_TRAINING_EXTRACTION_MODEL=provider/model-slug
 GOOGLE_OAUTH_CLIENT_ID=....apps.googleusercontent.com
 GOOGLE_OAUTH_CLIENT_SECRET=...
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8080/api/training/google/callback
-GOOGLE_PICKER_API_KEY=...
-GOOGLE_CLOUD_PROJECT_NUMBER=123456789012
 GOOGLE_CREDENTIAL_ENCRYPTION_KEY=...
 ```
 
@@ -139,9 +126,9 @@ The decoded value must be exactly 32 bytes. It encrypts Google refresh tokens us
 
 Treat this key as durable production data, not as a disposable deployment secret. Replacing it immediately makes existing refresh tokens unreadable. The current implementation does not keep an old-key ring: before an intentional rotation, disconnect the Google connection, rotate the key, deploy, and reconnect. A lost key requires reconnecting affected Google accounts.
 
-The Picker API key and project number are delivered to the authenticated browser by the backend. The OAuth client secret, refresh token, and encryption key never leave Ktor.
+The OAuth access token, client secret, refresh token, raw spreadsheet ID, and encryption key never leave Ktor. The browser receives an opaque Sheet-selection token that expires after ten minutes and is bound to the signed-in member.
 
-## 6. Configure production secrets
+## 5. Configure production secrets
 
 For the current Fly.io backend, install the values from the `ktor` directory:
 
@@ -151,23 +138,21 @@ fly secrets set \
   GOOGLE_OAUTH_CLIENT_ID='....apps.googleusercontent.com' \
   GOOGLE_OAUTH_CLIENT_SECRET='...' \
   GOOGLE_OAUTH_REDIRECT_URI='https://YOUR-KTOR-ORIGIN/api/training/google/callback' \
-  GOOGLE_PICKER_API_KEY='...' \
-  GOOGLE_CLOUD_PROJECT_NUMBER='123456789012' \
   GOOGLE_CREDENTIAL_ENCRYPTION_KEY='...'
 ```
 
 `OPENROUTER_API_KEY` must also already be present. A secrets update restarts the Fly Machine. Flyway applies the training-import migrations (`V15__training_sheet_import.sql` through `V17__training_import_existing_program_only.sql`) during backend startup.
 
-No Iteration 2 values belong in `web-app/.env`. This avoids maintaining a second copy of Picker configuration and lets the backend report exactly which server-side values are missing.
+No Iteration 2 values belong in `web-app/.env`. All Google API calls and configuration stay in Ktor.
 
-## 7. First connection and smoke test
+## 6. First connection and smoke test
 
 Use a copy of the trainer Sheet first:
 
-1. Start Ktor and Vite, authenticate through Slack, and open **Training → Program settings → Import one week**.
+1. Start Ktor and Vite, authenticate through Slack, open the current training week, then choose **Add workout → Import from Google Sheet**.
 2. Confirm the page reports Google as configured. If not, it lists the exact missing variable names.
-3. Press **Connect Google**, approve only the selected-file permission, and return to the import page.
-4. Press **Choose Google Sheet** and choose the disposable native Google Sheet.
+3. Press **Connect Google**, approve the Drive metadata and Sheets permissions, and return to the import page.
+4. Confirm the app-owned selector lists native Google Sheets by recent modification, then choose the disposable Sheet.
 5. Choose one week that has both prescriptions and copied execution values.
 6. Confirm or exclude every tab. For each included workout, verify the row range, target workout, first execution column, execution-header cell, and execution-header text.
 7. Press **Extract Week N**. Confirm that only this week appears in review.
@@ -179,7 +164,7 @@ Use a copy of the trainer Sheet first:
 
 For a database-level check, the selected import should have `training_import.state = 'APPLIED'`, one selected-week row per included workout tab, and provenance in `sheet_week_link` and `sheet_prescription_link`. Applying an import must not add rows to `training_session`, `performed_exercise`, or `performed_set`, and must not change any `program` row (import never creates, activates, or deactivates a program).
 
-## 8. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom | Check |
 | --- | --- |
@@ -187,8 +172,11 @@ For a database-level check, the selected import should have `training_import.sta
 | `redirect_uri_mismatch` | `GOOGLE_OAUTH_REDIRECT_URI` must exactly match an authorized redirect URI, including scheme, host, port, path, and trailing-slash absence. |
 | Callback returns signed out | Use one hostname consistently; confirm the browser retained the Ktor session cookie and production uses HTTPS. |
 | Google returns no refresh token | Disconnect/revoke the app from the Google account, then connect again. The authorization request uses offline access and explicit consent. |
-| Picker says the developer key is invalid | Confirm the Picker and Drive APIs are enabled; HTTP-referrer restrictions include both the exact frontend origin and its `/*` form; and the API key, OAuth client, and numeric project number belong to one project. The app passes `window.location.origin` explicitly. If those checks pass but Picker opens its own sign-in page first, retry in a browser profile with third-party Google cookies allowed and privacy extensions disabled. |
-| Sheet read returns 403 | The OAuth account must be able to open the file, and the file must have been selected through this app’s Picker under `drive.file`. Reconnect and select it again. |
+| The page says **Reconnect Google** | The stored connection predates the app-owned selector and lacks one or both current scopes. Reconnect and approve the new Drive metadata and Sheets permissions. |
+| Sheet list returns 403 | Confirm the Drive API is enabled and the connection includes `drive.metadata.readonly`; then reconnect. |
+| Sheet read returns 403 | The connected Google account must be able to open the Sheet and the connection must include `spreadsheets`; reconnect or choose a Sheet accessible to that account. |
+| A Sheet is missing from search | Only native Google Sheets are listed. Confirm the connected account can see it, search by part of its Drive name, and check whether it is an uploaded XLSX rather than a converted Google Sheet. |
+| Choosing a Sheet says the selection expired | Selection tokens last ten minutes. Return to the Sheet list and choose it again. |
 | No weeks are found | Week discovery recognizes visible labels containing `Week N` or `Minggu N`. Correct the visible label or continue with manual authoring. |
 | Execution boundary is ambiguous | In Step 2, supply the first execution column and the exact execution-header cell/value. Extraction does not guess. |
 | OpenRouter rejects `response_format` | The configured model/provider does not support strict structured output. Choose a model whose metadata lists `structured_outputs` and `response_format`. |
@@ -197,10 +185,10 @@ For a database-level check, the selected import should have `training_import.sta
 | Server fails while constructing the cipher | Regenerate `GOOGLE_CREDENTIAL_ENCRYPTION_KEY` as standard Base64 for exactly 32 bytes. |
 | A testing connection stops working after several days | Google testing-mode authorizations currently expire after seven days. Reconnect or move the correctly configured app to production status. |
 
-## 9. Operational boundaries
+## 8. Operational boundaries
 
-- There is no background polling, timer, or read on page load.
-- **Choose Google Sheet**, **Load Week details**, and **Extract Week N** are explicit reads.
+- There is no background polling or timer. Opening or searching the Sheet selector explicitly reads Google Drive metadata.
+- Choosing a Sheet starts transient week discovery; **Load Week details** and **Extract Week N** are additional explicit reads.
 - Week discovery is transient. If the browser is refreshed before scope confirmation, press **Load Week details** to perform that read again.
 - Confirmed mappings, completed extraction, review decisions, source hashes, and model names survive refreshes.
 - Disconnect marks the stored credential revoked and makes a best-effort call to Google’s revoke endpoint.

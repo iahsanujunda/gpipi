@@ -52,6 +52,7 @@ import me.gpipi.training.trainingApiRoutes
 import me.gpipi.training.google.GoogleConnectionService
 import me.gpipi.training.google.GoogleCredentialCipher
 import me.gpipi.training.google.GoogleCredentialRepository
+import me.gpipi.training.google.GoogleDriveSheetClient
 import me.gpipi.training.google.GoogleOAuthClient
 import me.gpipi.training.google.GoogleTrainingSheetGateway
 import me.gpipi.training.google.googleSettings
@@ -147,6 +148,7 @@ fun Application.configureRouting() {
         repository = GoogleCredentialRepository(),
         oauth = googleOAuth,
         cipher = googleCipher,
+        drive = googleSettings.takeIf { it.configured }?.let { GoogleDriveSheetClient(googleHttpClient) },
         settings = googleSettings,
     )
     val trainingImportService = TrainingImportService(

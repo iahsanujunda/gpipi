@@ -576,15 +576,17 @@ Approved UI reference: [complete Google Sheet import flow](mockups/training-impo
 
 ### 2.2 Drive access
 
-The trainer shares a native Google Sheet. Members connect Google once, then pick the file with the **Google Picker**.
+The trainer shares a native Google Sheet. Members connect Google once, then select the file from an **app-owned Sheet selector**. Ktor lists only native Google Sheets, ordered by recent modification, with server-side name search and pagination. This avoids Google Picker's browser/API-key/cookie boundary.
 
-**Use the `drive.file` scope**, not full Drive read. `drive.file` grants access only to files the user explicitly selects through the Picker, so the app never holds broad access to either member's Drive. This is the same least-privilege instinct as scoping the Slack app to `app_mentions:read`.
+Use `drive.metadata.readonly` to discover Sheet file metadata and `spreadsheets` to read the chosen Sheet and support iteration-3 write-back. These scopes are broader than the earlier Picker plus `drive.file` design: Drive metadata is visible across the account and the Sheets scope can read/write accessible spreadsheets. The accepted trade-off is a reliable backend-only flow with no Google token, developer key, or raw spreadsheet ID in browser code. The OAuth consent configuration and operator guide must state the permissions honestly; the in-app selector lists native Sheets only and provides a visible disconnect action without repeating a long permission explanation.
 
-Refresh tokens are credentials: stored encrypted, per member, revocable from the app, and never logged. Confirm current Google API scope names and Picker behaviour at implementation time.
+Refresh tokens are credentials: stored encrypted, per member, revocable from the app, and never logged. A connection stored with the old scope set is not treated as connected; the UI requires a new consent flow.
 
 **Encryption at rest is net-new — the session cookie only signs, it does not encrypt.** `configureSecurity` uses `SessionTransportTransformerMessageAuthentication` (sign, don't encrypt), which proves *not tampered* but hides nothing. A refresh token is a long-lived key to a member's Drive, so plaintext in the DB turns any backup, `pg_dump`, or read-replica leak into third-party account takeover. Add a small symmetric utility (AES-GCM: confidentiality *and* an auth tag) with the key sourced from config the same way `session.signKey` is (`Security.kt`), key held outside the repo and rotatable. Encrypt on write into `google_credential.refresh_token`; decrypt only at the moment of a token refresh; never log plaintext or ciphertext. The key-location decision (env var, matching the current sign-key pattern, versus a KMS) is deliberate, not a default.
 
-**Build the Google integration read-path-first, so failures surface cheap.** This is the first external integration beyond Slack and OpenRouter, and the entire write-back safety model (iteration 3) rests on reading *formatted display values plus A1 addresses* from the grid API — a flattened export would make provenance wrong from day one. Order: (1) confirm live scope names and Picker behaviour *before* writing client code, keeping `drive.file` least-privilege intact; (2) build and prove the read path (OAuth connect → Picker file id → Sheets grid read returning display values **with** addresses) against a real fixture sheet; (3) only then build write-back. Put the Sheets calls behind an interface with a fake boundary so drift/conflict/verify logic is testable without the network (see Cross-Cutting).
+**Build the Google integration read-path-first, so failures surface cheap.** This is the first external integration beyond Slack and OpenRouter, and the entire write-back safety model (iteration 3) rests on reading *formatted display values plus A1 addresses* from the grid API — a flattened export would make provenance wrong from day one. Order: (1) prove OAuth and backend Drive listing with the current scopes; (2) prove the read path (OAuth connect → app-owned Sheet selection → Sheets grid read returning display values **with** addresses) against a real fixture sheet; (3) only then build write-back. Put the Drive and Sheets calls behind interfaces with fake boundaries so listing, drift/conflict, and verify logic are testable without the network (see Cross-Cutting).
+
+The Sheet-list response contains only `name`, `modifiedAt`, and a ten-minute encrypted `selectionToken`. That token binds the raw spreadsheet ID to the authenticated member. Import start resolves it in Ktor and rejects expired, altered, or cross-member tokens. No extra selection table is required and the token works across Fly Machines that share the credential-encryption key.
 
 ```sql
 create table google_credential (
@@ -600,10 +602,10 @@ create table google_credential (
 
 | Action | What it does |
 |---|---|
-| **Add workout → Import from Google Sheet** | From the current week, opens the Picker, discovers available week labels/ranges, and starts a persisted import for one member-selected week in the active program |
+| **Add workout → Import from Google Sheet** | From the current week, opens the app-owned Sheet selector, discovers available week labels/ranges for the chosen Sheet, and starts a persisted import for one member-selected week in the active program |
 | **Sync** | Asks for one week, then re-extracts only that week from the already-linked spreadsheet |
 
-Nothing else triggers a read. There is no background poll, no refresh on page load, and no sync on a timer. The trainer edits their sheet on their own schedule; a member decides when to pull those edits in, having usually just been told about them.
+Opening or searching the selector reads Drive metadata only. Choosing a Sheet triggers transient header discovery; the later week-detail and extraction actions read only their confirmed Sheet scope. Nothing performs a background poll, timer-based sync, or automatic Sheet-content read on an unrelated page load. The trainer edits their sheet on their own schedule; a member decides when to pull those edits in, having usually just been told about them.
 
 **One import handles one week.** A sheet may already contain Weeks 1–8, but choosing Week 5 creates drafts, provenance, and domain changes only for Week 5 across its confirmed workout tabs. Weeks 1–4 and 6–8 are neither extracted nor represented by placeholder rows. This makes the first imported week naturally become the iteration-1 current week: if Week 5 is the only authored week in the app, it is the lowest unresolved authored week without adding a stored current-week pointer. Importing Week 6 early is also safe because Week 5 remains the lowest unresolved week.
 
@@ -718,7 +720,7 @@ An import contains at most one `training_import_week` per included workout tab, 
 
 #### The model never receives the file
 
-Google Picker returns a spreadsheet ID to the app; it does **not** become an LLM attachment. The backend uses the Sheets API itself and never gives OpenRouter a Google URL, spreadsheet ID, OAuth token, XLSX binary, or member identity.
+The app-owned selector returns an opaque selection token to the browser; the raw spreadsheet ID stays in Ktor. The Sheet does **not** become an LLM attachment. The backend uses the Sheets API itself and never gives OpenRouter a Google URL, spreadsheet ID, OAuth token, XLSX binary, or member identity.
 
 There are two distinct reads:
 
@@ -728,7 +730,7 @@ There are two distinct reads:
 The Sheets adapter returns formatted display text, row/column coordinates, A1 addresses, merged ranges intersecting the selection, stable numeric tab ID, and tab title. Formatted display text is authoritative for prescriptions. Underlying numeric/date types and formulas are not supplied to the model.
 
 ```text
-Picker file ID
+member-bound Sheet selection token → backend file ID
     → transient header discovery
     → member chooses Week N
     → read only Week N ranges
@@ -1038,7 +1040,9 @@ Only the final Apply transaction changes domain tables, confirmed aliases, and p
 
 ### Definition of Done
 
-- [ ] Google connected with `drive.file` scope; file chosen via the Picker
+- [ ] Google connected with `drive.metadata.readonly` and `spreadsheets`; native file chosen through the app-owned selector
+- [ ] Sheet listing is backend-only, searchable, recently modified first, paginated, and never exposes an OAuth token or raw spreadsheet ID to the browser
+- [ ] Sheet selection tokens expire after ten minutes, are encrypted and member-bound, and reject tampering or cross-member use
 - [ ] Refresh tokens encrypted at rest, revocable in-app, never logged
 - [ ] Sheet read through the Sheets API preserving cell addresses
 - [ ] Every tab is explicitly mapped to an existing/new workout or excluded before extraction
@@ -1069,7 +1073,7 @@ Only the final Apply transaction changes domain tables, confirmed aliases, and p
 - [ ] Cancelling an import leaves the active program and all training-domain rows unchanged
 - [ ] Applying an import creates only the reviewed selected-week workout data inside the program that started it
 - [ ] `sheet_link`, `sheet_week_link`, and `sheet_prescription_link` capture stable numeric tab ID, display title, week range, execution boundary/header, exact movement/source cells, per-set destination cells, and redacted source snapshot/hash
-- [ ] **Select file** and **Sync** are the only ways a read happens — no poll, no timer, no read on page load
+- [ ] Opening/searching the selector reads Drive metadata; choosing a Sheet, loading week details, extracting, and Sync are the only Sheet reads — no poll, timer, or unrelated page-load read
 - [ ] Re-linking a program to a different spreadsheet warns first and does not silently retarget old provenance
 - [ ] Confirmation shows only the chosen week, with each included workout annotated unchanged / changed / new and changed workouts naming what differs
 - [ ] A week whose stored values were locally edited is flagged distinctly before overwrite
@@ -1354,7 +1358,7 @@ Unspecified until iterations 1–3 are in real use. Candidates:
 - **Persistence discipline** unchanged: all access through `dbQuery(db)`, one flat transaction per atomic write, no network calls inside a transaction, client-side UUIDs.
 - **Migrations + codegen:** Flyway is the source of truth; register each new table in the pgen allowlist before regenerating, or it silently will not be generated.
 - **`jsonb` is net-new and needs a pgen `columnTypeMapping` before any jsonb table is registered.** Iterations 2–3 depend heavily on jsonb (`extracted_draft`, `source_snapshot`, `prescription_cells`, `execution_cells`, `observed_/proposed_/verified_user_entered_value`, …), but no existing table uses it and `columnTypeMappings` in `build.gradle.kts` maps only `timestamptz`. Unmapped, pgen falls back to text or emits a type Exposed cannot bind — degrading provenance maps into stringly-typed blobs whose corruption would not surface until a write-back targets the wrong cell in the trainer's live sheet. Add a jsonb mapping alongside the `timestamptz` one, keep (de)serialization at the repo boundary using the existing `kotlinx.serialization` `Json`, and verify with a throwaway jsonb table that the generated Kotlin compiles and round-trips before building on it.
-- **Testing:** per the testing guide, narrowest layer that proves the behaviour. Authorization boundaries belong in route tests with two authenticated member sessions, proving member B receives not found for member A's IDs. Session lifecycle, target snapshots, stable set slots, exact-cell history, deleted-set clearing, and write-state/idempotency transitions belong in persistence tests. A fake Sheets boundary covers drift, late conflict, atomic payload construction, timeout/read-back reconciliation, and post-write verification. The Drive picker, import review, and write preview/conflict choices belong in Playwright.
+- **Testing:** per the testing guide, narrowest layer that proves the behaviour. Authorization boundaries belong in route tests with two authenticated member sessions, proving member B receives not found for member A's IDs. Session lifecycle, target snapshots, stable set slots, exact-cell history, deleted-set clearing, and write-state/idempotency transitions belong in persistence tests. A fake Drive boundary covers filtered listing/search/pagination; the encrypted selection codec proves expiry, tamper resistance, and member binding. A fake Sheets boundary covers drift, late conflict, atomic payload construction, timeout/read-back reconciliation, and post-write verification. The app-owned Sheet selector, import review, and write preview/conflict choices belong in Playwright.
 - **Design system** applies unchanged: mobile-first, one-handed reach, no reliance on colour alone, and loading/empty/error/pending states visible — an unsynced session is a state the UI must show, not hide.
 
 ---

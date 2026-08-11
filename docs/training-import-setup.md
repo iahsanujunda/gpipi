@@ -171,6 +171,8 @@ For a database-level check, the selected import should have `training_import.sta
 | Google says `response_type` is missing | The deployed backend must generate a URL containing `response_type=code`. This is produced by Ktor, not configured in Google Cloud. Deploy a version containing the OAuth URL-builder fix, then press **Connect Google** again to create a fresh one-use state. |
 | `redirect_uri_mismatch` | `GOOGLE_OAUTH_REDIRECT_URI` must exactly match an authorized redirect URI, including scheme, host, port, path, and trailing-slash absence. |
 | Callback returns signed out | Use one hostname consistently; confirm the browser retained the Ktor session cookie and production uses HTTPS. |
+| Token exchange reports `invalid_client` | `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` must come from the same current Web application client. If its secret was regenerated, update the Fly secret and redeploy. |
+| Token exchange reports `invalid_grant` | Start **Connect Google** again so the authorization code is fresh. If it repeats immediately, verify that the deployed redirect URI exactly matches the URI on that same OAuth client. |
 | Google returns no refresh token | Disconnect/revoke the app from the Google account, then connect again. The authorization request uses offline access and explicit consent. |
 | The page says **Reconnect Google** | The stored connection predates the app-owned selector and lacks one or both current scopes. Reconnect and approve the new Drive metadata and Sheets permissions. |
 | Sheet list returns 403 | Confirm the Drive API is enabled and the connection includes `drive.metadata.readonly`; then reconnect. |

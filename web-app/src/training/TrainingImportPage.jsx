@@ -67,6 +67,7 @@ function openPicker(token) {
       .setOAuthToken(token.accessToken)
       .setDeveloperKey(token.apiKey)
       .setAppId(token.appId)
+      .setOrigin(window.location.origin)
       .setCallback((data) => {
         if (data.action === picker.Action.PICKED) resolve(data.docs[0].id)
         if (data.action === picker.Action.CANCEL) reject(new Error('No Google Sheet was selected.'))

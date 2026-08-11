@@ -111,6 +111,7 @@ Configure:
 - API restriction: restrict the key to the **Google Picker API**.
 
 Store its value as `GOOGLE_PICKER_API_KEY`. The OAuth client, API key, and numeric project number must belong to the same Google Cloud project.
+The frontend passes its current `window.location.origin` to Picker explicitly. Production website restrictions must therefore name the public frontend origin, not the Ktor OAuth-callback origin.
 
 ## 5. Configure local environment variables
 
@@ -186,7 +187,7 @@ For a database-level check, the selected import should have `training_import.sta
 | `redirect_uri_mismatch` | `GOOGLE_OAUTH_REDIRECT_URI` must exactly match an authorized redirect URI, including scheme, host, port, path, and trailing-slash absence. |
 | Callback returns signed out | Use one hostname consistently; confirm the browser retained the Ktor session cookie and production uses HTTPS. |
 | Google returns no refresh token | Disconnect/revoke the app from the Google account, then connect again. The authorization request uses offline access and explicit consent. |
-| Picker says the developer key is invalid | Confirm the Picker API is enabled, HTTP-referrer restrictions include the exact frontend origin, and the key belongs to the OAuth client’s project. |
+| Picker says the developer key is invalid | Confirm the Picker and Drive APIs are enabled; HTTP-referrer restrictions include both the exact frontend origin and its `/*` form; and the API key, OAuth client, and numeric project number belong to one project. The app passes `window.location.origin` explicitly. If those checks pass but Picker opens its own sign-in page first, retry in a browser profile with third-party Google cookies allowed and privacy extensions disabled. |
 | Sheet read returns 403 | The OAuth account must be able to open the file, and the file must have been selected through this app’s Picker under `drive.file`. Reconnect and select it again. |
 | No weeks are found | Week discovery recognizes visible labels containing `Week N` or `Minggu N`. Correct the visible label or continue with manual authoring. |
 | Execution boundary is ambiguous | In Step 2, supply the first execution column and the exact execution-header cell/value. Extraction does not guess. |

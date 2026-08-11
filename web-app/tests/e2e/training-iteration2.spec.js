@@ -120,6 +120,7 @@ test('one explicit week crosses Picker, mapping, extraction, review, and Apply',
       setOAuthToken() { return this }
       setDeveloperKey() { return this }
       setAppId() { return this }
+      setOrigin(origin) { window.__pickerOrigin = origin; return this }
       setCallback(callback) { this.callback = callback; return this }
       build() {
         return { setVisible: () => this.callback({ action: 'picked', docs: [{ id: selectedId }] }) }
@@ -229,6 +230,7 @@ test('one explicit week crosses Picker, mapping, extraction, review, and Apply',
 
   await page.goto('/training/program/import')
   await page.getByRole('button', { name: 'Choose Google Sheet' }).click()
+  expect(await page.evaluate(() => window.__pickerOrigin)).toBe(await page.evaluate(() => window.location.origin))
   await page.getByRole('button', { name: 'Week 5' }).click()
   await expect(page.getByText('Only Week 5 will cross into the app')).toBeVisible()
   await expect(page.getByText('Warming Up')).toBeVisible()

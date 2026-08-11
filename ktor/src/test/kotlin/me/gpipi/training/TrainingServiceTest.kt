@@ -241,6 +241,34 @@ class TrainingServiceTest : PersistenceTest() {
     }
 
     @Test
+    fun `owner-guarded mutations reject a foreign owner and leave data intact`() = runBlocking {
+        createProgram()
+        val week = found(service.overview(OWNER, 1))
+        val strength = week.workouts.single { it.workoutName == "Strength A" }
+        val squat = detail(strength.workoutId).groups.flatMap { it.exercises }.single { it.exerciseName == "Squat" }
+        service.putSet(OWNER, strength.weekId, squat.prescriptionId, 1, reps(8))
+        service.finish(OWNER, strength.weekId)
+        val ownerProgram = service.programs(OWNER).single { it.active }.id
+
+        val other = "U-other"
+        val today = java.time.LocalDate.parse("2026-08-10")
+        assertEquals(TrainingMutationResult.NotFound, service.finish(other, strength.weekId))
+        assertEquals(TrainingMutationResult.NotFound, service.resume(other, strength.weekId))
+        assertEquals(TrainingMutationResult.NotFound, service.skip(other, strength.weekId))
+        assertEquals(TrainingMutationResult.NotFound, service.restore(other, strength.weekId))
+        assertEquals(
+            TrainingMutationResult.NotFound,
+            service.deleteSet(other, strength.weekId, squat.prescriptionId, 1),
+        )
+        assertEquals(TrainingMutationResult.NotFound, service.updateSession(other, strength.weekId, today, "hi"))
+        assertEquals(TrainingMutationResult.NotFound, service.activateProgram(other, ownerProgram))
+
+        val untouched = detail(strength.workoutId)
+        assertEquals("COMPLETED", untouched.session?.status)
+        assertEquals(listOf(1), untouched.setsFor(squat.prescriptionId).map { it.setNumber })
+    }
+
+    @Test
     fun `a previous program can be made active again without losing either block`() = runBlocking {
         val first = assertIs<ProgramCreateResult.Created>(
             service.createProgram(OWNER, programInput()),

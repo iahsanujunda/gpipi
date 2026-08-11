@@ -64,7 +64,6 @@ class GoogleCredentialRepository {
         returning encrypted_refresh_token
         """.trimIndent(),
         listOf(timestamp(now), text(userId)),
-        StatementType.UPDATE,
     ) { it.getString("encrypted_refresh_token") }.singleOrNull()
 
     fun saveState(
@@ -91,7 +90,6 @@ class GoogleCredentialRepository {
         returning user_id, return_path
         """.trimIndent(),
         listOf(text(hash(rawState)), timestamp(now)),
-        StatementType.UPDATE,
     ) { rs ->
         ConsumedGoogleOAuthState(
             userId = rs.getString("user_id"),

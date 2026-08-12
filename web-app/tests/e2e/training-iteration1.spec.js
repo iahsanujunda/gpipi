@@ -125,6 +125,8 @@ test('blank execution, stable slot repair, finish, and completed edits work in t
   await page.getByRole('button', { name: 'Finish workout' }).click()
   await expect(page.getByRole('heading', { name: 'Workout history' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Resume workout' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Write to Google Sheet' })).toBeVisible()
+  await expect(page.getByText(/Sets save immediately/)).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Edit set 1 for Rear-foot elevated split squat' }).click()
   await editor.getByLabel('Reps / side').fill('9')

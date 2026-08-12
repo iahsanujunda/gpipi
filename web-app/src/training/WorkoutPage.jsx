@@ -13,13 +13,14 @@ import {
   Typography,
 } from '@mui/material'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowBackIcon, EditIcon, ExternalLinkIcon, PlayIcon, RemoveIcon } from '@/app/AppIcons'
+import { ArrowBackIcon, EditIcon, ExternalLinkIcon, PlayIcon, RemoveIcon, SheetIcon } from '@/app/AppIcons'
 import {
   useDeleteTrainingSet,
   usePutTrainingSet,
   useTrainingLifecycle,
   useUpdateTrainingSession,
   useWorkoutDetail,
+  useTrainingWriteStatus,
 } from './queries'
 
 function todayInTokyo() {
@@ -399,6 +400,9 @@ export default function WorkoutPage() {
   const restore = useTrainingLifecycle('restore')
   const [notice, setNotice] = useState(null)
 
+  const sessionId = detail.data?.session?.id
+  const writeStatus = useTrainingWriteStatus(sessionId)
+
   if (detail.isPending) return <WorkoutLoading />
   if (detail.isError) return <Alert severity="error">{detail.error.message}</Alert>
 
@@ -512,7 +516,7 @@ export default function WorkoutPage() {
         ))}
       </Stack>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ alignItems: { sm: 'center' } }}>
+      <Stack spacing={1.25}>
         {workout.skipped ? (
           <Button disabled={restore.isPending} onClick={() => run('Workout week restored', () => restore.mutateAsync(workout.weekId))} variant="outlined">
             Restore workout week
@@ -526,9 +530,29 @@ export default function WorkoutPage() {
             Finish workout
           </Button>
         )}
-        <Typography color="text.secondary" variant="body2">
-          Sets save immediately. Finishing does not validate against the prescription.
-        </Typography>
+        {completed && (
+          <Button
+            component={Link}
+            disabled={!workout.session?.id}
+            startIcon={<SheetIcon />}
+            to={`/training/weeks/${workout.weekNumber}/workouts/${workout.workoutId}/write`}
+            variant="contained"
+          >
+            {writeStatus.data?.state === 'CHANGED' ? 'Write again' : 'Write to Google Sheet'}
+          </Button>
+        )}
+        {completed && writeStatus.data?.state !== 'NOT_WRITTEN' && writeStatus.data && (
+          <Paper variant="outlined" sx={{ bgcolor: writeStatus.data.state === 'WRITTEN' ? 'highlight.main' : 'background.paper', p: 1.5 }}>
+            <Typography color="text.secondary" sx={{ fontSize: '0.6875rem', fontWeight: 750, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {writeStatus.data.state === 'WRITTEN' ? 'Written' :
+                writeStatus.data.state === 'CHANGED' ? 'Changed since write' :
+                  writeStatus.data.state === 'UNKNOWN' ? 'Result unknown' : 'Sheet verification differs'}
+            </Typography>
+            <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>
+              {writeStatus.data.sheetTitle} · Sheet Week {writeStatus.data.targetWeekNumber}
+            </Typography>
+          </Paper>
+        )}
       </Stack>
     </Stack>
   )

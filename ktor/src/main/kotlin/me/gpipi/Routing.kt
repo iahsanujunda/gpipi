@@ -60,6 +60,10 @@ import me.gpipi.training.imports.TrainingImportRepository
 import me.gpipi.training.imports.TrainingImportService
 import me.gpipi.training.imports.TrainingPrescriptionExtractionService
 import me.gpipi.training.imports.trainingImportApiRoutes
+import me.gpipi.training.writes.TrainingWriteMatchingService
+import me.gpipi.training.writes.TrainingWriteRepository
+import me.gpipi.training.writes.TrainingWriteService
+import me.gpipi.training.writes.trainingWriteApiRoutes
 
 /**
  * Composition root for routes — hand-wired, since Ktor has no component scan. Public health
@@ -159,6 +163,13 @@ fun Application.configureRouting() {
         sheets = GoogleTrainingSheetGateway(googleHttpClient),
         extractor = TrainingPrescriptionExtractionService(trainingExtractionClient),
     )
+    val trainingWriteService = TrainingWriteService(
+        db = db,
+        repository = TrainingWriteRepository(),
+        google = googleConnectionService,
+        sheets = GoogleTrainingSheetGateway(googleHttpClient),
+        matcher = TrainingWriteMatchingService(trainingExtractionClient),
+    )
 
     val webBaseUrl = cfg.property("web.baseUrl").getString()
     val eventHandler = SlackEventHandler(
@@ -218,6 +229,7 @@ fun Application.configureRouting() {
             shoppingApiRoutes(shoppingService)
             trainingApiRoutes(trainingService)
             trainingImportApiRoutes(googleConnectionService, trainingImportService, webBaseUrl)
+            trainingWriteApiRoutes(googleConnectionService, trainingWriteService)
         }
         if (isDev) {
             log.warn("DEV routes enabled — /dev/extract calls OpenRouter unauthenticated. Never set APP_ENV=DEV in prod.")

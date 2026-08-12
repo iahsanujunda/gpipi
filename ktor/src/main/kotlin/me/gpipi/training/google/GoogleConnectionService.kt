@@ -8,9 +8,11 @@ import java.util.Base64
 import me.gpipi.config.dbQuery
 import org.jetbrains.exposed.v1.jdbc.Database
 
-private val ALLOWED_GOOGLE_OAUTH_RETURN_PATHS = setOf(
-    "/training/program/import",
-)
+private val GOOGLE_WRITE_RETURN_PATH =
+    Regex("^/training/weeks/[1-9][0-9]*/workouts/[0-9a-fA-F-]{36}/write$")
+
+private fun allowedGoogleReturnPath(path: String): Boolean =
+    path == "/training/program/import" || GOOGLE_WRITE_RETURN_PATH.matches(path)
 
 data class GoogleConnectionStatus(
     val configured: Boolean,
@@ -57,7 +59,7 @@ class GoogleConnectionService(
 
     suspend fun beginConnection(userId: String, returnPath: String): String {
         val client = requireClient()
-        require(returnPath in ALLOWED_GOOGLE_OAUTH_RETURN_PATHS) { "Google OAuth return path is not allowed." }
+        require(allowedGoogleReturnPath(returnPath)) { "Google OAuth return path is not allowed." }
         val state = ByteArray(32).also(random::nextBytes).let {
             Base64.getUrlEncoder().withoutPadding().encodeToString(it)
         }

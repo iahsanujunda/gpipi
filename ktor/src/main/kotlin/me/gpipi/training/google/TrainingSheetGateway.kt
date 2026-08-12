@@ -1,12 +1,27 @@
 package me.gpipi.training.google
 
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class SheetValue(
+    val type: String,
+    val value: String,
+) {
+    init {
+        require(type in setOf("NUMBER", "STRING", "BOOLEAN", "FORMULA"))
+    }
+}
+
+@Serializable
 data class SheetCell(
     val row: Int,
     val column: Int,
     val address: String,
     val display: String,
+    val userEnteredValue: SheetValue? = null,
 )
 
+@Serializable
 data class SheetMergedRange(
     val startRow: Int,
     val endRow: Int,
@@ -15,6 +30,7 @@ data class SheetMergedRange(
     val a1: String,
 )
 
+@Serializable
 data class SheetTabGrid(
     val sheetId: Long,
     val title: String,
@@ -25,6 +41,7 @@ data class SheetTabGrid(
     val mergedRanges: List<SheetMergedRange> = emptyList(),
 )
 
+@Serializable
 data class SheetDiscovery(
     val spreadsheetTitle: String,
     val tabs: List<SheetTabGrid>,
@@ -40,10 +57,18 @@ data class WeekRangeProposal(
     val present: Boolean,
     val startRow: Int?,
     val endRow: Int?,
+    val weekHeaderAddress: String?,
+    val weekHeaderValue: String?,
     val executionBoundaryColumn: Int?,
     val executionHeaderAddress: String?,
     val executionHeaderValue: String?,
     val boundaryAmbiguous: Boolean,
+)
+
+data class SheetValueUpdate(
+    val row: Int,
+    val column: Int,
+    val value: SheetValue?,
 )
 
 interface TrainingSheetGateway {
@@ -58,6 +83,15 @@ interface TrainingSheetGateway {
         endRow: Int,
         executionBoundaryColumn: Int,
     ): SheetTabGrid
+
+    suspend fun batchUpdateValues(
+        accessToken: String,
+        spreadsheetId: String,
+        sheetId: Long,
+        updates: List<SheetValueUpdate>,
+    ) {
+        throw UnsupportedOperationException("This Sheet gateway is read-only.")
+    }
 }
 
 private val weekLabel = Regex("(?i)\\b(?:week|minggu)\\s*[-:]?\\s*(\\d+)\\b")
@@ -79,6 +113,8 @@ fun SheetDiscovery.proposalsFor(weekNumber: Int): List<WeekRangeProposal> = tabs
             present = false,
             startRow = null,
             endRow = null,
+            weekHeaderAddress = null,
+            weekHeaderValue = null,
             executionBoundaryColumn = null,
             executionHeaderAddress = null,
             executionHeaderValue = null,
@@ -86,6 +122,9 @@ fun SheetDiscovery.proposalsFor(weekNumber: Int): List<WeekRangeProposal> = tabs
         )
     } else {
         val start = selectedRows.min()
+        val weekHeader = labels.getValue(weekNumber)
+            .filter { it.row == start }
+            .minBy(SheetCell::column)
         val nextWeekRow = labels
             .filterKeys { it != weekNumber }
             .values.flatten().map(SheetCell::row)
@@ -103,6 +142,8 @@ fun SheetDiscovery.proposalsFor(weekNumber: Int): List<WeekRangeProposal> = tabs
             present = true,
             startRow = start,
             endRow = end,
+            weekHeaderAddress = weekHeader.address,
+            weekHeaderValue = weekHeader.display,
             executionBoundaryColumn = boundary?.column,
             executionHeaderAddress = boundary?.address,
             executionHeaderValue = boundary?.display,

@@ -20,6 +20,7 @@ vi.mock('@/training/queries', () => ({
   useDeleteTrainingSet: () => mockDeleteSet(),
   useUpdateTrainingSession: () => mockUpdateSession(),
   useTrainingLifecycle: (action) => mockLifecycle(action),
+  useTrainingWriteStatus: () => ({ data: { state: 'NOT_WRITTEN' }, isPending: false }),
 }))
 
 function mutation(overrides = {}) {

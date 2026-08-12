@@ -14,6 +14,7 @@ import TrainingProgramPage from '@/training/TrainingProgramPage'
 import WorkoutPage from '@/training/WorkoutPage'
 import TrainingImportPage from '@/training/TrainingImportPage'
 import TrainingWorkoutAuthoringPage from '@/training/TrainingWorkoutAuthoringPage'
+import TrainingWritePage from '@/training/TrainingWritePage'
 
 export const routes = [
   { path: '/enter', element: <EnterPage /> },
@@ -36,6 +37,7 @@ export const routes = [
           { path: 'training/weeks/:weekNumber', element: <TrainingPage /> },
           { path: 'training/weeks/:weekNumber/workouts/new', element: <TrainingWorkoutAuthoringPage /> },
           { path: 'training/weeks/:weekNumber/workouts/:workoutId', element: <WorkoutPage /> },
+          { path: 'training/weeks/:weekNumber/workouts/:workoutId/write', element: <TrainingWritePage /> },
           { path: 'training/program', element: <TrainingProgramPage /> },
           { path: 'training/program/:programId', element: <TrainingProgramPage /> },
           { path: 'training/program/import', element: <TrainingImportPage /> },

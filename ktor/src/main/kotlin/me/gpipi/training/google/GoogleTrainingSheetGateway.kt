@@ -4,17 +4,28 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 
 class GoogleTrainingSheetGateway(
     private val http: HttpClient,
@@ -67,6 +78,63 @@ class GoogleTrainingSheetGateway(
         return parsed
     }
 
+    override suspend fun batchUpdateValues(
+        accessToken: String,
+        spreadsheetId: String,
+        sheetId: Long,
+        updates: List<SheetValueUpdate>,
+    ) {
+        if (updates.isEmpty()) return
+        val body = buildJsonObject {
+            putJsonArray("requests") {
+                updates.sortedWith(compareBy(SheetValueUpdate::row, SheetValueUpdate::column)).forEach { update ->
+                    add(buildJsonObject {
+                        putJsonObject("updateCells") {
+                            putJsonObject("range") {
+                                put("sheetId", sheetId)
+                                put("startRowIndex", update.row - 1)
+                                put("endRowIndex", update.row)
+                                put("startColumnIndex", update.column - 1)
+                                put("endColumnIndex", update.column)
+                            }
+                            putJsonArray("rows") {
+                                add(buildJsonObject {
+                                    putJsonArray("values") {
+                                        add(buildJsonObject {
+                                            update.value?.let { value ->
+                                                putJsonObject("userEnteredValue") {
+                                                    when (value.type) {
+                                                        "NUMBER" -> put("numberValue", value.value.toDouble())
+                                                        "BOOLEAN" -> put("boolValue", value.value.toBooleanStrict())
+                                                        "FORMULA" -> put("formulaValue", value.value)
+                                                        else -> put("stringValue", value.value)
+                                                    }
+                                                }
+                                            }
+                                        })
+                                    }
+                                })
+                            }
+                            put("fields", "userEnteredValue")
+                        }
+                    })
+                }
+            }
+        }
+        val response = try {
+            http.post("$base/spreadsheets/$spreadsheetId:batchUpdate") {
+                bearerAuth(accessToken)
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        } catch (ex: Exception) {
+            throw GoogleIntegrationException("Google Sheets could not be reached while writing.", ex)
+        }
+        if (!response.status.isSuccess()) {
+            throw GoogleSheetWriteRejectedException("Google Sheets rejected the write (${response.status.value}).")
+        }
+    }
+
     private suspend fun getSpreadsheet(
         accessToken: String,
         spreadsheetId: String,
@@ -107,11 +175,13 @@ class GoogleTrainingSheetGateway(
                 val startColumn = grid.int("startColumn") ?: 0
                 grid.array("rowData").forEachIndexed { rowOffset, rowElement ->
                     rowElement.jsonObject.array("values").forEachIndexed { columnOffset, cellElement ->
-                        val display = cellElement.jsonObject.string("formattedValue") ?: return@forEachIndexed
-                        if (display.isNotEmpty()) {
+                        val cell = cellElement.jsonObject
+                        val entered = cell.objectAt("userEnteredValue")?.toSheetValue()
+                        val display = cell.string("formattedValue").orEmpty()
+                        if (display.isNotEmpty() || entered != null) {
                             val row = startRow + rowOffset + 1
                             val column = startColumn + columnOffset + 1
-                            add(SheetCell(row, column, a1Address(row, column), display))
+                            add(SheetCell(row, column, a1Address(row, column), display, entered))
                         }
                     }
                 }
@@ -149,9 +219,18 @@ class GoogleTrainingSheetGateway(
     private fun JsonObject.string(name: String): String? = get(name)?.jsonPrimitive?.content
     private fun JsonObject.int(name: String): Int? = get(name)?.jsonPrimitive?.intOrNull
     private fun JsonObject.long(name: String): Long? = get(name)?.jsonPrimitive?.longOrNull
+    private fun JsonObject.toSheetValue(): SheetValue? = when {
+        get("numberValue")?.jsonPrimitive?.doubleOrNull != null ->
+            SheetValue("NUMBER", getValue("numberValue").jsonPrimitive.content)
+        get("stringValue") != null -> SheetValue("STRING", getValue("stringValue").jsonPrimitive.content)
+        get("boolValue")?.jsonPrimitive?.booleanOrNull != null ->
+            SheetValue("BOOLEAN", getValue("boolValue").jsonPrimitive.content)
+        get("formulaValue") != null -> SheetValue("FORMULA", getValue("formulaValue").jsonPrimitive.content)
+        else -> null
+    }
 
     private companion object {
         const val DISCOVERY_FIELDS = "properties(title),sheets(properties(sheetId,title,index,gridProperties(rowCount,columnCount)),data(startRow,startColumn,rowData(values(formattedValue))))"
-        const val RANGE_FIELDS = "sheets(properties(sheetId,title,index,gridProperties(rowCount,columnCount)),merges,data(startRow,startColumn,rowData(values(formattedValue))))"
+        const val RANGE_FIELDS = "sheets(properties(sheetId,title,index,gridProperties(rowCount,columnCount)),merges,data(startRow,startColumn,rowData(values(formattedValue,userEnteredValue))))"
     }
 }

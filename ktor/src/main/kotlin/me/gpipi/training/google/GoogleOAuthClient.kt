@@ -23,6 +23,8 @@ fun hasGoogleTrainingScopes(scope: String): Boolean = scope
 
 class GoogleIntegrationException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+class GoogleSheetWriteRejectedException(message: String) : Exception(message)
+
 @Serializable
 data class GoogleTokenResponse(
     @SerialName("access_token") val accessToken: String,

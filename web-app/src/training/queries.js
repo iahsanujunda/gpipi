@@ -8,6 +8,9 @@ export const trainingKeys = {
   google: ['training', 'google'],
   googleSheets: (query) => ['training', 'google', 'sheets', query],
   import: (importId) => ['training', 'import', importId],
+  write: (writeId) => ['training', 'write', writeId],
+  writeDestination: (sessionId) => ['training', 'write-destination', sessionId],
+  writeStatus: (sessionId) => ['training', 'write-status', sessionId],
 }
 
 export function useGoogleTrainingStatus() {
@@ -22,6 +25,30 @@ export function useTrainingImport(importId) {
     queryKey: trainingKeys.import(importId),
     queryFn: ({ signal }) => apiFetch(`/api/training/imports/${importId}`, { signal }),
     enabled: Boolean(importId),
+  })
+}
+
+export function useTrainingWriteDestination(sessionId) {
+  return useQuery({
+    queryKey: trainingKeys.writeDestination(sessionId),
+    queryFn: ({ signal }) => apiFetch(`/api/training/sessions/${sessionId}/write-destination`, { signal }),
+    enabled: Boolean(sessionId),
+  })
+}
+
+export function useTrainingWriteStatus(sessionId) {
+  return useQuery({
+    queryKey: trainingKeys.writeStatus(sessionId),
+    queryFn: ({ signal }) => apiFetch(`/api/training/sessions/${sessionId}/write-status`, { signal }),
+    enabled: Boolean(sessionId),
+  })
+}
+
+export function useTrainingWrite(writeId) {
+  return useQuery({
+    queryKey: trainingKeys.write(writeId),
+    queryFn: ({ signal }) => apiFetch(`/api/training/writes/${writeId}`, { signal }),
+    enabled: Boolean(writeId),
   })
 }
 
@@ -225,6 +252,59 @@ export function useSaveTrainingImportReview() {
 export function useApplyTrainingImport() {
   return useTrainingImportMutation((importId) => apiFetch(
     `/api/training/imports/${importId}/apply`,
+    { method: 'POST' },
+  ))
+}
+
+function useTrainingWriteMutation(mutationFn) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: (data) => {
+      if (data?.id) queryClient.setQueryData(trainingKeys.write(data.id), data)
+      queryClient.invalidateQueries({ queryKey: trainingKeys.all })
+    },
+  })
+}
+
+export function useStartTrainingWrite() {
+  return useTrainingWriteMutation(({ sessionId, selectionToken = null }) => apiFetch(
+    `/api/training/sessions/${sessionId}/writes`,
+    { method: 'POST', body: { selectionToken } },
+  ))
+}
+
+export function useChooseTrainingWriteWeek() {
+  return useTrainingWriteMutation(({ writeId, weekNumber }) => apiFetch(
+    `/api/training/writes/${writeId}/week`,
+    { method: 'PUT', body: { weekNumber } },
+  ))
+}
+
+export function useConfirmTrainingWriteMatches() {
+  return useTrainingWriteMutation(({ writeId, tabKey, movements }) => apiFetch(
+    `/api/training/writes/${writeId}/matches`,
+    { method: 'PUT', body: { tabKey, movements } },
+  ))
+}
+
+export function usePrepareTrainingWrite() {
+  return useTrainingWriteMutation((writeId) => apiFetch(
+    `/api/training/writes/${writeId}/preview`,
+    { method: 'POST' },
+  ))
+}
+
+export function useConfirmTrainingWrite() {
+  return useTrainingWriteMutation((writeId) => apiFetch(
+    `/api/training/writes/${writeId}/confirm`,
+    { method: 'POST' },
+  ))
+}
+
+export function useVerifyTrainingWrite() {
+  return useTrainingWriteMutation((writeId) => apiFetch(
+    `/api/training/writes/${writeId}/verify`,
     { method: 'POST' },
   ))
 }

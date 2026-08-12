@@ -39,6 +39,15 @@ class GoogleConnectionServiceTest : PersistenceTest() {
     }
 
     @Test
+    fun `oauth can return to one completed workout write page`() = runBlocking {
+        val authorizationUrl = service.beginConnection(
+            "U-OAUTH",
+            "/training/weeks/3/workouts/61000000-0000-0000-0000-000000000001/write",
+        )
+        assertTrue(authorizationUrl.startsWith("https://accounts.test/auth?state="))
+    }
+
+    @Test
     fun `oauth rejects the removed new-program import return path`() = runBlocking {
         assertFailsWith<IllegalArgumentException> {
             service.beginConnection("U-OAUTH", "/training/program/import/new")

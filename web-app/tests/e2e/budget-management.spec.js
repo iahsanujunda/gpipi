@@ -50,6 +50,7 @@ function expectPeriodHeaderToStayAligned(samples) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/budgets')
+  await expect(page.locator('header')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Budgeting', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Eating Out' })).toBeVisible()
 })
@@ -117,26 +118,25 @@ test('shows exact utilization states on mobile and in the wider budget table', a
   await expect(page.getByText('4 lines · 1 over cap')).toBeVisible()
 })
 
-test('reviews and applies a carry-forward without implying a wallet transfer', async ({ page }) => {
+test('reviews and applies a carry-forward with one quiet action', async ({ page }) => {
   const eatingOut = page
     .locator('[data-budget-id="10000000-0000-0000-0000-000000000001"]')
     .first()
 
-  await expect(eatingOut.getByText('¥3,000 unused')).toBeVisible()
-  await expect(eatingOut.getByText('This is not included in the ¥15,000 allowance.')).toBeVisible()
-  await expect(eatingOut.getByText('wallet unchanged')).toBeVisible()
-  await eatingOut.getByRole('button', { name: 'Add ¥3,000 to this period' }).click()
+  await expect(eatingOut.getByText(/unused|not included|wallet unchanged/i)).toHaveCount(0)
+  await eatingOut.getByRole('button', { name: 'Add ¥3,000 from last week' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Review carry-forward' })).toBeVisible()
-  await expect(page.getByText('No money moves between wallets.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Add ¥3,000?' })).toBeVisible()
+  await expect(page.getByText(/money moves|changes the budget/i)).toHaveCount(0)
+  await expect(page.getByText('Current allowance')).toBeVisible()
   await expect(page.getByText('¥18,000')).toBeVisible()
   await page.getByRole('button', { name: 'Add ¥3,000', exact: true }).click()
 
   await expect(page.getByRole('status')).toContainText(
-    '+¥3,000 applied to Eating Out. Wallet unchanged.',
+    '¥3,000 added to Eating Out',
   )
-  await expect(eatingOut.getByText('APPLIED')).toBeVisible()
-  await expect(eatingOut.getByText("This period's allowance")).toBeVisible()
+  await expect(eatingOut.getByText('Included +¥3,000 from last week')).toBeVisible()
+  await expect(eatingOut.getByRole('button', { name: /Add ¥3,000/ })).toHaveCount(0)
   await expect(eatingOut.getByRole('progressbar', { name: 'Eating Out utilization' }))
     .toHaveAttribute('aria-valuetext', '67% used; ¥12,000 spent of ¥18,000')
 })
@@ -361,20 +361,17 @@ test('keeps the desktop dialog inside the main view on a MacBook Air-sized viewp
   await expect(dialog).not.toHaveAttribute('data-motion')
   await expect(dialog.getByRole('button', { name: 'Review changes' })).toBeVisible()
 
-  const header = page.locator('header')
   const actionBar = page.getByTestId('navigation-mask')
   const reviewAction = dialog.getByRole('button', { name: 'Review changes' })
-  const [box, headerBox, actionBarBox, reviewActionBox] = await Promise.all([
+  const [box, actionBarBox, reviewActionBox] = await Promise.all([
     dialog.boundingBox(),
-    header.boundingBox(),
     actionBar.boundingBox(),
     reviewAction.boundingBox(),
   ])
   expect(box).not.toBeNull()
-  expect(headerBox).not.toBeNull()
   expect(actionBarBox).not.toBeNull()
   expect(reviewActionBox).not.toBeNull()
-  expect(box.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height + 23)
+  expect(box.y).toBeGreaterThanOrEqual(23)
   expect(box.y + box.height).toBeLessThanOrEqual(actionBarBox.y - 23)
   expect(reviewActionBox.y + reviewActionBox.height).toBeLessThanOrEqual(box.y + box.height)
 

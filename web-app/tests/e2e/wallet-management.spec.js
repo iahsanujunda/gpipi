@@ -32,17 +32,14 @@ async function expectDialogInsideMainView(page, dialog, actionName) {
   await expect(dialog).not.toHaveAttribute('data-motion')
   await expect(dialog.getByRole('button', { name: actionName })).toBeVisible()
 
-  const header = page.locator('header')
   const actionBar = page.getByTestId('navigation-mask')
-  const [box, headerBox, actionBarBox] = await Promise.all([
+  const [box, actionBarBox] = await Promise.all([
     dialog.boundingBox(),
-    header.boundingBox(),
     actionBar.boundingBox(),
   ])
   expect(box).not.toBeNull()
-  expect(headerBox).not.toBeNull()
   expect(actionBarBox).not.toBeNull()
-  expect(box.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height + 23)
+  expect(box.y).toBeGreaterThanOrEqual(23)
   expect(box.y + box.height).toBeLessThanOrEqual(actionBarBox.y - 23)
 }
 

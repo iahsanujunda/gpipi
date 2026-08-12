@@ -303,14 +303,15 @@ describe('BudgetsPage', () => {
 
     renderBudgetExperience()
 
-    expect(screen.getAllByText('This is not included in the ¥15,000 allowance.')).not.toHaveLength(0)
+    expect(screen.queryByText(/not included/i)).not.toBeInTheDocument()
     expect(screen.getAllByRole('progressbar', { name: 'Eating Out utilization' })[0])
       .toHaveAttribute('aria-valuetext', '14% used; ¥2,100 spent of ¥15,000')
 
-    await user.click(screen.getAllByRole('button', { name: 'Add ¥3,000 to this period' })[0])
+    await user.click(screen.getAllByRole('button', { name: 'Add ¥3,000 from last week' })[0])
 
-    expect(await screen.findByRole('heading', { name: 'Review carry-forward' })).toBeInTheDocument()
-    expect(screen.getByText('No money moves between wallets.')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Add ¥3,000?' })).toBeInTheDocument()
+    expect(screen.queryByText(/money moves/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Current allowance')).toBeInTheDocument()
     expect(screen.getByText('¥18,000')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Add ¥3,000' }))
@@ -320,7 +321,7 @@ describe('BudgetsPage', () => {
       targetWindowStart: '2026-07-20',
       expectedAmount: 3_000,
     })
-    expect(await screen.findByText('+¥3,000 applied to Eating Out. Wallet unchanged.'))
+    expect(await screen.findByText('¥3,000 added to Eating Out'))
       .toBeInTheDocument()
   })
 
@@ -343,15 +344,15 @@ describe('BudgetsPage', () => {
     })
 
     renderBudgetExperience()
-    await user.click(screen.getAllByRole('button', { name: 'Subtract ¥3,000 from this period' })[0])
+    await user.click(screen.getAllByRole('button', { name: 'Subtract ¥3,000 from last week' })[0])
 
-    expect(await screen.findByRole('heading', { name: 'Review carry-forward' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Subtract ¥3,000?' })).toBeInTheDocument()
     expect(screen.getAllByText('−¥3,000')).not.toHaveLength(0)
     expect(screen.getByText('¥12,000')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Subtract ¥3,000' })).toBeInTheDocument()
   })
 
-  it('uses an applied carry in utilization and shows the allowance breakdown', () => {
+  it('uses an applied carry in utilization and removes the carry action', () => {
     mockUseBudgetSpend.mockReturnValue({
       data: [{
         ...spendRow(eatingOut, 2_100),
@@ -373,8 +374,8 @@ describe('BudgetsPage', () => {
 
     renderBudgetExperience()
 
-    expect(screen.getAllByText('Allowance breakdown')).not.toHaveLength(0)
-    expect(screen.getAllByText("This period's allowance")).not.toHaveLength(0)
+    expect(screen.getAllByText('Included +¥3,000 from last week')).not.toHaveLength(0)
+    expect(screen.queryByText('Allowance breakdown')).not.toBeInTheDocument()
     expect(screen.getAllByRole('progressbar', { name: 'Eating Out utilization' })[0])
       .toHaveAttribute('aria-valuetext', '12% used; ¥2,100 spent of ¥18,000')
     expect(screen.queryByRole('button', { name: /Add ¥3,000/ })).not.toBeInTheDocument()

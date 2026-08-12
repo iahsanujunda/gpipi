@@ -515,86 +515,36 @@ function Difference({ historical, spend }) {
   )
 }
 
-function CarryForwardPanel({ budget, compact = false, onReview, spend }) {
+function previousPeriodLabel(period) {
+  return period === 'WEEKLY' ? 'last week' : 'last payday period'
+}
+
+function CarryForwardPanel({ budget, onReview, spend }) {
   const carry = spend?.carryForward
   if (!carry) return null
   const negative = carry.amount < 0
+  const sourceLabel = previousPeriodLabel(budget.period)
 
   if (carry.status === 'APPLIED') {
     return (
-      <Stack
-        spacing={0.75}
-        sx={{
-          p: compact ? 1.25 : 2,
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 2.5,
-          bgcolor: 'background.default',
-        }}
+      <Typography
+        color="text.secondary"
+        sx={{ fontSize: '0.75rem' }}
       >
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography sx={metricLabelSx}>Allowance breakdown</Typography>
-          <Chip label="APPLIED" size="small" color="primary" variant="outlined" />
-        </Stack>
-        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-          <Typography color="text.secondary" variant="body2">Base cap</Typography>
-          <Typography variant="body2" fontWeight={700}>{formatMoney(spend.baseCap)}</Typography>
-        </Stack>
-        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-          <Typography color="text.secondary" variant="body2">Carry from previous period</Typography>
-          <Typography color={negative ? 'error.main' : 'primary.main'} variant="body2" fontWeight={700}>
-            {formatSignedMoney(carry.amount)}
-          </Typography>
-        </Stack>
-        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-          <Typography variant="body2" fontWeight={700}>This period&apos;s allowance</Typography>
-          <Typography variant="body2" fontWeight={750}>{formatMoney(spend.effectiveAllowance)}</Typography>
-        </Stack>
-      </Stack>
+        Included {formatSignedMoney(carry.amount)} from {sourceLabel}
+      </Typography>
     )
   }
 
   return (
-    <Stack
-      spacing={1.25}
-      sx={{
-        p: compact ? 1.25 : 2,
-        border: 1,
-        borderColor: negative ? 'error.light' : 'brandAccent.main',
-        borderRadius: 2.5,
-        bgcolor: 'highlight.main',
-      }}
+    <Button
+      fullWidth
+      onClick={() => onReview({ budget, spend })}
+      variant="outlined"
+      sx={{ minHeight: 44 }}
     >
-      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <Stack spacing={0.15}>
-          <Typography sx={metricLabelSx}>Previous period</Typography>
-          <Typography sx={{ color: negative ? 'error.main' : 'text.heading', fontWeight: 750 }}>
-            {formatMoney(Math.abs(carry.amount))} {negative ? 'overrun' : 'unused'}
-          </Typography>
-        </Stack>
-        <Chip label="PENDING" size="small" variant="outlined" />
-      </Stack>
-      {!compact && (
-        <Typography color="text.secondary" variant="body2">
-          This is not included in the {formatMoney(spend.baseCap)} allowance.
-        </Typography>
-      )}
-      <Button
-        fullWidth
-        onClick={() => onReview({ budget, spend })}
-        variant="contained"
-        sx={{ minHeight: 44 }}
-      >
-        {negative ? 'Subtract' : 'Add'} {formatMoney(Math.abs(carry.amount))}{compact
-          ? ''
-          : negative ? ' from this period' : ' to this period'}
-      </Button>
-      {!compact && (
-        <Typography color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center' }}>
-          Changes this period only · wallet unchanged
-        </Typography>
-      )}
-    </Stack>
+      {negative ? 'Subtract' : 'Add'} {formatMoney(Math.abs(carry.amount))} from {sourceLabel}
+    </Button>
   )
 }
 
@@ -710,7 +660,6 @@ function BudgetTable({
                     {!historical && (
                       <CarryForwardPanel
                         budget={budget}
-                        compact
                         onReview={onReviewCarry}
                         spend={spend}
                       />
@@ -1075,7 +1024,7 @@ export default function BudgetsPage() {
           sx={{ border: 1, borderColor: 'brandAccent.main', bgcolor: 'highlight.main' }}
         >
           {success.type === 'carry-forward'
-            ? `${formatSignedMoney(success.amount)} applied to ${success.name}. Wallet unchanged.`
+            ? `${formatMoney(Math.abs(success.amount))} ${success.amount < 0 ? 'subtracted from' : 'added to'} ${success.name}`
             : success.type === 'deactivated'
             ? `${success.name} deactivated`
             : `${success.name} ${success.type === 'created' ? 'created' : 'saved'}`}

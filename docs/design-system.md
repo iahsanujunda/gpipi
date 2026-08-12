@@ -30,7 +30,7 @@ Desktop layouts are enhancements of the mobile experience, not a separate produc
 
 Users normally reach the frontend from a magic link posted by the Slack bot. A valid browser session may be reloaded directly, but a fresh or expired session returns to Slack to obtain a new link.
 
-The app bar's back control means **Return to Slack**. It is not a sign-out action and must not depend solely on browser history. The exact Slack destination and deep-link implementation remain an integration decision.
+Slack is an entry and re-authentication path, not persistent browser chrome. The authenticated app does not reserve a global Return to Slack control; expired sessions use the access-required flow to guide the member back to Slack.
 
 ### Put the current task first
 
@@ -48,23 +48,23 @@ Navigation stays visually quiet until requested. Pages should lead with the user
 
 ## Application shell
 
-### Top app bar
+### No persistent top app bar
 
-The compact top app bar is locked in:
+The authenticated application has **no global top header or app bar** on any viewport. This is a locked shell rule, not a Budgeting-specific optimization:
 
-- White surface with a subtle bottom border.
-- A `44 × 44 px` icon button at the left.
-- A left arrow icon with the accessible name `Return to Slack`.
-- `Household Assistant` immediately after the icon.
-- No visible sign-out button in the primary header.
-- The page title belongs to page content, not the app bar.
+- Do not render `gpipi`, `Household Assistant`, a logo, or a global back button above every page.
+- The fixed bottom navigation launcher is the persistent app identifier and primary navigation control.
+- Each top-level route begins with its own single `h1` inside page content.
+- A true drill-down view may render a contextual back control beside its local title, but that control belongs to the view and must not recreate branded global chrome.
+- Dialogs and bottom drawers use their own local title and Back/Close action.
+- New features must inherit this headerless shell. Do not introduce route-specific or desktop-only global headers.
 
-Signing out remains available as a secondary action, but its location is not yet specified.
+Signing out remains a secondary action whose placement is feature-level work; it is never justification for restoring a persistent header.
 
 ### Page frame
 
 - Use `min-height: 100dvh` so the shell follows the mobile browser viewport.
-- Apply device safe areas with `env(safe-area-inset-top)` and `env(safe-area-inset-bottom)` where relevant.
+- Apply `env(safe-area-inset-top)` directly to the page frame now that no header owns the top safe area, and use `env(safe-area-inset-bottom)` for the navigation dock.
 - Use a `16 px` horizontal gutter on phones and `24 px` from tablet widths upward.
 - Reserve enough bottom padding that content is never hidden by the navigation launcher.
 - Keep the content column readable on larger screens; the current maximum width is `1120 px`.
@@ -163,7 +163,7 @@ The supplied palette is preserved as a design ramp. Semantic UI roles must use t
 | `color-text` | `#17312E` | Body copy and form values |
 | `color-text-secondary` | `#526966` | Supporting copy and metadata |
 | `color-page` | `#F4FAFB` | App background |
-| `color-surface` | `#FFFFFF` | Cards, app bar, menus and fields |
+| `color-surface` | `#FFFFFF` | Cards, menus, dialogs and fields |
 | `color-border` | `#C9E2E5` | Dividers, card and field outlines |
 | `color-highlight` | `#DFF4F4` | Chips and selected soft backgrounds |
 | `color-scrim` | `rgba(29, 78, 137, 0.30)` | Navigation overlay |
@@ -188,7 +188,6 @@ Use **Inter Variable** with system sans-serif fallbacks. Keep the hierarchy comp
 | Role | Size / line height | Weight | Notes |
 |---|---|---:|---|
 | Page title | `30 px / 36 px` | 700 | One primary title per view |
-| App title | `17 px / 24 px` | 700 | Top app bar only |
 | Card title | `18 px / 24 px` | 700 | Budget names and section cards |
 | Body | `16 px / 24 px` | 400 | Default readable copy |
 | Supporting | `14 px / 21 px` | 400 | Descriptions and metadata |
@@ -255,9 +254,15 @@ The utilization bar is a supporting comparison signal. Clamp its visual fill at 
 
 ### Manual carry-forward
 
-The current-period card may surface the immediately previous period's signed balance without applying it automatically. Keep this pending balance in a bordered supporting panel below utilization, explicitly say that it is not included in the current allowance, and provide one full-width `44 px` action: `Add ¥… to this week/period` for a surplus or `Subtract ¥… from this week/period` for an overrun. Do not show the action for historical periods, zero balances, or lines with no cap.
+The current-period card may surface the immediately previous period's signed balance without applying it automatically. Treat carry-forward as a secondary option, never as a featured card within the budget card:
 
-Selecting the action opens the shared adaptive confirmation surface. Review names the source and target windows and shows `Base cap`, signed `Carry`, and `New allowance`. It must also state that the adjustment changes the budget allowance only and does not move money between wallets. After success, replace the pending panel with a read-only allowance breakdown and an `APPLIED` status; announce concise feedback without moving focus unexpectedly.
+- Show one quiet, full-width outlined action below utilization: `Add ¥… from last week/payday period` or `Subtract ¥… from last week/payday period`.
+- Do not add a pending badge, pending heading, tinted container, unused/overrun summary, or instructional copy around the action.
+- Keep the control at least `44 px` high. Do not show it for historical periods, zero balances, or lines with no cap.
+
+Selecting the action opens the shared adaptive confirmation surface. Keep confirmation terse but decision-complete: budget and target window, source window with source spend versus allowance, current allowance, signed amount from the previous period, resulting allowance, and Back plus signed Add/Subtract action. Do not add generic explanatory prose.
+
+After success, remove the action. A single subdued line may identify the amount already included from the prior period; do not replace the action with a status card, `PENDING`/`APPLIED` badge, or full allowance-breakdown panel. Announce concise success feedback without moving focus unexpectedly.
 
 Utilization uses the effective allowance after carry, while the base cap and signed carry remain separately visible. If a carried overrun makes the effective allowance zero or negative, omit the percentage bar and show an explicit starting-deficit treatment instead. On desktop, place carry status and its action in the existing Difference area or an adjacent carry column only when space permits; preserve a minimum `44 px` action height and avoid compressing the financial columns.
 

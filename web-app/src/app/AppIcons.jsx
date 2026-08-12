@@ -1,20 +1,5 @@
 import { SvgIcon } from '@mui/material'
 
-export function ReturnToSlackIcon(props) {
-  return (
-    <SvgIcon viewBox="0 0 24 24" {...props}>
-      <path
-        d="M11 5 4 12l7 7M5 12h15"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </SvgIcon>
-  )
-}
-
 export function BrandIcon(props) {
   return (
     <SvgIcon viewBox="0 0 32 32" {...props}>

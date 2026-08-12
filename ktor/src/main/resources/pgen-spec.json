@@ -92,6 +92,111 @@
           ]
         },
         {
+          "name": "public.budget_carry_forward",
+          "columns": [
+            {
+              "name": "id",
+              "type": "uuid",
+              "defaultExpr": "gen_random_uuid()"
+            },
+            {
+              "name": "category_id",
+              "type": "uuid"
+            },
+            {
+              "name": "cadence",
+              "type": "text"
+            },
+            {
+              "name": "source_window_start",
+              "type": "pg_catalog.date"
+            },
+            {
+              "name": "source_window_end_exclusive",
+              "type": "pg_catalog.date"
+            },
+            {
+              "name": "target_window_start",
+              "type": "pg_catalog.date"
+            },
+            {
+              "name": "target_window_end_exclusive",
+              "type": "pg_catalog.date"
+            },
+            {
+              "name": "amount",
+              "type": "int8"
+            },
+            {
+              "name": "source_base_cap",
+              "type": "int8"
+            },
+            {
+              "name": "source_incoming_carry",
+              "type": "int8"
+            },
+            {
+              "name": "source_spent",
+              "type": "int8"
+            },
+            {
+              "name": "created_by_user_id",
+              "type": "text"
+            },
+            {
+              "name": "created_at",
+              "type": "pg_catalog.timestamptz",
+              "defaultExpr": "now()"
+            }
+          ],
+          "primaryKey": {
+            "name": "budget_carry_forward_pkey",
+            "columns": [
+              "id"
+            ]
+          },
+          "foreignKeys": [
+            {
+              "name": "budget_carry_forward_category_id_fkey",
+              "targetTable": "public.category",
+              "references": [
+                {
+                  "sourceColumn": "category_id",
+                  "targetColumn": "id"
+                }
+              ]
+            }
+          ],
+          "uniqueConstraints": [
+            {
+              "name": "budget_carry_forward_target_unique"
+            }
+          ],
+          "checkConstraints": [
+            {
+              "name": "budget_carry_forward_amount_matches_snapshot"
+            },
+            {
+              "name": "budget_carry_forward_amount_non_zero"
+            },
+            {
+              "name": "budget_carry_forward_cadence_valid"
+            },
+            {
+              "name": "budget_carry_forward_consecutive_windows"
+            },
+            {
+              "name": "budget_carry_forward_creator_not_blank"
+            },
+            {
+              "name": "budget_carry_forward_source_base_cap_non_negative"
+            },
+            {
+              "name": "budget_carry_forward_source_spent_non_negative"
+            }
+          ]
+        },
+        {
           "name": "public.categorization_event",
           "columns": [
             {
@@ -1790,8 +1895,7 @@
             },
             {
               "name": "program_id",
-              "type": "uuid",
-              "nullable": true
+              "type": "uuid"
             },
             {
               "name": "spreadsheet_id",

@@ -21,7 +21,9 @@ import {
 } from '@/app/AppIcons'
 import { useNavigationGuard, usePageAction } from '@/app/pageActions'
 import BudgetEditor from './BudgetEditor'
+import BudgetCarryForwardDialog from './BudgetCarryForwardDialog'
 import {
+  useApplyCarryForward,
   useBudgetSpend,
   useBudgets,
   useCreateBudget,
@@ -34,6 +36,10 @@ const BUDGET_ZONE = 'Asia/Tokyo'
 
 function formatMoney(value) {
   return `¥${Number(value).toLocaleString('ja-JP')}`
+}
+
+function formatSignedMoney(value) {
+  return `${value < 0 ? '−' : '+'}${formatMoney(Math.abs(value))}`
 }
 
 function currentBudgetDate() {
@@ -141,15 +147,15 @@ function formatPeriodLabel(period, budgetDate, spend) {
 }
 
 function utilizationFor(spend) {
-  if (!spend || spend.cap === 0) return null
-  return Math.round((spend.spent / spend.cap) * 100)
+  if (!spend || spend.effectiveAllowance <= 0) return null
+  return Math.round((spend.spent / spend.effectiveAllowance) * 100)
 }
 
 function UtilizationBar({ name, spend }) {
   const percentage = utilizationFor(spend)
   if (percentage === null) return null
 
-  const overCap = spend.cap > 0 && spend.remaining < 0
+  const overCap = spend.effectiveAllowance > 0 && spend.remaining < 0
   const visualPercentage = Math.max(0, Math.min(percentage, 100))
   return (
     <Box
@@ -157,7 +163,7 @@ function UtilizationBar({ name, spend }) {
       aria-valuemax={100}
       aria-valuemin={0}
       aria-valuenow={visualPercentage}
-      aria-valuetext={`${percentage}% used; ${formatMoney(spend.spent)} spent of ${formatMoney(spend.cap)}`}
+      aria-valuetext={`${percentage}% used; ${formatMoney(spend.spent)} spent of ${formatMoney(spend.effectiveAllowance)}`}
       role="progressbar"
       sx={{
         height: 8,
@@ -244,9 +250,10 @@ function MobileSpending({ budget, historical, isError, isPending, onRetry, spend
   if (isPending) return <SpendingLoading name={budget.name} />
   if (isError || !spend) return <SpendingUnavailable onRetry={onRetry} />
 
-  const overCap = spend.cap > 0 && spend.remaining < 0
+  const overCap = spend.effectiveAllowance > 0 && spend.remaining < 0
   const percentage = utilizationFor(spend)
   if (percentage === null) {
+    const startingDeficit = spend.baseCap > 0 && spend.effectiveAllowance <= 0
     return (
       <Stack spacing={0.75}>
         <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
@@ -255,12 +262,16 @@ function MobileSpending({ budget, historical, isError, isPending, onRetry, spend
             <Typography sx={metricValueSx}>{formatMoney(spend.spent)}</Typography>
           </Stack>
           <Stack spacing={0.25} sx={{ alignItems: 'flex-end' }}>
-            <Typography sx={metricLabelSx}>Cap</Typography>
-            <Typography sx={{ ...metricValueSx, color: 'text.secondary' }}>No cap set</Typography>
+            <Typography sx={metricLabelSx}>{startingDeficit ? 'Starting deficit' : 'Cap'}</Typography>
+            <Typography sx={{ ...metricValueSx, color: startingDeficit ? 'error.main' : 'text.secondary' }}>
+              {startingDeficit ? formatMoney(Math.abs(spend.effectiveAllowance)) : 'No cap set'}
+            </Typography>
           </Stack>
         </Stack>
         <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-          Utilization bar omitted when cap is ¥0.
+          {spend.baseCap === 0
+            ? 'Utilization bar omitted when cap is ¥0.'
+            : 'Utilization bar omitted when the allowance is not positive.'}
         </Typography>
       </Stack>
     )
@@ -286,7 +297,9 @@ function MobileSpending({ budget, historical, isError, isPending, onRetry, spend
       <UtilizationBar name={budget.name} spend={spend} />
       <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
         <Typography color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-          {historical ? 'Current cap' : 'Cap'} {formatMoney(spend.cap)}
+          {spend.appliedCarry === 0
+            ? `${historical ? 'Current cap' : 'Base cap'} ${formatMoney(spend.baseCap)}`
+            : `Allowance ${formatMoney(spend.effectiveAllowance)}`}
         </Typography>
         <Typography
           sx={{
@@ -359,6 +372,7 @@ function BudgetCards({
   historical,
   highlightedId,
   onEdit,
+  onReviewCarry,
   onRetrySpend,
   spendByCategory,
   spendError,
@@ -368,7 +382,7 @@ function BudgetCards({
     <Stack spacing={1.5} sx={{ display: { md: 'none' } }}>
       {budgets.map((budget) => {
         const spend = spendByCategory.get(budget.id)
-        const overCap = spend?.cap > 0 && spend.remaining < 0
+        const overCap = spend?.effectiveAllowance > 0 && spend.remaining < 0
         return (
           <Paper
             key={budget.id}
@@ -415,6 +429,9 @@ function BudgetCards({
                 onRetry={onRetrySpend}
                 spend={spend}
               />
+              {!historical && (
+                <CarryForwardPanel budget={budget} onReview={onReviewCarry} spend={spend} />
+              )}
             </Stack>
           </Paper>
         )
@@ -426,7 +443,7 @@ function BudgetCards({
 function DesktopSpending({ budget, isError, isPending, onRetry, spend }) {
   if (isPending) return <SpendingLoading compact name={budget.name} />
   if (isError || !spend) return <SpendingUnavailable compact onRetry={onRetry} />
-  if (spend.cap === 0) {
+  if (spend.baseCap === 0) {
     return (
       <Stack spacing={0.25}>
         <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>
@@ -436,12 +453,24 @@ function DesktopSpending({ budget, isError, isPending, onRetry, spend }) {
       </Stack>
     )
   }
+  if (spend.effectiveAllowance <= 0) {
+    return (
+      <Stack spacing={0.25}>
+        <Typography sx={{ color: 'text.heading', fontWeight: 700 }}>
+          {formatMoney(spend.spent)} spent
+        </Typography>
+        <Typography color="error.main" sx={{ fontSize: '0.75rem', fontWeight: 700 }}>
+          Starting deficit {formatMoney(Math.abs(spend.effectiveAllowance))} · no utilization bar
+        </Typography>
+      </Stack>
+    )
+  }
 
   const percentage = utilizationFor(spend)
   return (
     <Stack spacing={0.75}>
       <Typography sx={{ color: 'text.heading', fontSize: '0.8125rem', fontWeight: 700 }}>
-        {formatMoney(spend.spent)} / {formatMoney(spend.cap)}
+        {formatMoney(spend.spent)} / {formatMoney(spend.effectiveAllowance)}
       </Typography>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
@@ -449,7 +478,7 @@ function DesktopSpending({ budget, isError, isPending, onRetry, spend }) {
         </Box>
         <Typography
           sx={{
-            color: spend.cap > 0 && spend.remaining < 0 ? 'error.main' : 'text.secondary',
+            color: spend.effectiveAllowance > 0 && spend.remaining < 0 ? 'error.main' : 'text.secondary',
             fontSize: '0.6875rem',
             fontWeight: spend.remaining < 0 ? 700 : 500,
             minWidth: 34,
@@ -465,7 +494,10 @@ function DesktopSpending({ budget, isError, isPending, onRetry, spend }) {
 
 function Difference({ historical, spend }) {
   if (!spend) return <Typography color="text.secondary">—</Typography>
-  if (spend.cap === 0) return <Typography color="text.secondary">No cap set</Typography>
+  if (spend.baseCap === 0) return <Typography color="text.secondary">No cap set</Typography>
+  if (spend.effectiveAllowance <= 0) {
+    return <Typography color="error.main" fontWeight={700}>Starting deficit</Typography>
+  }
   const overCap = spend.remaining < 0
   const qualifier = historical
     ? `${overCap ? 'over' : 'under'} current cap`
@@ -483,6 +515,89 @@ function Difference({ historical, spend }) {
   )
 }
 
+function CarryForwardPanel({ budget, compact = false, onReview, spend }) {
+  const carry = spend?.carryForward
+  if (!carry) return null
+  const negative = carry.amount < 0
+
+  if (carry.status === 'APPLIED') {
+    return (
+      <Stack
+        spacing={0.75}
+        sx={{
+          p: compact ? 1.25 : 2,
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 2.5,
+          bgcolor: 'background.default',
+        }}
+      >
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={metricLabelSx}>Allowance breakdown</Typography>
+          <Chip label="APPLIED" size="small" color="primary" variant="outlined" />
+        </Stack>
+        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+          <Typography color="text.secondary" variant="body2">Base cap</Typography>
+          <Typography variant="body2" fontWeight={700}>{formatMoney(spend.baseCap)}</Typography>
+        </Stack>
+        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+          <Typography color="text.secondary" variant="body2">Carry from previous period</Typography>
+          <Typography color={negative ? 'error.main' : 'primary.main'} variant="body2" fontWeight={700}>
+            {formatSignedMoney(carry.amount)}
+          </Typography>
+        </Stack>
+        <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+          <Typography variant="body2" fontWeight={700}>This period&apos;s allowance</Typography>
+          <Typography variant="body2" fontWeight={750}>{formatMoney(spend.effectiveAllowance)}</Typography>
+        </Stack>
+      </Stack>
+    )
+  }
+
+  return (
+    <Stack
+      spacing={1.25}
+      sx={{
+        p: compact ? 1.25 : 2,
+        border: 1,
+        borderColor: negative ? 'error.light' : 'brandAccent.main',
+        borderRadius: 2.5,
+        bgcolor: 'highlight.main',
+      }}
+    >
+      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <Stack spacing={0.15}>
+          <Typography sx={metricLabelSx}>Previous period</Typography>
+          <Typography sx={{ color: negative ? 'error.main' : 'text.heading', fontWeight: 750 }}>
+            {formatMoney(Math.abs(carry.amount))} {negative ? 'overrun' : 'unused'}
+          </Typography>
+        </Stack>
+        <Chip label="PENDING" size="small" variant="outlined" />
+      </Stack>
+      {!compact && (
+        <Typography color="text.secondary" variant="body2">
+          This is not included in the {formatMoney(spend.baseCap)} allowance.
+        </Typography>
+      )}
+      <Button
+        fullWidth
+        onClick={() => onReview({ budget, spend })}
+        variant="contained"
+        sx={{ minHeight: 44 }}
+      >
+        {negative ? 'Subtract' : 'Add'} {formatMoney(Math.abs(carry.amount))}{compact
+          ? ''
+          : negative ? ' from this period' : ' to this period'}
+      </Button>
+      {!compact && (
+        <Typography color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center' }}>
+          Changes this period only · wallet unchanged
+        </Typography>
+      )}
+    </Stack>
+  )
+}
+
 const tableGrid = 'minmax(160px, 1.15fr) minmax(120px, .8fr) minmax(200px, 1.35fr) minmax(145px, .85fr) 60px 52px'
 
 function BudgetTable({
@@ -491,6 +606,7 @@ function BudgetTable({
   historical,
   highlightedId,
   onEdit,
+  onReviewCarry,
   onRetrySpend,
   spendByCategory,
   spendError,
@@ -589,7 +705,17 @@ function BudgetTable({
               </Box>
               <Box role="cell">
                 {!spendPending && !spendError && (
-                  <Difference historical={historical} spend={spend} />
+                  <Stack spacing={1}>
+                    <Difference historical={historical} spend={spend} />
+                    {!historical && (
+                      <CarryForwardPanel
+                        budget={budget}
+                        compact
+                        onReview={onReviewCarry}
+                        spend={spend}
+                      />
+                    )}
+                  </Stack>
                 )}
               </Box>
               <Typography role="cell" color="text.secondary" variant="body2">
@@ -720,6 +846,7 @@ function BudgetPeriodSection({
   highlightedId,
   onBudgetDateChange,
   onEdit,
+  onReviewCarry,
   period,
   spendQuery,
 }) {
@@ -731,7 +858,7 @@ function BudgetPeriodSection({
   const periodSpend = spendRows.find((row) => row.period === period)
   const overCapCount = budgets.filter((budget) => {
     const spend = spendByCategory.get(budget.id)
-    return spend?.cap > 0 && spend.remaining < 0
+    return spend?.effectiveAllowance > 0 && spend.remaining < 0
   }).length
   const summary = `${budgets.length} ${budgets.length === 1 ? 'line' : 'lines'}${
     !spendQuery.isPending && !spendQuery.isError ? ` · ${overCapCount} over cap` : ''
@@ -807,6 +934,7 @@ function BudgetPeriodSection({
         historical={historical}
         highlightedId={highlightedId}
         onEdit={onEdit}
+        onReviewCarry={onReviewCarry}
         onRetrySpend={() => spendQuery.refetch()}
         spendByCategory={spendByCategory}
         spendError={spendQuery.isError}
@@ -818,6 +946,7 @@ function BudgetPeriodSection({
         historical={historical}
         highlightedId={highlightedId}
         onEdit={onEdit}
+        onReviewCarry={onReviewCarry}
         onRetrySpend={() => spendQuery.refetch()}
         spendByCategory={spendByCategory}
         spendError={spendQuery.isError}
@@ -838,11 +967,13 @@ export default function BudgetsPage() {
   const createMutation = useCreateBudget()
   const updateMutation = useUpdateBudget()
   const deactivateMutation = useDeactivateBudget()
+  const applyCarryMutation = useApplyCarryForward()
   const [editor, setEditor] = useState(null)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editorDirty, setEditorDirty] = useState(false)
   const [discardRequested, setDiscardRequested] = useState(false)
   const [success, setSuccess] = useState(null)
+  const [carryReview, setCarryReview] = useState(null)
   const pendingNavigationRef = useRef(null)
 
   const openCreate = useCallback(() => {
@@ -908,6 +1039,26 @@ export default function BudgetsPage() {
     setSuccess(result)
   }
 
+  async function applyCarryForward() {
+    const { budget, spend } = carryReview
+    try {
+      await applyCarryMutation.mutateAsync({
+        categoryId: budget.id,
+        targetWindowStart: spend.windowStart,
+        expectedAmount: spend.carryForward.amount,
+      })
+      setCarryReview(null)
+      setSuccess({
+        id: budget.id,
+        name: budget.name,
+        type: 'carry-forward',
+        amount: spend.carryForward.amount,
+      })
+    } catch {
+      // The mutation error remains visible in the review dialog.
+    }
+  }
+
   const rows = budgets.data ?? []
   const weeklyBudgets = rows.filter((budget) => budget.period === 'WEEKLY')
   const monthlyBudgets = rows.filter((budget) => budget.period === 'MONTHLY')
@@ -923,7 +1074,9 @@ export default function BudgetsPage() {
           role="status"
           sx={{ border: 1, borderColor: 'brandAccent.main', bgcolor: 'highlight.main' }}
         >
-          {success.type === 'deactivated'
+          {success.type === 'carry-forward'
+            ? `${formatSignedMoney(success.amount)} applied to ${success.name}. Wallet unchanged.`
+            : success.type === 'deactivated'
             ? `${success.name} deactivated`
             : `${success.name} ${success.type === 'created' ? 'created' : 'saved'}`}
         </Alert>
@@ -990,6 +1143,7 @@ export default function BudgetsPage() {
               highlightedId={success?.id}
               onBudgetDateChange={setWeeklyDate}
               onEdit={openEdit}
+              onReviewCarry={setCarryReview}
               period="WEEKLY"
               spendQuery={weeklySpend}
             />
@@ -1002,6 +1156,7 @@ export default function BudgetsPage() {
               highlightedId={success?.id}
               onBudgetDateChange={setMonthlyDate}
               onEdit={openEdit}
+              onReviewCarry={setCarryReview}
               period="MONTHLY"
               spendQuery={monthlySpend}
             />
@@ -1026,6 +1181,21 @@ export default function BudgetsPage() {
           updateMutation={updateMutation}
         />
       )}
+
+      <BudgetCarryForwardDialog
+        budget={carryReview?.budget}
+        error={applyCarryMutation.error}
+        onApply={applyCarryForward}
+        onClose={() => {
+          if (!applyCarryMutation.isPending) {
+            applyCarryMutation.reset()
+            setCarryReview(null)
+          }
+        }}
+        open={Boolean(carryReview)}
+        pending={applyCarryMutation.isPending}
+        spend={carryReview?.spend}
+      />
     </Stack>
   )
 }

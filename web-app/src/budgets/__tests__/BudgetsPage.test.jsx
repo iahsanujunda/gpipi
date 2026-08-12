@@ -10,6 +10,7 @@ const mockUseBudgetSpend = vi.fn()
 const mockUseCreateBudget = vi.fn()
 const mockUseUpdateBudget = vi.fn()
 const mockUseDeactivateBudget = vi.fn()
+const mockUseApplyCarryForward = vi.fn()
 const mockUseWallets = vi.fn()
 
 vi.mock('@/budgets/queries', () => ({
@@ -18,6 +19,7 @@ vi.mock('@/budgets/queries', () => ({
   useCreateBudget: () => mockUseCreateBudget(),
   useUpdateBudget: () => mockUseUpdateBudget(),
   useDeactivateBudget: () => mockUseDeactivateBudget(),
+  useApplyCarryForward: () => mockUseApplyCarryForward(),
 }))
 
 vi.mock('@/wallets/queries', () => ({
@@ -88,9 +90,12 @@ function spendRow(budget, spent) {
     name: budget.name,
     period: budget.period,
     ...window,
-    cap: budget.amount,
+    baseCap: budget.amount,
+    appliedCarry: 0,
+    effectiveAllowance: budget.amount,
     spent,
     remaining: budget.amount - spent,
+    carryForward: null,
   }
 }
 
@@ -151,6 +156,7 @@ describe('BudgetsPage', () => {
     mockUseCreateBudget.mockReturnValue(mutation())
     mockUseUpdateBudget.mockReturnValue(mutation())
     mockUseDeactivateBudget.mockReturnValue(mutation())
+    mockUseApplyCarryForward.mockReturnValue(mutation())
     mockUseWallets.mockReturnValue({
       data: [everydayWallet],
       isPending: false,
@@ -166,7 +172,7 @@ describe('BudgetsPage', () => {
     expect(screen.getByText('20–26 JUL')).toBeInTheDocument()
     expect(screen.getByText('SLACK ON')).toBeInTheDocument()
     expect(screen.getAllByText('Everyday account')).not.toHaveLength(0)
-    expect(screen.getAllByText(/Cap ¥15,000/)).not.toHaveLength(0)
+    expect(screen.getAllByText(/Base cap ¥15,000/)).not.toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Add budget line' })).not.toBeInTheDocument()
   })
 
@@ -273,6 +279,105 @@ describe('BudgetsPage', () => {
       .toHaveAttribute('aria-valuenow', '80')
     expect(screen.getAllByRole('progressbar', { name: 'Monthly Groceries utilization' })[0])
       .toHaveAttribute('aria-valuetext', '62% used; ¥46,200 spent of ¥75,000')
+  })
+
+  it('keeps an available surplus out of the allowance until the user reviews and applies it', async () => {
+    const user = userEvent.setup()
+    const applyMutation = mutation({ mutateAsync: vi.fn().mockResolvedValue({}) })
+    mockUseApplyCarryForward.mockReturnValue(applyMutation)
+    mockUseBudgetSpend.mockReturnValue({
+      data: [{
+        ...spendRow(eatingOut, 2_100),
+        carryForward: {
+          status: 'AVAILABLE',
+          amount: 3_000,
+          sourceWindowStart: '2026-07-13',
+          sourceWindowEndExclusive: '2026-07-20',
+          sourceAllowance: 15_000,
+          sourceSpent: 12_000,
+        },
+      }],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getAllByText('This is not included in the ¥15,000 allowance.')).not.toHaveLength(0)
+    expect(screen.getAllByRole('progressbar', { name: 'Eating Out utilization' })[0])
+      .toHaveAttribute('aria-valuetext', '14% used; ¥2,100 spent of ¥15,000')
+
+    await user.click(screen.getAllByRole('button', { name: 'Add ¥3,000 to this period' })[0])
+
+    expect(await screen.findByRole('heading', { name: 'Review carry-forward' })).toBeInTheDocument()
+    expect(screen.getByText('No money moves between wallets.')).toBeInTheDocument()
+    expect(screen.getByText('¥18,000')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Add ¥3,000' }))
+
+    expect(applyMutation.mutateAsync).toHaveBeenCalledWith({
+      categoryId: eatingOut.id,
+      targetWindowStart: '2026-07-20',
+      expectedAmount: 3_000,
+    })
+    expect(await screen.findByText('+¥3,000 applied to Eating Out. Wallet unchanged.'))
+      .toBeInTheDocument()
+  })
+
+  it('reviews an overrun as a subtraction from the allowance', async () => {
+    const user = userEvent.setup()
+    mockUseBudgetSpend.mockReturnValue({
+      data: [{
+        ...spendRow(eatingOut, 2_100),
+        carryForward: {
+          status: 'AVAILABLE',
+          amount: -3_000,
+          sourceWindowStart: '2026-07-13',
+          sourceWindowEndExclusive: '2026-07-20',
+          sourceAllowance: 15_000,
+          sourceSpent: 18_000,
+        },
+      }],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+    await user.click(screen.getAllByRole('button', { name: 'Subtract ¥3,000 from this period' })[0])
+
+    expect(await screen.findByRole('heading', { name: 'Review carry-forward' })).toBeInTheDocument()
+    expect(screen.getAllByText('−¥3,000')).not.toHaveLength(0)
+    expect(screen.getByText('¥12,000')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Subtract ¥3,000' })).toBeInTheDocument()
+  })
+
+  it('uses an applied carry in utilization and shows the allowance breakdown', () => {
+    mockUseBudgetSpend.mockReturnValue({
+      data: [{
+        ...spendRow(eatingOut, 2_100),
+        appliedCarry: 3_000,
+        effectiveAllowance: 18_000,
+        remaining: 15_900,
+        carryForward: {
+          status: 'APPLIED',
+          amount: 3_000,
+          sourceWindowStart: '2026-07-13',
+          sourceWindowEndExclusive: '2026-07-20',
+          sourceAllowance: 15_000,
+          sourceSpent: 12_000,
+        },
+      }],
+      isPending: false,
+      isError: false,
+    })
+
+    renderBudgetExperience()
+
+    expect(screen.getAllByText('Allowance breakdown')).not.toHaveLength(0)
+    expect(screen.getAllByText("This period's allowance")).not.toHaveLength(0)
+    expect(screen.getAllByRole('progressbar', { name: 'Eating Out utilization' })[0])
+      .toHaveAttribute('aria-valuetext', '12% used; ¥2,100 spent of ¥18,000')
+    expect(screen.queryByRole('button', { name: /Add ¥3,000/ })).not.toBeInTheDocument()
   })
 
   it('shows the real percentage when over cap and omits utilization when the cap is zero', () => {

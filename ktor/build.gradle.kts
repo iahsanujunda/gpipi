@@ -114,6 +114,7 @@ pgen {
             addTable("public", "shopping_mutation_item")
             addTable("public", "account")
             addTable("public", "money_movement")
+            addTable("public", "budget_carry_forward")
             addTable("public", "exercise")
             addTable("public", "exercise_alias")
             addTable("public", "program")

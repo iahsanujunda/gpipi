@@ -2,6 +2,7 @@ package me.gpipi.category
 
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.put
@@ -10,7 +11,13 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.auth.authenticate
+import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.response.respond
+import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import io.ktor.server.sessions.sessions
+import io.ktor.server.sessions.set
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import io.mockk.coEvery
@@ -25,6 +32,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import me.gpipi.UserSession
+import me.gpipi.configureSecurity
 import me.gpipi.configureSerialization
 
 class BudgetRoutesTest {
@@ -42,6 +51,30 @@ class BudgetRoutesTest {
     }
 
     private fun ApplicationTestBuilder.apiClient() = createClient {
+        install(ContentNegotiation) { json() }
+    }
+
+    private fun ApplicationTestBuilder.bootAuthenticated(clock: Clock) {
+        environment {
+            config = MapApplicationConfig("session.signKey" to "test-session-key")
+        }
+        application {
+            configureSecurity(clock)
+            configureSerialization()
+            routing {
+                post("/test/login") {
+                    call.sessions.set(UserSession("U-web", clock.instant().epochSecond))
+                    call.respond(HttpStatusCode.OK)
+                }
+                authenticate("auth-session") {
+                    budgetApiRoutes(service, clock)
+                }
+            }
+        }
+    }
+
+    private fun ApplicationTestBuilder.authenticatedApiClient() = createClient {
+        install(HttpCookies)
         install(ContentNegotiation) { json() }
     }
 
@@ -251,7 +284,9 @@ class BudgetRoutesTest {
                 period = "MONTHLY",
                 windowStart = "2026-07-01",
                 windowEndExclusive = "2026-08-01",
-                cap = 75_000L,
+                baseCap = 75_000L,
+                appliedCarry = 0L,
+                effectiveAllowance = 75_000L,
                 spent = 20_000L,
                 remaining = 55_000L,
             ),
@@ -295,4 +330,41 @@ class BudgetRoutesTest {
         )
         coVerify(exactly = 0) { service.spendVsCap(any()) }
     }
+
+    @Test
+    fun `POST carry-forward uses the authenticated actor and maps a new application`() =
+        testApplication {
+            val clock = Clock.fixed(Instant.parse("2026-07-20T03:00:00Z"), ZoneOffset.UTC)
+            val categoryId = UUID.randomUUID()
+            val request = ApplyCarryForwardRequest("2026-07-20", 3_000L)
+            val write = CarryForwardWrite(
+                categoryId = categoryId.toString(),
+                targetWindowStart = "2026-07-20",
+                amount = 3_000L,
+                effectiveAllowance = 18_000L,
+                replayed = false,
+            )
+            coEvery {
+                service.applyCarryForward(categoryId, "2026-07-20", 3_000L, "U-web")
+            } returns CarryForwardResult.Applied(write)
+            bootAuthenticated(clock)
+            val client = authenticatedApiClient()
+            client.post("/test/login")
+
+            val response = client.post("/api/budgets/categories/$categoryId/carry-forward") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+
+            assertEquals(HttpStatusCode.Created, response.status)
+            val body = response.body<JsonObject>()
+            assertEquals("3000", body["amount"]?.jsonPrimitive?.content)
+            assertEquals(
+                "18000",
+                body["effectiveAllowance"]?.jsonPrimitive?.content,
+            )
+            coVerify(exactly = 1) {
+                service.applyCarryForward(categoryId, "2026-07-20", 3_000L, "U-web")
+            }
+        }
 }

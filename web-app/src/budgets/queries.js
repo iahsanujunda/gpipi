@@ -53,3 +53,21 @@ export function useDeactivateBudget() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: budgetKeys.all }),
   })
 }
+
+export function useApplyCarryForward() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ categoryId, targetWindowStart, expectedAmount }) => apiFetch(
+      `/api/budgets/categories/${categoryId}/carry-forward`,
+      {
+        method: 'POST',
+        body: { targetWindowStart, expectedAmount },
+      },
+    ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: budgetKeys.all }),
+    onError: (error) => {
+      if (error.status === 409) queryClient.invalidateQueries({ queryKey: budgetKeys.all })
+    },
+  })
+}

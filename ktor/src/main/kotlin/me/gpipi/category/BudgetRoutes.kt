@@ -2,6 +2,7 @@ package me.gpipi.category
 
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -14,6 +15,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeParseException
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import me.gpipi.UserSession
 
 @Serializable
 data class UpsertBudgetRequest(
@@ -31,6 +33,21 @@ private data class CreatedBudgetResponse(val id: String)
 
 @Serializable
 private data class BudgetApiError(val message: String)
+
+@Serializable
+data class ApplyCarryForwardRequest(
+    val targetWindowStart: String,
+    val expectedAmount: Long,
+)
+
+@Serializable
+data class CarryForwardResponse(
+    val categoryId: String,
+    val targetWindowStart: String,
+    val amount: Long,
+    val effectiveAllowance: Long,
+    val replayed: Boolean,
+)
 
 fun Route.budgetApiRoutes(
     service: BudgetService,
@@ -65,6 +82,25 @@ fun Route.budgetApiRoutes(
             call.respondBudgetResult(service.deactivate(id))
         }
 
+        post("/categories/{id}/carry-forward") {
+            val id = call.parameters["id"].toUuidOrNull()
+                ?: return@post call.respond(
+                    HttpStatusCode.BadRequest,
+                    BudgetApiError("'id' must be a UUID."),
+                )
+            val actorId = call.principal<UserSession>()?.userId
+                ?: return@post call.respond(HttpStatusCode.Unauthorized)
+            val request = call.receive<ApplyCarryForwardRequest>()
+            call.respondCarryForwardResult(
+                service.applyCarryForward(
+                    categoryId = id,
+                    targetWindowStart = request.targetWindowStart,
+                    expectedAmount = request.expectedAmount,
+                    actorId = actorId,
+                ),
+            )
+        }
+
         get("/spend") {
             val date = call.request.queryParameters["date"]?.let {
                 try {
@@ -78,6 +114,33 @@ fun Route.budgetApiRoutes(
             } ?: LocalDate.now(clock.withZone(DEFAULT_BUDGET_ZONE))
             call.respond(service.spendVsCap(date))
         }
+    }
+}
+
+private suspend fun ApplicationCall.respondCarryForwardResult(result: CarryForwardResult) {
+    when (result) {
+        is CarryForwardResult.Applied -> {
+            val write = result.write
+            respond(
+                if (write.replayed) HttpStatusCode.OK else HttpStatusCode.Created,
+                CarryForwardResponse(
+                    categoryId = write.categoryId,
+                    targetWindowStart = write.targetWindowStart,
+                    amount = write.amount,
+                    effectiveAllowance = write.effectiveAllowance,
+                    replayed = write.replayed,
+                ),
+            )
+        }
+
+        CarryForwardResult.NotFound ->
+            respond(HttpStatusCode.NotFound, BudgetApiError("Budget line not found."))
+
+        is CarryForwardResult.Invalid ->
+            respond(HttpStatusCode.BadRequest, BudgetApiError(result.message))
+
+        is CarryForwardResult.Conflict ->
+            respond(HttpStatusCode.Conflict, BudgetApiError(result.message))
     }
 }
 

@@ -1,7 +1,9 @@
 package me.gpipi.category
 
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeParseException
 import java.util.UUID
 import kotlinx.serialization.Serializable
 import me.gpipi.config.dbQuery
@@ -30,17 +32,50 @@ data class SpendRow(
     val period: String,
     val windowStart: String,
     val windowEndExclusive: String,
-    val cap: Long,
+    val baseCap: Long,
+    val appliedCarry: Long,
+    val effectiveAllowance: Long,
     val spent: Long,
     val remaining: Long,
+    val carryForward: CarryForwardRow? = null,
 )
+
+@Serializable
+data class CarryForwardRow(
+    val status: String,
+    val amount: Long,
+    val sourceWindowStart: String,
+    val sourceWindowEndExclusive: String,
+    val sourceAllowance: Long,
+    val sourceSpent: Long,
+)
+
+data class CarryForwardWrite(
+    val categoryId: String,
+    val targetWindowStart: String,
+    val amount: Long,
+    val effectiveAllowance: Long,
+    val replayed: Boolean,
+)
+
+sealed interface CarryForwardResult {
+    data class Applied(val write: CarryForwardWrite) : CarryForwardResult
+
+    data object NotFound : CarryForwardResult
+
+    data class Invalid(val message: String) : CarryForwardResult
+
+    data class Conflict(val message: String) : CarryForwardResult
+}
 
 class BudgetService(
     private val db: Database,
     private val categoryRepo: CategoryRepository,
     private val expenseRepo: ExpenseRepository,
+    private val carryForwardRepo: BudgetCarryForwardRepository = BudgetCarryForwardRepository(),
     private val activeCategories: ActiveCategoryRebuilder,
     private val budgetZone: ZoneId = DEFAULT_BUDGET_ZONE,
+    private val clock: Clock = Clock.systemUTC(),
 ) {
     private companion object {
         const val UNIQUE_VIOLATION_SQL_STATE = "23505"
@@ -138,8 +173,16 @@ class BudgetService(
                 "Unknown budget period: ${b.period}"
             }
             val bucket = period.bucketFor(date, budgetZone)
+            val categoryId = UUID.fromString(b.id)
+            val applied = carryForwardRepo.findForTarget(
+                categoryId,
+                b.period,
+                bucket.startInclusive.toLocalDate(),
+            )
+            val appliedCarry = applied?.amount ?: 0L
+            val effectiveAllowance = b.amount + appliedCarry
             val spent = expenseRepo.sumAmount(
-                UUID.fromString(b.id),
+                categoryId,
                 bucket.startInclusive,
                 bucket.endExclusive,
             )
@@ -149,11 +192,167 @@ class BudgetService(
                 period = b.period,
                 windowStart = bucket.startInclusive.toLocalDate().toString(),
                 windowEndExclusive = bucket.endExclusive.toLocalDate().toString(),
-                cap = b.amount,
+                baseCap = b.amount,
+                appliedCarry = appliedCarry,
+                effectiveAllowance = effectiveAllowance,
                 spent = spent,
-                remaining = b.amount - spent,
+                remaining = effectiveAllowance - spent,
+                carryForward = carryForwardFor(
+                    budget = b,
+                    period = period,
+                    targetBucket = bucket,
+                    applied = applied,
+                    selectedDate = date,
+                ),
             )
         }
+    }
+
+    suspend fun applyCarryForward(
+        categoryId: UUID,
+        targetWindowStart: String,
+        expectedAmount: Long,
+        actorId: String,
+    ): CarryForwardResult {
+        val requestedTarget = try {
+            LocalDate.parse(targetWindowStart)
+        } catch (_: DateTimeParseException) {
+            return CarryForwardResult.Invalid("'targetWindowStart' must be an ISO-8601 date (YYYY-MM-DD).")
+        }
+        if (expectedAmount == 0L) {
+            return CarryForwardResult.Invalid("There is no previous balance to carry forward.")
+        }
+        if (actorId.isBlank()) {
+            return CarryForwardResult.Invalid("The applying user must not be blank.")
+        }
+
+        return dbQuery(db) {
+            val budget = categoryRepo.listBudgets().singleOrNull { it.id == categoryId.toString() }
+                ?: return@dbQuery CarryForwardResult.NotFound
+            if (budget.amount == 0L) {
+                return@dbQuery CarryForwardResult.Invalid("A budget line with no cap cannot carry a balance forward.")
+            }
+            val period = requireNotNull(BudgetPeriod.from(budget.period)) {
+                "Unknown budget period: ${budget.period}"
+            }
+            val currentBucket = period.bucketFor(
+                LocalDate.now(clock.withZone(budgetZone)),
+                budgetZone,
+            )
+            val currentStart = currentBucket.startInclusive.toLocalDate()
+            if (requestedTarget != currentStart) {
+                return@dbQuery CarryForwardResult.Conflict(
+                    "The selected budget period is no longer current. Refresh and review the carry-forward again.",
+                )
+            }
+
+            val existing = carryForwardRepo.findForTarget(categoryId, budget.period, currentStart)
+            if (existing != null) {
+                return@dbQuery if (existing.amount == expectedAmount) {
+                    CarryForwardResult.Applied(existing.toWrite(budget.amount, replayed = true))
+                } else {
+                    CarryForwardResult.Conflict("A carry-forward has already been applied to this period.")
+                }
+            }
+
+            val sourceBucket = period.bucketFor(currentStart.minusDays(1), budgetZone)
+            val sourceStart = sourceBucket.startInclusive.toLocalDate()
+            val sourceIncomingCarry = carryForwardRepo
+                .findForTarget(categoryId, budget.period, sourceStart)
+                ?.amount
+                ?: 0L
+            val sourceSpent = expenseRepo.sumAmount(
+                categoryId,
+                sourceBucket.startInclusive,
+                sourceBucket.endExclusive,
+            )
+            val amount = budget.amount + sourceIncomingCarry - sourceSpent
+            if (amount == 0L) {
+                return@dbQuery CarryForwardResult.Invalid("There is no previous balance to carry forward.")
+            }
+            if (amount != expectedAmount) {
+                return@dbQuery CarryForwardResult.Conflict(
+                    "The previous balance changed. Refresh and review the carry-forward again.",
+                )
+            }
+
+            val inserted = carryForwardRepo.insertOrFind(
+                NewBudgetCarryForward(
+                    categoryId = categoryId,
+                    cadence = budget.period,
+                    sourceWindowStart = sourceStart,
+                    sourceWindowEndExclusive = sourceBucket.endExclusive.toLocalDate(),
+                    targetWindowStart = currentStart,
+                    targetWindowEndExclusive = currentBucket.endExclusive.toLocalDate(),
+                    amount = amount,
+                    sourceBaseCap = budget.amount,
+                    sourceIncomingCarry = sourceIncomingCarry,
+                    sourceSpent = sourceSpent,
+                    createdByUserId = actorId,
+                ),
+            )
+            if (inserted.record.amount != expectedAmount) {
+                CarryForwardResult.Conflict("A carry-forward has already been applied to this period.")
+            } else {
+                CarryForwardResult.Applied(
+                    inserted.record.toWrite(budget.amount, replayed = !inserted.inserted),
+                )
+            }
+        }
+    }
+
+    private fun carryForwardFor(
+        budget: BudgetRow,
+        period: BudgetPeriod,
+        targetBucket: BudgetBucket,
+        applied: BudgetCarryForwardRecord?,
+        selectedDate: LocalDate,
+    ): CarryForwardRow? {
+        if (applied != null) {
+            return CarryForwardRow(
+                status = "APPLIED",
+                amount = applied.amount,
+                sourceWindowStart = applied.sourceWindowStart.toString(),
+                sourceWindowEndExclusive = applied.sourceWindowEndExclusive.toString(),
+                sourceAllowance = applied.sourceBaseCap + applied.sourceIncomingCarry,
+                sourceSpent = applied.sourceSpent,
+            )
+        }
+        if (budget.amount == 0L) return null
+
+        val currentBucket = period.bucketFor(
+            LocalDate.now(clock.withZone(budgetZone)),
+            budgetZone,
+        )
+        if (targetBucket.startInclusive != currentBucket.startInclusive) return null
+        if (period.bucketFor(selectedDate, budgetZone).startInclusive != currentBucket.startInclusive) return null
+
+        val categoryId = UUID.fromString(budget.id)
+        val sourceBucket = period.bucketFor(
+            targetBucket.startInclusive.toLocalDate().minusDays(1),
+            budgetZone,
+        )
+        val sourceIncomingCarry = carryForwardRepo.findForTarget(
+            categoryId,
+            budget.period,
+            sourceBucket.startInclusive.toLocalDate(),
+        )?.amount ?: 0L
+        val sourceSpent = expenseRepo.sumAmount(
+            categoryId,
+            sourceBucket.startInclusive,
+            sourceBucket.endExclusive,
+        )
+        val amount = budget.amount + sourceIncomingCarry - sourceSpent
+        if (amount == 0L) return null
+
+        return CarryForwardRow(
+            status = "AVAILABLE",
+            amount = amount,
+            sourceWindowStart = sourceBucket.startInclusive.toLocalDate().toString(),
+            sourceWindowEndExclusive = sourceBucket.endExclusive.toLocalDate().toString(),
+            sourceAllowance = budget.amount + sourceIncomingCarry,
+            sourceSpent = sourceSpent,
+        )
     }
 
     private fun validate(request: UpsertBudgetRequest): BudgetMutationResult.Invalid? =
@@ -176,6 +375,17 @@ class BudgetService(
             else -> null
         }
 }
+
+private fun BudgetCarryForwardRecord.toWrite(
+    baseCap: Long,
+    replayed: Boolean,
+): CarryForwardWrite = CarryForwardWrite(
+    categoryId = categoryId.toString(),
+    targetWindowStart = targetWindowStart.toString(),
+    amount = amount,
+    effectiveAllowance = baseCap + amount,
+    replayed = replayed,
+)
 
 private fun String.toUuidOrNull(): UUID? =
     try {

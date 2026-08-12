@@ -85,4 +85,18 @@ class BudgetRoutesGuardTest {
 
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
+
+    @Test
+    fun `budget carry-forward without a session is rejected with 401`() = testApplication {
+        boot()
+        val id = "00000000-0000-0000-0000-000000000001"
+
+        val response = client.post("/api/budgets/categories/$id/carry-forward") {
+            header(HttpHeaders.Origin, "https://budget.test")
+            contentType(ContentType.Application.Json)
+            setBody("""{"targetWindowStart":"2026-07-20","expectedAmount":3000}""")
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
 }

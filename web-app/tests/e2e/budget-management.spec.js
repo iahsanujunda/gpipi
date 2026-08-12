@@ -117,6 +117,30 @@ test('shows exact utilization states on mobile and in the wider budget table', a
   await expect(page.getByText('4 lines · 1 over cap')).toBeVisible()
 })
 
+test('reviews and applies a carry-forward without implying a wallet transfer', async ({ page }) => {
+  const eatingOut = page
+    .locator('[data-budget-id="10000000-0000-0000-0000-000000000001"]')
+    .first()
+
+  await expect(eatingOut.getByText('¥3,000 unused')).toBeVisible()
+  await expect(eatingOut.getByText('This is not included in the ¥15,000 allowance.')).toBeVisible()
+  await expect(eatingOut.getByText('wallet unchanged')).toBeVisible()
+  await eatingOut.getByRole('button', { name: 'Add ¥3,000 to this period' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Review carry-forward' })).toBeVisible()
+  await expect(page.getByText('No money moves between wallets.')).toBeVisible()
+  await expect(page.getByText('¥18,000')).toBeVisible()
+  await page.getByRole('button', { name: 'Add ¥3,000', exact: true }).click()
+
+  await expect(page.getByRole('status')).toContainText(
+    '+¥3,000 applied to Eating Out. Wallet unchanged.',
+  )
+  await expect(eatingOut.getByText('APPLIED')).toBeVisible()
+  await expect(eatingOut.getByText("This period's allowance")).toBeVisible()
+  await expect(eatingOut.getByRole('progressbar', { name: 'Eating Out utilization' }))
+    .toHaveAttribute('aria-valuetext', '67% used; ¥12,000 spent of ¥18,000')
+})
+
 test('weekly and monthly history controls move independently', async ({ page }) => {
   const weekly = page.locator('section[aria-labelledby="weekly-budget-heading"]')
   const monthly = page.locator('section[aria-labelledby="monthly-budget-heading"]')

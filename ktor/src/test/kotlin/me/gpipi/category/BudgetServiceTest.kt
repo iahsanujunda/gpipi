@@ -2,18 +2,24 @@ package me.gpipi.category
 
 import io.mockk.coVerify
 import io.mockk.mockk
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlinx.coroutines.runBlocking
+import me.gpipi.account.AccountRepository
 import me.gpipi.config.dbQuery
 import me.gpipi.expense.ExpenseRepository
 import me.gpipi.generated.db.base.public1.Category
 import me.gpipi.generated.db.base.public1.Expense
+import me.gpipi.generated.db.base.public1.BudgetCarryForward
+import me.gpipi.generated.db.base.public1.MoneyMovement
 import me.gpipi.inbound.InboundRepository
 import me.gpipi.support.PersistenceTest
 import me.gpipi.support.insertTestAccount
@@ -32,6 +38,18 @@ class BudgetServiceTest : PersistenceTest() {
         budgetZone = budgetZone,
     )
     private val inboundRepository = InboundRepository()
+
+    private fun carryService(todayInTokyo: String) = BudgetService(
+        db = db,
+        categoryRepo = CategoryRepository(),
+        expenseRepo = ExpenseRepository(),
+        activeCategories = activeCategories,
+        budgetZone = budgetZone,
+        clock = Clock.fixed(
+            Instant.parse("${todayInTokyo}T03:00:00Z"),
+            ZoneOffset.UTC,
+        ),
+    )
 
     private fun request(
         name: String = "Monthly Groceries",
@@ -320,6 +338,9 @@ class BudgetServiceTest : PersistenceTest() {
         assertEquals(categoryId.toString(), result.categoryId)
         assertEquals("2026-07-24", result.windowStart)
         assertEquals("2026-08-25", result.windowEndExclusive)
+        assertEquals(50_000L, result.baseCap)
+        assertEquals(0L, result.appliedCarry)
+        assertEquals(50_000L, result.effectiveAllowance)
         assertEquals(15_000L, result.spent)
         assertEquals(35_000L, result.remaining)
     }
@@ -335,6 +356,9 @@ class BudgetServiceTest : PersistenceTest() {
         val result = service.spendVsCap(LocalDate.of(2026, 7, 24)).single()
 
         assertEquals(categoryId.toString(), result.categoryId)
+        assertEquals(120_000L, result.baseCap)
+        assertEquals(0L, result.appliedCarry)
+        assertEquals(120_000L, result.effectiveAllowance)
         assertEquals(0L, result.spent)
         assertEquals(120_000L, result.remaining)
     }
@@ -401,5 +425,195 @@ class BudgetServiceTest : PersistenceTest() {
         assertEquals(12_000L, resultByName.getValue("Monthly Groceries").remaining)
         assertEquals("2026-06-25", resultByName.getValue("Monthly Groceries").windowStart)
         assertEquals("2026-07-24", resultByName.getValue("Monthly Groceries").windowEndExclusive)
+    }
+
+    @Test
+    fun `surplus stays pending until applied and applying it does not change the wallet`() = runBlocking {
+        val service = carryService("2026-07-20")
+        val categoryId = assertIs<BudgetMutationResult.Created>(
+            service.create(request(name = "Eating Out", period = "WEEKLY", amount = 15_000L)),
+        ).id
+        givenExpense(
+            categoryId,
+            12_000L,
+            OffsetDateTime.parse("2026-07-15T12:00:00+09:00"),
+            "Ev-carry-surplus",
+        )
+
+        val beforeApply = service.spendVsCap(LocalDate.of(2026, 7, 20)).single()
+        val walletId = dbQuery(db) { testCategoryAccountId(categoryId) }
+        val walletBalanceBefore = dbQuery(db) { AccountRepository().balance(walletId) }
+        val walletTransactionsBefore = dbQuery(db) {
+            AccountRepository().listTransactions(walletId, limit = 100, cursor = null)
+        }
+        val expenseCountBefore = dbQuery(db) { Expense.selectAll().count() }
+
+        assertEquals(15_000L, beforeApply.baseCap)
+        assertEquals(0L, beforeApply.appliedCarry)
+        assertEquals(15_000L, beforeApply.effectiveAllowance)
+        assertEquals("AVAILABLE", beforeApply.carryForward?.status)
+        assertEquals(3_000L, beforeApply.carryForward?.amount)
+
+        val first = assertIs<CarryForwardResult.Applied>(
+            service.applyCarryForward(categoryId, "2026-07-20", 3_000L, "U1"),
+        ).write
+        val replay = assertIs<CarryForwardResult.Applied>(
+            service.applyCarryForward(categoryId, "2026-07-20", 3_000L, "U1"),
+        ).write
+        val afterApply = service.spendVsCap(LocalDate.of(2026, 7, 20)).single()
+
+        assertEquals(false, first.replayed)
+        assertEquals(true, replay.replayed)
+        assertEquals(3_000L, afterApply.appliedCarry)
+        assertEquals(18_000L, afterApply.effectiveAllowance)
+        assertEquals("APPLIED", afterApply.carryForward?.status)
+        assertEquals(walletBalanceBefore, dbQuery(db) { AccountRepository().balance(walletId) })
+        assertEquals(
+            walletTransactionsBefore,
+            dbQuery(db) { AccountRepository().listTransactions(walletId, limit = 100, cursor = null) },
+        )
+        assertEquals(expenseCountBefore, dbQuery(db) { Expense.selectAll().count() })
+        assertEquals(0L, dbQuery(db) { MoneyMovement.selectAll().count() })
+        assertEquals(1L, dbQuery(db) { BudgetCarryForward.selectAll().count() })
+    }
+
+    @Test
+    fun `an overrun is offered and subtracts from allowance only after confirmation`() = runBlocking {
+        val service = carryService("2026-07-20")
+        val categoryId = assertIs<BudgetMutationResult.Created>(
+            service.create(request(name = "Transport", period = "WEEKLY", amount = 15_000L)),
+        ).id
+        givenExpense(
+            categoryId,
+            18_000L,
+            OffsetDateTime.parse("2026-07-15T12:00:00+09:00"),
+            "Ev-carry-overrun",
+        )
+
+        val pending = service.spendVsCap(LocalDate.of(2026, 7, 20)).single()
+        val walletId = dbQuery(db) { testCategoryAccountId(categoryId) }
+        val walletBalanceBefore = dbQuery(db) { AccountRepository().balance(walletId) }
+        val walletTransactionsBefore = dbQuery(db) {
+            AccountRepository().listTransactions(walletId, limit = 100, cursor = null)
+        }
+        val expenseCountBefore = dbQuery(db) { Expense.selectAll().count() }
+        assertEquals(15_000L, pending.effectiveAllowance)
+        assertEquals(-3_000L, pending.carryForward?.amount)
+
+        assertIs<CarryForwardResult.Applied>(
+            service.applyCarryForward(categoryId, "2026-07-20", -3_000L, "U1"),
+        )
+
+        val applied = service.spendVsCap(LocalDate.of(2026, 7, 20)).single()
+        assertEquals(-3_000L, applied.appliedCarry)
+        assertEquals(12_000L, applied.effectiveAllowance)
+        assertEquals(walletBalanceBefore, dbQuery(db) { AccountRepository().balance(walletId) })
+        assertEquals(
+            walletTransactionsBefore,
+            dbQuery(db) { AccountRepository().listTransactions(walletId, limit = 100, cursor = null) },
+        )
+        assertEquals(expenseCountBefore, dbQuery(db) { Expense.selectAll().count() })
+        assertEquals(0L, dbQuery(db) { MoneyMovement.selectAll().count() })
+    }
+
+    @Test
+    fun `an applied carry participates in the following period calculation`() = runBlocking {
+        val firstService = carryService("2026-07-13")
+        val categoryId = assertIs<BudgetMutationResult.Created>(
+            firstService.create(request(name = "Leisure", period = "WEEKLY", amount = 15_000L)),
+        ).id
+        givenExpense(
+            categoryId,
+            10_000L,
+            OffsetDateTime.parse("2026-07-08T12:00:00+09:00"),
+            "Ev-chain-source",
+        )
+        assertIs<CarryForwardResult.Applied>(
+            firstService.applyCarryForward(categoryId, "2026-07-13", 5_000L, "U1"),
+        )
+        givenExpense(
+            categoryId,
+            12_000L,
+            OffsetDateTime.parse("2026-07-15T12:00:00+09:00"),
+            "Ev-chain-middle",
+        )
+
+        val secondService = carryService("2026-07-20")
+        val next = secondService.spendVsCap(LocalDate.of(2026, 7, 20)).single()
+
+        assertEquals(8_000L, next.carryForward?.amount)
+        assertEquals(20_000L, next.carryForward?.sourceAllowance)
+        assertEquals(12_000L, next.carryForward?.sourceSpent)
+    }
+
+    @Test
+    fun `stale target or changed source balance cannot create a carry`() = runBlocking {
+        val service = carryService("2026-07-20")
+        val categoryId = assertIs<BudgetMutationResult.Created>(
+            service.create(request(name = "Dining", period = "WEEKLY", amount = 15_000L)),
+        ).id
+        givenExpense(
+            categoryId,
+            12_000L,
+            OffsetDateTime.parse("2026-07-15T12:00:00+09:00"),
+            "Ev-carry-stale",
+        )
+
+        assertIs<CarryForwardResult.Conflict>(
+            service.applyCarryForward(categoryId, "2026-07-13", 3_000L, "U1"),
+        )
+        assertIs<CarryForwardResult.Conflict>(
+            service.applyCarryForward(categoryId, "2026-07-20", 2_500L, "U1"),
+        )
+        assertEquals(0L, dbQuery(db) { BudgetCarryForward.selectAll().count() })
+    }
+
+    @Test
+    fun `zero-cap lines never offer or accept carry-forward`() = runBlocking {
+        val service = carryService("2026-07-20")
+        val categoryId = assertIs<BudgetMutationResult.Created>(
+            service.create(request(name = "Repairs", period = "WEEKLY", amount = 0L)),
+        ).id
+        givenExpense(
+            categoryId,
+            3_000L,
+            OffsetDateTime.parse("2026-07-15T12:00:00+09:00"),
+            "Ev-no-cap-carry",
+        )
+
+        assertEquals(null, service.spendVsCap(LocalDate.of(2026, 7, 20)).single().carryForward)
+        assertIs<CarryForwardResult.Invalid>(
+            service.applyCarryForward(categoryId, "2026-07-20", -3_000L, "U1"),
+        )
+        assertEquals(0L, dbQuery(db) { BudgetCarryForward.selectAll().count() })
+    }
+
+    @Test
+    fun `an applied carry remains its approved snapshot after source expenses change`() = runBlocking {
+        val service = carryService("2026-07-20")
+        val categoryId = assertIs<BudgetMutationResult.Created>(
+            service.create(request(name = "Leisure", period = "WEEKLY", amount = 15_000L)),
+        ).id
+        givenExpense(
+            categoryId,
+            12_000L,
+            OffsetDateTime.parse("2026-07-15T12:00:00+09:00"),
+            "Ev-snapshot-before",
+        )
+        assertIs<CarryForwardResult.Applied>(
+            service.applyCarryForward(categoryId, "2026-07-20", 3_000L, "U1"),
+        )
+
+        givenExpense(
+            categoryId,
+            1_000L,
+            OffsetDateTime.parse("2026-07-16T12:00:00+09:00"),
+            "Ev-snapshot-after",
+        )
+
+        val row = service.spendVsCap(LocalDate.of(2026, 7, 20)).single()
+        assertEquals(3_000L, row.appliedCarry)
+        assertEquals(18_000L, row.effectiveAllowance)
+        assertEquals(12_000L, row.carryForward?.sourceSpent)
     }
 }

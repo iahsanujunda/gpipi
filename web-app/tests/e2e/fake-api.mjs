@@ -139,6 +139,7 @@ const budgetSpend = new Map([
   ['10000000-0000-0000-0000-000000000004', 22000],
   ['10000000-0000-0000-0000-000000000005', 2000],
 ])
+const budgetCarryForwards = new Map()
 
 let nextBudgetId = 10
 let nextShoppingMutation = 10
@@ -780,14 +781,44 @@ createServer(async (request, response) => {
         .filter((budget) => budget.active)
         .map((budget) => {
           const spent = budgetSpend.get(budget.id) ?? 0
+          const window = budgetWindow(budget.period, requestedDate)
+          const appliedCarry = budgetCarryForwards.get(`${budget.id}:${window.windowStart}`) ?? 0
+          const effectiveAllowance = budget.amount + appliedCarry
+          const currentWindow = budgetWindow(budget.period, new Date().toISOString().slice(0, 10))
+          const carryAvailable = budget.id === '10000000-0000-0000-0000-000000000001'
+            && window.windowStart === currentWindow.windowStart
+          const sourceStart = new Date(`${window.windowStart}T00:00:00Z`)
+          sourceStart.setUTCDate(sourceStart.getUTCDate() - 7)
+          const carryForward = appliedCarry !== 0
+            ? {
+                status: 'APPLIED',
+                amount: appliedCarry,
+                sourceWindowStart: sourceStart.toISOString().slice(0, 10),
+                sourceWindowEndExclusive: window.windowStart,
+                sourceAllowance: 15000,
+                sourceSpent: 12000,
+              }
+            : carryAvailable
+              ? {
+                  status: 'AVAILABLE',
+                  amount: 3000,
+                  sourceWindowStart: sourceStart.toISOString().slice(0, 10),
+                  sourceWindowEndExclusive: window.windowStart,
+                  sourceAllowance: 15000,
+                  sourceSpent: 12000,
+                }
+              : null
           return {
             categoryId: budget.id,
             name: budget.name,
             period: budget.period,
-            ...budgetWindow(budget.period, requestedDate),
-            cap: budget.amount,
+            ...window,
+            baseCap: budget.amount,
+            appliedCarry,
+            effectiveAllowance,
             spent,
-            remaining: budget.amount - spent,
+            remaining: effectiveAllowance - spent,
+            carryForward,
           }
         }),
     )
@@ -811,6 +842,31 @@ createServer(async (request, response) => {
       accountName: accounts.find((account) => account.id === body.accountId)?.name,
     })
     sendJson(response, 201, { id })
+    return
+  }
+
+  const carryMatch = request.url?.match(/^\/api\/budgets\/categories\/([^/]+)\/carry-forward$/)
+  if (carryMatch && request.method === 'POST') {
+    const budget = budgets.find((candidate) => candidate.id === carryMatch[1])
+    if (!budget) {
+      sendJson(response, 404, { message: 'Budget line not found.' })
+      return
+    }
+    const body = await readJson(request)
+    const key = `${budget.id}:${body.targetWindowStart}`
+    const existing = budgetCarryForwards.get(key)
+    if (existing !== undefined && existing !== body.expectedAmount) {
+      sendJson(response, 409, { message: 'A carry-forward has already been applied.' })
+      return
+    }
+    budgetCarryForwards.set(key, body.expectedAmount)
+    sendJson(response, existing === undefined ? 201 : 200, {
+      categoryId: budget.id,
+      targetWindowStart: body.targetWindowStart,
+      amount: body.expectedAmount,
+      effectiveAllowance: budget.amount + body.expectedAmount,
+      replayed: existing !== undefined,
+    })
     return
   }
 

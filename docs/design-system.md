@@ -9,6 +9,7 @@ Related references:
 - [Phase 2 product and API plan](phase2.md)
 - [Budget page, default state](mockups/budget-mobile-default.svg)
 - [Budget utilization states](mockups/budget-spend-vs-cap-views.svg)
+- [Manual budget carry-forward flow](mockups/budget-carry-forward-views.svg)
 - [Wallets and money movement flow](mockups/payday-funding-views.svg)
 - [Activity page, default state](mockups/activity-mobile-default.svg)
 - [Activity mobile drawer states](mockups/activity-mobile-drawer-states.svg)
@@ -251,6 +252,14 @@ On phones, render each budget line as a card rather than a compressed table row.
 - A compact utilization bar when the cap is greater than zero.
 
 The utilization bar is a supporting comparison signal. Clamp its visual fill at `100%`, while displaying and announcing the real percentage, such as `110%`. Pair over-cap red with the `OVER CAP` label, exact overage, and percentage. When the cap is zero, say `No cap set` and omit the bar; spend against an unset cap is not an over-cap error.
+
+### Manual carry-forward
+
+The current-period card may surface the immediately previous period's signed balance without applying it automatically. Keep this pending balance in a bordered supporting panel below utilization, explicitly say that it is not included in the current allowance, and provide one full-width `44 px` action: `Add ¥… to this week/period` for a surplus or `Subtract ¥… from this week/period` for an overrun. Do not show the action for historical periods, zero balances, or lines with no cap.
+
+Selecting the action opens the shared adaptive confirmation surface. Review names the source and target windows and shows `Base cap`, signed `Carry`, and `New allowance`. It must also state that the adjustment changes the budget allowance only and does not move money between wallets. After success, replace the pending panel with a read-only allowance breakdown and an `APPLIED` status; announce concise feedback without moving focus unexpectedly.
+
+Utilization uses the effective allowance after carry, while the base cap and signed carry remain separately visible. If a carried overrun makes the effective allowance zero or negative, omit the percentage bar and show an explicit starting-deficit treatment instead. On desktop, place carry status and its action in the existing Difference area or an adjacent carry column only when space permits; preserve a minimum `44 px` action height and avoid compressing the financial columns.
 
 Fetch budget definitions and spend projections independently. While spend is loading, keep the name, description, period, Slack state, and Edit action usable and show a local skeleton in the financial area. If only spend fails, keep the same budget details available and show an inline `Spending unavailable` state with a safe Retry action. Join the resources by category ID, never by display name.
 

@@ -22,7 +22,7 @@ Ordering is driven by **what retires the most manual effort soonest**, not by te
 |---|-------|----------------|
 | 1 | Auth foundation + expense list | Auth is the spine every screen needs; a read-only expense table is the cheapest way to prove the full magic-link flow end-to-end before any write risk exists |
 | 2 | Wallets + payday funding | The critical path — show where recorded money went, then make payday allocation and between-wallet reallocation quick. Establishes the first balance-affecting web write path |
-| 3 | Budget management (view + edit) | Already delivers category CRUD and spend-vs-cap; iteration 2 extends each budget line with its required wallet association |
+| 3 | Budget management (view + edit + manual carry-forward) | Already delivers category CRUD and spend-vs-cap; iteration 2 extends each budget line with its required wallet association, then period-specific carry-forward removes the remaining spreadsheet calculation without silently changing future caps |
 | 4 | Savings goals | Lowest frequency (checked rarely, easy to do manually); reuses iteration 2's wallet balance projection, so it lands almost for free |
 
 You could stop after **iteration 2** and have already retired the spreadsheet — that is the test of whether the ordering is right.
@@ -413,14 +413,15 @@ There is deliberately no global transfer ledger, monthly payday plan, variance e
 
 ---
 
-# Iteration 3 — Budget Management (View + Edit)
+# Iteration 3 — Budget Management (View + Edit + Manual Carry-Forward)
 
-Manages budget-line definitions and spend-vs-cap history. The category-only slice shipped before wallets; iteration 2 extends the same editor and read models with the required account association shown in the approved budget mockups.
+Manages budget-line definitions, spend-vs-cap history, and an explicit previous-period carry action. The category-only slice shipped before wallets; iteration 2 extends the same editor and read models with the required account association. The approved carry states are shown in [`budget-carry-forward-views.svg`](mockups/budget-carry-forward-views.svg).
 
 ### 3.1 Scope
 
 - View/edit/create the phase-1 `category` table as budget lines: `name`, `description`, `period`, `amount`, `active`, `slack_loggable`, and required `account_id`.
 - Spend-vs-cap view: expenses-in-period against each line's `amount`.
+- Surface the immediately previous period's unused balance or overrun in the current period, but never include it in the current allowance until a household member reviews and applies it.
 - Each budget line names one wallet/account; many lines may share one account. The account selector is required for create and edit.
 - The migration's `Default wallet` keeps existing records valid. New forms may preselect the only available account, but must show the selection explicitly in the review step.
 
@@ -438,7 +439,8 @@ Editing `description` here directly tunes phase-1 categorization (it is the LLM 
 | POST | `/api/budgets/categories` | session | Create a budget line with required `accountId` |
 | PUT | `/api/budgets/categories/{id}` | session | Full-replace edit: name/description/period/amount/slack_loggable/accountId |
 | PUT | `/api/budgets/categories/{id}/deactivate` | session | Deactivate only — the sole way `active` is ever set to `false` |
-| GET | `/api/budgets/spend?date=` | session | Spend vs. cap per line for the bucket containing `date` (defaults to today's date in Tokyo) |
+| GET | `/api/budgets/spend?date=` | session | Spend, base cap, applied carry, effective allowance, and previous-balance status per line for the bucket containing `date` (defaults to today's date in Tokyo) |
+| POST | `/api/budgets/categories/{id}/carry-forward` | session + trusted Origin | Apply the immediately previous period's signed balance to the category's current Tokyo period after stale-state validation |
 
 **Spend-vs-cap bucketing (`3.2a`).** A category's `period` is its own — WEEKLY or MONTHLY — so a single `?period=YYYY-MM` param (the original spec) can't cleanly cover weekly lines: comparing a weekly ¥3,000 cap against a full month's spend would always read as over budget. Instead, `?date=YYYY-MM-DD` (default today's date in Tokyo) is bucketed **per category**, using that category's own period. A WEEKLY line uses the ISO week (Monday–Sunday) containing `date`. A MONTHLY line uses the household payday cycle: it starts on the 25th, except a Saturday or Sunday 25th moves to the preceding Friday, and ends **exclusively** at the following month's adjusted payday. Thus July 2026 is `[2026-07-24, 2026-08-25)`: an expense at midnight on 25 August belongs to the next cycle, never both. Each spend row returns `windowStart` and the half-open `windowEndExclusive` as local ISO dates so the frontend displays the same authoritative window used by the calculation. Both layers use the shared `DEFAULT_BUDGET_ZONE` (`Asia/Tokyo`): `budgetApiRoutes` converts its injectable clock to that zone before resolving an omitted date, and `BudgetService` uses it for bucket boundaries. This makes the household's actual "today" explicit instead of inheriting the server's local zone or UTC. At household scale (a handful of budget lines), `BudgetService.spendVsCap` computes this as one small per-category loop (`listBudgets()` then `ExpenseRepository.sumAmount(categoryId, from, to)` per row) rather than one clever aggregate query — consistent with this project's general preference for deterministic, simple queries (see phase 1's iteration-8 stance on deterministic SQL over agent loops).
 
@@ -457,7 +459,55 @@ The frontend maintains **independent weekly and monthly query anchors**. Moving 
 - Unsaved-edit protection: an in-app navigation guard plus a `beforeunload` handler warn before losing dirty form state.
 - Spend-vs-cap renders as a secondary layer on the existing budget cards/table (joined by `categoryId`), not a blocking dependency — the page still renders caps if the spend query fails or is slow.
 
-### 3.4 Cross-door note
+### 3.4 Manual carry-forward model and rules
+
+`category.amount` remains the reusable **base cap**. Applying a previous balance must never update it: doing so would alter every later period and make historical comparisons even less honest. A carry is instead a signed, period-specific adjustment:
+
+- **Source balance** = source base cap + carry applied to the source period − source spending.
+- **Effective allowance** = current base cap + carry applied to the current period.
+- **Remaining** = effective allowance − current spending.
+
+Before confirmation, the source balance is only pending context and the current effective allowance equals the base cap. A positive source balance is added; a negative source balance is subtracted. A carry applied to one period participates in that period's source balance when the following period is reviewed, but each hop still requires its own button press. There is no recursive or scheduled rollover.
+
+The first version applies only the immediately previous bucket to the **current** bucket for that category. The server derives both buckets from the category cadence and `Asia/Tokyo`; weekly means the preceding Monday–Sunday window and monthly means the preceding adjusted-payday window. The request includes the `targetWindowStart` and signed `expectedAmount` shown during review. The server rejects a stale tab when the target is no longer current or the recomputed balance differs, returning a conflict that tells the member to review the refreshed values. The client never chooses an arbitrary carry amount.
+
+The carry write is idempotent. A database uniqueness constraint permits at most one carry for `(category_id, cadence, target_window_start)`, so a double tap, retry, or simultaneous household action cannot apply it twice. Repeating the same confirmed action returns the existing applied result; a conflicting request returns `409`. Zero balances, zero-cap lines (`amount = 0` means **No cap set**), inactive categories, and unknown categories are ineligible. `slack_loggable` is not an eligibility rule: it controls extraction, not budget arithmetic.
+
+An overrun may be larger than the next base cap. The signed effective allowance may therefore be zero or negative; do not clamp away the debt. In that state, `remaining` continues to use the signed formula, while the frontend omits utilization percentage and the progress bar and presents an explicit starting deficit.
+
+**Snapshot semantics.** Applying is a human-confirmed snapshot, not a live formula. Later changes to an old expense or to the category definition do not silently rewrite the applied carry amount. The persisted record retains the source cadence and exact source/target half-open windows, signed amount, source base cap, incoming source carry, source spending, applying user, and application timestamp. This preserves what was approved despite the existing limitation that category base caps themselves are not historically versioned.
+
+The Flyway migration adds `budget_carry_forward` with a category foreign key, the source and target window snapshots, the calculation snapshots, and the unique target constraint. The table is retained when a category is deactivated and is registered in pgen's table allowlist before regenerating `pgen-spec.json` and generated Exposed sources. A dedicated repository owns carry reads/inserts; the service calculates and inserts inside one flat `dbQuery` transaction. Applying a carry does **not** advance `ActiveCategoryCatalog`, because categorization configuration did not change.
+
+**Wallet invariant.** Carry-forward changes a budget allowance only. It never inserts a `money_movement`, never inserts or edits an `expense`, and never changes `category.account_id`. `AccountRepository.balance()` remains movements in minus movements out minus attributed expenses; `budget_carry_forward` must not participate in that query. Consequently, merely viewing an available carry, applying a positive carry, and applying a negative carry all leave every wallet balance and wallet transaction list unchanged.
+
+### 3.5 Carry-forward frontend
+
+The carry UI follows [`budget-carry-forward-views.svg`](mockups/budget-carry-forward-views.svg) and extends the existing `BudgetsPage.jsx` card/table rather than adding a separate route or placing carry controls in `BudgetEditor.jsx`.
+
+- **Available, not applied.** On a current-period mobile card, place a bordered supporting panel below utilization. It names the source as `LAST WEEK` or `LAST PAYDAY PERIOD`, shows `¥… unused` or `¥… over`, carries a `PENDING` label, and explicitly says the amount is not included in the current allowance. Its single full-width action is `Add ¥… to this week/period` or `Subtract ¥… from this week/period` with a minimum `44 px` height.
+- **Review.** The action opens the shared `AnimatedBottomSheet` on phones and its centered-dialog adaptation from medium widths upward. It names the budget and target window, summarizes source spend versus source allowance, and shows `Base cap`, signed `Carry`, and `New allowance`. It explicitly says this changes the budget allowance only and moves no money between wallets. `Back` is secondary; `Apply +¥…` or `Confirm −¥…` is the sole primary action.
+- **Submitting and stale data.** Disable the confirmation action and show progress while the request is pending. A stale-value `409` closes neither the context nor the member's path: refresh the spend projection, return to the reviewable current card, and explain that the previous balance changed. Other request failures stay inside the confirmation surface with Retry/Back recovery.
+- **Applied.** On success, invalidate the relevant spend queries, close the confirmation surface, announce `¥… added to/subtracted from …`, and replace the pending panel with an `APPLIED` chip plus a read-only `Base cap + Carry = Allowance` breakdown. Utilization immediately uses the effective allowance.
+- **Historical and ineligible states.** Historical views may show a previously applied carry as read-only context but never show an apply action. A zero previous balance needs no panel; a zero-cap line retains `No cap set`; a zero/negative effective allowance uses the explicit starting-deficit treatment rather than a bar or invalid percentage.
+- **Desktop.** Keep the existing grouped cadence tables. Show pending/applied carry beside Difference when it fits; only introduce a dedicated `Previous balance` column at widths where the financial columns and `44 px` actions remain comfortable. Surplus and overrun use signed text and distinct verbs, not color alone.
+- **Query ownership.** Extend the existing spend projection rather than add a second per-card request. Add one carry mutation hook whose success invalidates spend data. Definitions and spend remain independently recoverable as today; while spend is unavailable, carry state and carry actions are unavailable too, but budget details and Edit remain usable.
+
+### 3.6 Test impact
+
+Existing tests change as follows:
+
+- `BudgetServiceTest`: existing no-carry cases assert `baseCap`, zero `appliedCarry`, equal `effectiveAllowance`, and unchanged remaining; spend bucketing expectations remain the same.
+- `BudgetRoutesTest`: spend response fixtures gain carry fields; carry response/status mapping and authenticated actor propagation are covered.
+- `BudgetRoutesGuardTest`: the new unsafe endpoint rejects a missing session, missing Origin, and untrusted Origin.
+- `BudgetsPage.test.jsx`: the shared spend fixture gains carry status; cap labels become base-cap/allowance-aware; utilization assertions use effective allowance; historical copy and zero/negative allowance expectations are updated.
+- `budget-management.spec.js` and `fake-api.mjs`: the fake contract persists one carry per target and the browser flow covers available → review → applied for both responsive layouts.
+
+New persistence/service tests cover positive carry, negative carry, chained manual carry, zero/ineligible cases, adjusted-payday and weekly source boundaries, stale confirmation, idempotent retry, concurrent double submission, no silent recalculation after source-history changes, and cadence changes not leaking old carry into new windows. New frontend tests cover positive/negative copy, no request before confirmation, pending/error/retry states, applied breakdown, hidden historical action, independent weekly/monthly actions, and the zero/negative allowance treatment.
+
+One cross-feature integration test is mandatory: record a wallet balance, observe an available carry without applying it, apply a positive carry, then apply a negative carry on a second eligible period/category. After every step it asserts that the wallet balance and transaction list are identical and that the counts and contents of `money_movement` and `expense` are unchanged; only carry records and budget allowance projections may differ. A browser assertion that the sheet says “wallet unchanged” is useful UX coverage but does not replace this database-backed invariant test.
+
+### 3.7 Cross-door note
 
 Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are the **same mutation over the same data**, through the Slack door instead of the web door — they belong to phase 1's bot/intent surface (iteration 8) as a new `SlackCommand` in the dispatcher (see phase 1 appendix), not here. Both doors resolve to the same authorized write; this iteration is the web door for it.
 
@@ -473,6 +523,14 @@ Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are th
 - [x] **Iteration 2 integration:** budget reads/cards include their associated account
 - [x] **Iteration 2 integration:** create/edit/review require and persist a valid `accountId`
 - [x] **Iteration 2 integration:** changing a category account does not rewrite historical `expense.account_id`
+- [x] `budget_carry_forward` migration, constraints, pgen allowlist entry/spec, and generated Exposed table added
+- [x] Spend projection separates base cap, signed applied carry, effective allowance, remaining, and previous-balance status
+- [x] Previous-period surplus and overrun remain visible but do not affect the current allowance before confirmation
+- [x] Carry endpoint is current-period-only, stale-safe, idempotent, authenticated, Origin-protected, and records the applying user
+- [x] Mobile and desktop carry states match the approved mockup: available, review, submitting/error, and applied
+- [x] Applied carry participates in the next source calculation but never crosses another period without a new explicit action
+- [ ] Zero/no-cap, historical, deactivated, cadence-change, and zero/negative effective-allowance behavior is explicit and tested
+- [ ] Positive, negative, unapplied, repeated, and concurrent carry cases cannot change wallet balances, wallet transactions, `money_movement`, or `expense`
 
 ---
 

@@ -98,9 +98,12 @@ private val weekLabel = Regex("(?i)\\b(?:week|minggu)\\s*[-:]?\\s*(\\d+)\\b")
 private val executionHeader = Regex("(?i)^(?:eksekusi|realisasi)(?:\\b.*)?$")
 
 fun SheetTabGrid.weekLabels(): Map<Int, List<SheetCell>> = cells.mapNotNull { cell ->
-    val number = weekLabel.find(cell.display.trim())?.groupValues?.get(1)?.toIntOrNull()
+    val number = cell.weekNumber()
     number?.let { it to cell }
 }.groupBy({ it.first }, { it.second })
+
+fun SheetCell.weekNumber(): Int? =
+    weekLabel.find(display.trim())?.groupValues?.get(1)?.toIntOrNull()
 
 fun SheetDiscovery.proposalsFor(weekNumber: Int): List<WeekRangeProposal> = tabs.map { tab ->
     val labels = tab.weekLabels()

@@ -87,7 +87,10 @@ class TrainingWriteRepositoryTest : PersistenceTest() {
         val snapshot = Json.encodeToString(WriteDiscoverySnapshot("JUNDA – M1", listOf(1, 5)))
 
         val attemptId = dbQuery(db) {
-            repository.createAttempt(source, "sheet-id-12345", "JUNDA – M1", listOf(1, 5), snapshot, now)
+            repository.createAttempt(
+                source, "sheet-id-12345", "JUNDA – M1", listOf(1, 5), snapshot,
+                status = "NEEDS_WEEK", detail = null, now = now,
+            )
         }
         val stored = assertNotNull(dbQuery(db) { repository.attempt(owner, attemptId) })
 

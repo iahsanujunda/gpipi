@@ -1,16 +1,19 @@
 package me.gpipi.training.writes
 
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import java.math.BigDecimal
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlinx.coroutines.runBlocking
 import me.gpipi.support.PersistenceTest
+import me.gpipi.config.dbQuery
 import me.gpipi.training.GroupAuthoringInput
 import me.gpipi.training.PrescriptionAuthoringInput
 import me.gpipi.training.ProgramAuthoringInput
@@ -32,6 +35,7 @@ import me.gpipi.training.google.SheetValue
 import me.gpipi.training.google.SheetValueUpdate
 import me.gpipi.training.google.TrainingSheetGateway
 import me.gpipi.training.google.a1Address
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 
 class TrainingWriteServiceTest : PersistenceTest() {
     @Test
@@ -84,8 +88,14 @@ class TrainingWriteServiceTest : PersistenceTest() {
         )
 
         val started = ok(service.start(owner, sessionId, "sheet-id-12345"))
-        assertEquals("NEEDS_WEEK", started.status)
-        assertEquals(listOf(5), started.availableWeekNumbers)
+        assertEquals("NEEDS_TAB", started.status)
+        assertEquals(listOf("Full Body WO 1", "Macro Check In"), started.availableTabs.map { it.title })
+
+        val tabChosen = ok(
+            service.chooseTab(owner, java.util.UUID.fromString(started.id), "tab-101"),
+        )
+        assertEquals("NEEDS_WEEK", tabChosen.status)
+        assertEquals(listOf(5), tabChosen.availableWeekNumbers)
 
         val matched = ok(service.chooseWeek(owner, java.util.UUID.fromString(started.id), 5))
         assertEquals("REVIEW", matched.status)
@@ -120,6 +130,92 @@ class TrainingWriteServiceTest : PersistenceTest() {
         val repeated = ok(service.confirm(owner, java.util.UUID.fromString(started.id)))
         assertEquals("SUCCEEDED", repeated.status)
         assertEquals(1, gateway.batchCount)
+
+        val retry = ok(service.start(owner, sessionId, "sheet-id-12345"))
+        ok(service.chooseTab(owner, UUID.fromString(retry.id), "tab-202"))
+        val unreadable = ok(service.chooseWeek(owner, UUID.fromString(retry.id), 5))
+        assertEquals("NEEDS_TAB", unreadable.status)
+        assertEquals("No clear execution column in Macro Check In for Sheet Week 5.", unreadable.detail)
+    }
+
+    @Test
+    fun `imported workout resolves from provenance without discovery or model matching`() = runBlocking {
+        val clock = Clock.fixed(Instant.parse("2026-08-13T00:00:00Z"), ZoneOffset.UTC)
+        val owner = "U-IMPORTED-WRITE"
+        val training = TrainingService(db, TrainingRepository(), clock)
+        assertIs<ProgramCreateResult.Created>(training.createProgram(owner, programInput()))
+        val overview = found<WeekOverviewRecord>(training.overview(owner, 1))
+        val workout = overview.workouts.single()
+        val before = found<WorkoutDetailRecord>(training.workoutDetail(owner, 1, workout.workoutId))
+        val movement = before.groups.single().exercises.single()
+        training.putSet(owner, workout.weekId, movement.prescriptionId, 1, SetInput(8, null, BigDecimal("7.5"), 2, null))
+        training.finish(owner, workout.weekId)
+        val completed = found<WorkoutDetailRecord>(training.workoutDetail(owner, 1, workout.workoutId))
+        val performedMovementId = completed.groups.single().exercises.single().performedExerciseId!!
+        val sessionId = completed.session!!.id
+        val sheetLinkId = UUID.randomUUID()
+        dbQuery(db) {
+            val transaction = checkNotNull(TransactionManager.currentOrNull())
+            transaction.exec(
+                """
+                insert into sheet_link (
+                    id, program_id, spreadsheet_id, spreadsheet_title, connected_by_user_id,
+                    created_at, updated_at
+                ) values (
+                    '$sheetLinkId', '${completed.program.id}', 'sheet-id-12345', 'JUNDA – M1', '$owner',
+                    '2026-08-13T00:00:00Z', '2026-08-13T00:00:00Z'
+                )
+                """.trimIndent(),
+            )
+            transaction.exec(
+                """
+                insert into sheet_week_link (
+                    week_id, sheet_link_id, google_sheet_id, tab_title, week_start_row, week_end_row,
+                    execution_boundary_col, execution_header_address, execution_header_value,
+                    source_snapshot, source_hash
+                ) values (
+                    '${workout.weekId}', '$sheetLinkId', 101, 'Full Body WO 1', 10, 20,
+                    11, 'K10', 'Eksekusi Week 5', '{}'::jsonb, 'import-source-hash'
+                )
+                """.trimIndent(),
+            )
+            transaction.exec(
+                """
+                insert into sheet_prescription_link (
+                    prescription_id, sheet_week_id, movement_address, movement_text,
+                    source_cells, execution_cells
+                ) values (
+                    '${movement.prescriptionId}', '${workout.weekId}', 'B14', 'Romanian Deadlift',
+                    '{}'::jsonb, '[]'::jsonb
+                )
+                """.trimIndent(),
+            )
+        }
+
+        val gateway = FakeWriteSheetGateway()
+        val google = mockk<GoogleConnectionService>()
+        coEvery { google.accessToken(owner) } returns GoogleTokenResponse("access-token", 3600)
+        val matcher = mockk<TrainingWriteMatchingService>()
+        val service = TrainingWriteService(db, TrainingWriteRepository(), google, gateway, matcher, clock)
+
+        val resolved = ok(service.start(owner, sessionId))
+
+        assertEquals("RESOLVED", resolved.status)
+        assertEquals("IMPORT", resolved.matches.single().matchSource)
+        assertEquals(performedMovementId.toString(), resolved.matches.single().sourceMovementKey)
+        assertEquals("Full Body WO 1", resolved.targetTabTitle)
+        assertEquals(5, resolved.targetWeekNumber)
+        assertEquals(0, gateway.discoveryCount)
+        assertEquals(1, gateway.readCount)
+        coVerify(exactly = 0) { matcher.match(any(), any()) }
+
+        val preview = ok(service.prepare(owner, UUID.fromString(resolved.id)))
+        assertEquals("PREPARED", preview.status)
+
+        val resolvedAgain = ok(service.start(owner, sessionId))
+        val selection = ok(service.beginSelection(owner, UUID.fromString(resolvedAgain.id)))
+        assertEquals("NEEDS_TAB", selection.status)
+        assertEquals(listOf("Full Body WO 1", "Macro Check In"), selection.availableTabs.map { it.title })
     }
 
     private fun programInput() = ProgramAuthoringInput(
@@ -164,6 +260,10 @@ class TrainingWriteServiceTest : PersistenceTest() {
 private class FakeWriteSheetGateway : TrainingSheetGateway {
     var batchCount = 0
         private set
+    var discoveryCount = 0
+        private set
+    var readCount = 0
+        private set
     private val values = linkedMapOf(
         "A10" to SheetCell(10, 1, "A10", "Week 5", SheetValue("STRING", "Week 5")),
         "K10" to SheetCell(10, 11, "K10", "Eksekusi Week 5", SheetValue("STRING", "Eksekusi Week 5")),
@@ -182,8 +282,10 @@ private class FakeWriteSheetGateway : TrainingSheetGateway {
         "P14" to SheetCell(14, 16, "P14", "3", SheetValue("NUMBER", "3")),
     )
 
-    override suspend fun discover(accessToken: String, spreadsheetId: String) =
-        SheetDiscovery("JUNDA – M1", listOf(grid()))
+    override suspend fun discover(accessToken: String, spreadsheetId: String): SheetDiscovery {
+        discoveryCount++
+        return SheetDiscovery("JUNDA – M1", listOf(grid(), macroGrid()))
+    }
 
     override suspend fun readSelectedRange(
         accessToken: String,
@@ -193,7 +295,10 @@ private class FakeWriteSheetGateway : TrainingSheetGateway {
         startRow: Int,
         endRow: Int,
         executionBoundaryColumn: Int,
-    ) = grid()
+    ): SheetTabGrid {
+        readCount++
+        return grid()
+    }
 
     override suspend fun batchUpdateValues(
         accessToken: String,
@@ -221,5 +326,17 @@ private class FakeWriteSheetGateway : TrainingSheetGateway {
         rowCount = 40,
         columnCount = 20,
         cells = values.values.toList(),
+    )
+
+    private fun macroGrid() = SheetTabGrid(
+        sheetId = 202,
+        title = "Macro Check In",
+        position = 2,
+        rowCount = 40,
+        columnCount = 8,
+        cells = listOf(
+            SheetCell(3, 1, "A3", "Week 5", SheetValue("STRING", "Week 5")),
+            SheetCell(4, 1, "A4", "Body weight", SheetValue("STRING", "Body weight")),
+        ),
     )
 }

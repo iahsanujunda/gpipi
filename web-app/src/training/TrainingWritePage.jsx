@@ -18,6 +18,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { CheckIcon, SheetIcon } from '@/app/AppIcons'
 import {
   useChooseTrainingWriteWeek,
+  useBeginTrainingWriteSelection,
+  useChooseTrainingWriteTab,
   useConfirmTrainingWrite,
   useConfirmTrainingWriteMatches,
   useConnectGoogle,
@@ -96,7 +98,9 @@ function WeekChoice({ write, onChoose, pending }) {
   return (
     <Stack spacing={2.5}>
       <Stack spacing={0.5}>
-        <Typography color="text.secondary" sx={eyebrowSx}>{write.spreadsheetTitle}</Typography>
+        <Typography color="text.secondary" sx={eyebrowSx}>
+          {write.spreadsheetTitle} · {write.targetTabTitle}
+        </Typography>
         <Typography component="h1" variant="h4">Choose Sheet week</Typography>
       </Stack>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
@@ -117,6 +121,49 @@ function WeekChoice({ write, onChoose, pending }) {
           </Button>
         ))}
       </Stack>
+    </Stack>
+  )
+}
+
+function TabChoice({ write, onChoose, onChooseAnother, pending }) {
+  const [selected, setSelected] = useState('')
+  const selectedTab = write.availableTabs.find((tab) => tab.key === selected)
+
+  return (
+    <Stack spacing={2.5}>
+      <Stack spacing={0.5}>
+        <Typography color="text.secondary" sx={eyebrowSx}>{write.spreadsheetTitle}</Typography>
+        <Typography component="h1" variant="h4">Choose Sheet tab</Typography>
+      </Stack>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Chip label={`App Week ${write.sourceWeekNumber}`} />
+        <Typography color="text.secondary">→</Typography>
+        <Chip label="Sheet tab ?" />
+      </Stack>
+      {write.detail && <Alert severity="warning">{write.detail}</Alert>}
+      <Stack aria-label="Sheet tabs with week labels" spacing={1}>
+        {write.availableTabs.map((tab) => (
+          <Button
+            aria-pressed={selected === tab.key}
+            key={tab.key}
+            disabled={pending}
+            onClick={() => setSelected(tab.key)}
+            sx={{ justifyContent: 'flex-start', minHeight: 46, px: 2 }}
+            variant={selected === tab.key ? 'contained' : 'outlined'}
+          >
+            {tab.title}
+          </Button>
+        ))}
+      </Stack>
+      <Button
+        disabled={!selectedTab || pending}
+        onClick={() => onChoose(selectedTab.key)}
+        size="large"
+        variant="contained"
+      >
+        Choose week in {selectedTab?.title ?? 'tab'}
+      </Button>
+      <Button disabled={pending} onClick={onChooseAnother} variant="text">Choose another Sheet</Button>
     </Stack>
   )
 }
@@ -247,6 +294,31 @@ function MatchList({ write }) {
   )
 }
 
+function ResolvedDestination({ write, onEdit, onPreview, pending }) {
+  return (
+    <Stack spacing={2.5}>
+      <Stack spacing={0.5}>
+        <Typography color="text.secondary" sx={eyebrowSx}>Resolved from import</Typography>
+        <Typography component="h1" variant="h4">Destination</Typography>
+      </Stack>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Chip label={`App Week ${write.sourceWeekNumber}`} />
+        <Typography color="text.secondary">→</Typography>
+        <Chip color="primary" label={`Sheet Week ${write.targetWeekNumber}`} variant="outlined" />
+      </Stack>
+      <Paper sx={{ bgcolor: 'highlight.main', border: 1, borderColor: 'brandAccent.main', p: 2 }}>
+        <Typography sx={{ fontWeight: 750 }}>{write.spreadsheetTitle}</Typography>
+        <Typography color="text.secondary" variant="body2">{write.targetTabTitle}</Typography>
+      </Paper>
+      <MatchList write={write} />
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, .7fr) minmax(0, 1.4fr)', sm: 'auto minmax(220px, 1fr)' }, gap: 1.25 }}>
+        <Button disabled={pending} onClick={onEdit} size="large" variant="outlined">Edit</Button>
+        <Button disabled={pending} onClick={onPreview} size="large" variant="contained">Preview execution</Button>
+      </Box>
+    </Stack>
+  )
+}
+
 function ExecutionPreview({ write, onWrite, pending }) {
   return (
     <Stack spacing={2.5}>
@@ -369,6 +441,8 @@ export default function TrainingWritePage() {
   const destination = useTrainingWriteDestination(writeId ? null : sessionId)
   const writeQuery = useTrainingWrite(writeId)
   const start = useStartTrainingWrite()
+  const beginSelection = useBeginTrainingWriteSelection()
+  const chooseTab = useChooseTrainingWriteTab()
   const chooseWeek = useChooseTrainingWriteWeek()
   const confirmMatches = useConfirmTrainingWriteMatches()
   const prepare = usePrepareTrainingWrite()
@@ -381,7 +455,8 @@ export default function TrainingWritePage() {
   const [error, setError] = useState(null)
 
   const write = writeQuery.data
-  const pending = start.isPending || chooseWeek.isPending || confirmMatches.isPending ||
+  const pending = start.isPending || beginSelection.isPending || chooseTab.isPending ||
+    chooseWeek.isPending || confirmMatches.isPending ||
     prepare.isPending || confirm.isPending || verify.isPending
 
   const begin = useCallback(async (selectionToken = null) => {
@@ -424,6 +499,23 @@ export default function TrainingWritePage() {
       setError(cause.message)
       setMatchingWeek(null)
     }
+  }
+
+  async function selectTab(tabKey) {
+    try {
+      setError(null)
+      setMatchingWeek(null)
+      await chooseTab.mutateAsync({ writeId: write.id, tabKey })
+    } catch (cause) {
+      setError(cause.message)
+    }
+  }
+
+  function chooseDifferentSheet() {
+    setChooseAnother(true)
+    setMatchingWeek(null)
+    setError(null)
+    setSearchParams({}, { replace: true })
   }
 
   async function run(operation) {
@@ -485,6 +577,19 @@ export default function TrainingWritePage() {
   }
 
   if (!write) return <LoadingWrite />
+  if (write.status === 'NEEDS_TAB') {
+    return (
+      <>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <TabChoice
+          onChoose={selectTab}
+          onChooseAnother={chooseDifferentSheet}
+          pending={pending}
+          write={write}
+        />
+      </>
+    )
+  }
   if (write.status === 'NEEDS_WEEK') {
     if (matchingWeek) {
       return (
@@ -513,6 +618,19 @@ export default function TrainingWritePage() {
         pending={pending}
         write={write}
       />
+    )
+  }
+  if (write.status === 'RESOLVED') {
+    return (
+      <>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <ResolvedDestination
+          onEdit={() => run(() => beginSelection.mutateAsync(write.id))}
+          onPreview={() => run(() => prepare.mutateAsync(write.id))}
+          pending={pending}
+          write={write}
+        />
+      </>
     )
   }
   if (write.status === 'REVIEW') {

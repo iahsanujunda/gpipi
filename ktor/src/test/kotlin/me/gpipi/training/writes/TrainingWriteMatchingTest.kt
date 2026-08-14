@@ -14,6 +14,7 @@ class TrainingWriteMatchingTest {
         programId = UUID.randomUUID(),
         programName = "M1",
         sessionId = UUID.randomUUID(),
+        weekId = UUID.randomUUID(),
         sessionStatus = "COMPLETED",
         weekNumber = 3,
         workoutName = "Full Body 1",
@@ -89,6 +90,7 @@ class TrainingWriteMatchingTest {
 
     private fun movement(id: UUID, position: Int, name: String) = WriteSourceMovement(
         performedExerciseId = id,
+        prescriptionId = UUID.randomUUID(),
         position = position,
         groupLabel = "A",
         groupKind = "STRAIGHT_SET",

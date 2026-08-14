@@ -66,19 +66,22 @@ function detail() {
 }
 
 function write(state, overrides = {}) {
+  const choosingTab = state === 'NEEDS_TAB'
+  const choosingWeek = state === 'NEEDS_WEEK'
   return {
     id: writeId,
     sessionId,
     sourceWeekNumber: 2,
     sourceWorkoutName: 'Full Body 1',
     spreadsheetTitle: 'JUNDA – M1',
-    availableWeekNumbers: [1, 2, 3, 4, 5, 6],
-    targetWeekNumber: state === 'NEEDS_WEEK' ? null : 5,
-    targetTabTitle: state === 'NEEDS_WEEK' ? null : 'Full Body WO 1',
-    selectedTabKey: state === 'NEEDS_WEEK' ? null : 'tab-101',
+    availableWeekNumbers: choosingTab ? [] : [1, 2, 3, 4, 5, 6],
+    targetWeekNumber: choosingTab || choosingWeek ? null : 5,
+    targetTabTitle: choosingTab ? null : 'Full Body WO 1',
+    selectedTabKey: choosingTab ? null : 'tab-101',
     status: state,
     detail: null,
-    candidateTabs: state === 'NEEDS_WEEK' ? [] : [{
+    availableTabs: [{ key: 'tab-101', title: 'Full Body WO 1' }, { key: 'tab-202', title: 'Macro Check In' }],
+    candidateTabs: choosingTab || choosingWeek ? [] : [{
       key: 'tab-101',
       title: 'Full Body WO 1',
       rows: [
@@ -87,22 +90,22 @@ function write(state, overrides = {}) {
         { address: 'B18', text: 'Full plank' },
       ],
     }],
-    matches: state === 'NEEDS_WEEK' ? [] : [{
+    matches: choosingTab || choosingWeek ? [] : [{
       sourceMovementKey: rdlId,
       sourceName: 'Barbell RDL',
       sourcePosition: 1,
       sheetMovementAddress: 'B14',
       sheetMovementText: 'Romanian Deadlift',
-      matchSource: 'MODEL',
-      confirmed: state !== 'REVIEW',
+      matchSource: state === 'RESOLVED' ? 'IMPORT' : 'MODEL',
+      confirmed: state !== 'REVIEW' || state === 'RESOLVED',
     }, {
       sourceMovementKey: holdId,
       sourceName: 'Hollow hold',
       sourcePosition: 2,
       sheetMovementAddress: state === 'REVIEW' ? null : 'B15',
       sheetMovementText: state === 'REVIEW' ? null : 'Hollow body hold',
-      matchSource: state === 'REVIEW' ? null : 'MANUAL',
-      confirmed: state !== 'REVIEW',
+      matchSource: state === 'RESOLVED' ? 'IMPORT' : state === 'REVIEW' ? null : 'MANUAL',
+      confirmed: state !== 'REVIEW' || state === 'RESOLVED',
     }],
     preview: ['PREPARED', 'SUCCEEDED'].includes(state) ? [{
       sourceMovementKey: rdlId,
@@ -140,6 +143,7 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 test('a completed workout without a linked Sheet uses the app-owned Sheet selector', async ({ page }) => {
+  let current = write('NEEDS_TAB')
   await page.route(`**/api/training/weeks/2/workouts/${workoutId}`, (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify(detail()),
   }))
@@ -156,18 +160,29 @@ test('a completed workout without a linked Sheet uses the app-owned Sheet select
   }))
   await page.route(`**/api/training/sessions/${sessionId}/writes`, async (route) => {
     expect(await route.request().postDataJSON()).toEqual({ selectionToken: 'opaque-sheet-token' })
-    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(write('NEEDS_WEEK')) })
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(current) })
+  })
+  await page.route(`**/api/training/writes/${writeId}`, (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify(current),
+  }))
+  await page.route(`**/api/training/writes/${writeId}/tab`, async (route) => {
+    expect(await route.request().postDataJSON()).toEqual({ tabKey: 'tab-101' })
+    current = write('NEEDS_WEEK')
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(current) })
   })
 
   await page.goto(`/training/weeks/2/workouts/${workoutId}/write`)
 
   await expect(page.getByRole('heading', { name: 'Choose a Sheet' })).toBeVisible()
   await page.getByRole('button', { name: 'Choose JUNDA – M1' }).click()
+  await expect(page.getByRole('heading', { name: 'Choose Sheet tab' })).toBeVisible()
+  await page.getByRole('button', { name: 'Full Body WO 1' }).click()
+  await page.getByRole('button', { name: 'Choose week in Full Body WO 1' }).click()
   await expect(page.getByRole('heading', { name: 'Choose Sheet week' })).toBeVisible()
 })
 
 test('completed workout writes one chosen Sheet week through correction, exact preview, and verification', async ({ page }) => {
-  let current = write('NEEDS_WEEK')
+  let current = write('NEEDS_TAB')
 
   await page.route(`**/api/training/weeks/2/workouts/${workoutId}`, (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify(detail()),
@@ -182,6 +197,11 @@ test('completed workout writes one chosen Sheet week through correction, exact p
   await page.route(`**/api/training/writes/${writeId}`, (route) => route.fulfill({
     contentType: 'application/json', body: JSON.stringify(current),
   }))
+  await page.route(`**/api/training/writes/${writeId}/tab`, async (route) => {
+    expect(await route.request().postDataJSON()).toEqual({ tabKey: 'tab-101' })
+    current = write('NEEDS_WEEK')
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(current) })
+  })
   await page.route(`**/api/training/writes/${writeId}/week`, async (route) => {
     expect(await route.request().postDataJSON()).toEqual({ weekNumber: 5 })
     current = write('REVIEW')
@@ -210,6 +230,10 @@ test('completed workout writes one chosen Sheet week through correction, exact p
   })
 
   await page.goto(`/training/weeks/2/workouts/${workoutId}/write`)
+  await expect(page.getByRole('heading', { name: 'Choose Sheet tab' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Macro Check In' })).toBeVisible()
+  await page.getByRole('button', { name: 'Full Body WO 1' }).click()
+  await page.getByRole('button', { name: 'Choose week in Full Body WO 1' }).click()
   await expect(page.getByRole('heading', { name: 'Choose Sheet week' })).toBeVisible()
   await page.getByRole('button', { name: 'Week 5' }).click()
 
@@ -234,6 +258,59 @@ test('completed workout writes one chosen Sheet week through correction, exact p
 
   await page.getByRole('button', { name: 'Finish' }).click()
   await expect(page).toHaveURL(/\/training$/)
+})
+
+test('an imported workout resolves its destination without Sheet, tab, week, or model selection', async ({ page }) => {
+  let current = write('RESOLVED')
+  await page.route(`**/api/training/weeks/2/workouts/${workoutId}`, (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify(detail()),
+  }))
+  await page.route(`**/api/training/sessions/${sessionId}/write-destination`, (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ sessionId, linkedSheetTitle: 'JUNDA – M1', googleConnected: true }),
+  }))
+  await page.route(`**/api/training/sessions/${sessionId}/writes`, (route) => route.fulfill({
+    status: 201, contentType: 'application/json', body: JSON.stringify(current),
+  }))
+  await page.route(`**/api/training/writes/${writeId}`, (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify(current),
+  }))
+  await page.route(`**/api/training/writes/${writeId}/preview`, (route) => {
+    current = write('PREPARED')
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(current) })
+  })
+
+  await page.goto(`/training/weeks/2/workouts/${workoutId}/write`)
+
+  await expect(page.getByText('Resolved from import')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Destination' })).toBeVisible()
+  await expect(page.getByText('→ Romanian Deadlift · B14')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Choose a Sheet' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Choose Sheet tab' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Choose Sheet week' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Preview execution' }).click()
+  await expect(page.getByRole('heading', { name: 'Review execution' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
+test('Edit on a resolved destination enters tab-first selection', async ({ page }) => {
+  let current = write('RESOLVED')
+  await page.route(`**/api/training/weeks/2/workouts/${workoutId}`, (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify(detail()),
+  }))
+  await page.route(`**/api/training/writes/${writeId}`, (route) => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify(current),
+  }))
+  await page.route(`**/api/training/writes/${writeId}/selection`, (route) => {
+    current = write('NEEDS_TAB')
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(current) })
+  })
+
+  await page.goto(`/training/weeks/2/workouts/${workoutId}/write?attempt=${writeId}`)
+  await page.getByRole('button', { name: 'Edit' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Choose Sheet tab' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Macro Check In' })).toBeVisible()
 })
 
 test('structural drift stops the write and offers a fresh Sheet scan', async ({ page }) => {

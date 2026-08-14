@@ -281,6 +281,20 @@ export function useChooseTrainingWriteWeek() {
   ))
 }
 
+export function useBeginTrainingWriteSelection() {
+  return useTrainingWriteMutation((writeId) => apiFetch(
+    `/api/training/writes/${writeId}/selection`,
+    { method: 'POST' },
+  ))
+}
+
+export function useChooseTrainingWriteTab() {
+  return useTrainingWriteMutation(({ writeId, tabKey }) => apiFetch(
+    `/api/training/writes/${writeId}/tab`,
+    { method: 'PUT', body: { tabKey } },
+  ))
+}
+
 export function useConfirmTrainingWriteMatches() {
   return useTrainingWriteMutation(({ writeId, tabKey, movements }) => apiFetch(
     `/api/training/writes/${writeId}/matches`,

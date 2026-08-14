@@ -13,6 +13,7 @@ data class WriteSource(
     val programId: UUID,
     val programName: String,
     val sessionId: UUID,
+    val weekId: UUID,
     val sessionStatus: String,
     val weekNumber: Int,
     val workoutName: String,
@@ -22,6 +23,7 @@ data class WriteSource(
 
 data class WriteSourceMovement(
     val performedExerciseId: UUID,
+    val prescriptionId: UUID,
     val position: Int,
     val groupLabel: String,
     val groupKind: String,
@@ -50,6 +52,16 @@ data class WriteSourceSet(
 @Serializable
 data class WriteDiscoverySnapshot(
     val spreadsheetTitle: String,
+    val availableWeekNumbers: List<Int> = emptyList(),
+    val tabs: List<WriteDiscoveryTab> = emptyList(),
+)
+
+@Serializable
+data class WriteDiscoveryTab(
+    val key: String,
+    val googleSheetId: Long,
+    val title: String,
+    val position: Int,
     val availableWeekNumbers: List<Int>,
 )
 
@@ -141,8 +153,44 @@ data class WriteMatchMovementOutput(
 @Serializable
 data class WriteMatchingSnapshot(
     val candidates: List<WriteCandidateTab>,
-    val input: WriteMatchPayload,
+    val input: WriteMatchPayload? = null,
     val output: WriteMatchOutput,
+    val provenance: WriteResolvedProvenanceSnapshot? = null,
+)
+
+@Serializable
+data class WriteResolvedProvenanceSnapshot(
+    val tabTitle: String,
+    val googleSheetId: Long,
+    val startRow: Int,
+    val endRow: Int,
+    val sourceHash: String,
+)
+
+data class WriteImportProvenance(
+    val spreadsheetId: String,
+    val spreadsheetTitle: String,
+    val googleSheetId: Long,
+    val tabTitle: String,
+    val startRow: Int,
+    val endRow: Int,
+    val executionBoundaryColumn: Int,
+    val executionHeaderAddress: String,
+    val executionHeaderValue: String,
+    val sourceHash: String,
+    val movements: List<WriteImportMovementProvenance>,
+)
+
+data class WriteImportProvenanceLookup(
+    val provenance: WriteImportProvenance? = null,
+    val resolutionFailure: String? = null,
+)
+
+data class WriteImportMovementProvenance(
+    val performedExerciseId: UUID,
+    val position: Int,
+    val movementAddress: String,
+    val movementText: String,
 )
 
 data class WriteAttemptRecord(
@@ -229,6 +277,9 @@ data class StartTrainingWriteRequest(val selectionToken: String? = null)
 data class ChooseTrainingWriteWeekRequest(val weekNumber: Int)
 
 @Serializable
+data class ChooseTrainingWriteTabRequest(val tabKey: String)
+
+@Serializable
 data class ConfirmTrainingWriteMatchesRequest(
     val tabKey: String,
     val movements: List<ConfirmedTrainingWriteMovement>,
@@ -258,6 +309,12 @@ data class TrainingWriteCandidateTabResponse(
     val key: String,
     val title: String,
     val rows: List<TrainingWriteCandidateRowResponse>,
+)
+
+@Serializable
+data class TrainingWriteTabResponse(
+    val key: String,
+    val title: String,
 )
 
 @Serializable
@@ -302,6 +359,7 @@ data class TrainingWriteResponse(
     val selectedTabKey: String? = null,
     val status: String,
     val detail: String? = null,
+    val availableTabs: List<TrainingWriteTabResponse> = emptyList(),
     val candidateTabs: List<TrainingWriteCandidateTabResponse> = emptyList(),
     val matches: List<TrainingWriteMatchResponse> = emptyList(),
     val preview: List<TrainingWritePreviewMovementResponse> = emptyList(),

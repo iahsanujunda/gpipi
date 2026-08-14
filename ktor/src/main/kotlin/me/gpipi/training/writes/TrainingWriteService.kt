@@ -13,12 +13,15 @@ import me.gpipi.training.google.GoogleConnectionService
 import me.gpipi.training.google.GoogleIntegrationException
 import me.gpipi.training.google.GoogleSheetWriteRejectedException
 import me.gpipi.training.google.SheetCell
+import me.gpipi.training.google.SheetDiscovery
 import me.gpipi.training.google.SheetTabGrid
 import me.gpipi.training.google.SheetValue
 import me.gpipi.training.google.SheetValueUpdate
 import me.gpipi.training.google.TrainingSheetGateway
 import me.gpipi.training.google.WeekRangeProposal
 import me.gpipi.training.google.proposalsFor
+import me.gpipi.training.google.weekLabels
+import me.gpipi.training.google.weekNumber
 import org.jetbrains.exposed.v1.jdbc.Database
 
 class TrainingWriteService(
@@ -60,23 +63,54 @@ class TrainingWriteService(
         if (source.sessionStatus != "COMPLETED") {
             return TrainingWriteResult.Conflict("Finish this workout before writing it to Google Sheets.")
         }
-        val linked = dbQuery(db) { repository.linkedSheet(ownerUserId, source.programId) }
-        val spreadsheetId = selectedSpreadsheetId ?: linked?.first
-            ?: return TrainingWriteResult.Invalid("Choose a Google Sheet for this workout.")
         return try {
             val access = google.accessToken(ownerUserId)
-            val discovery = sheets.discover(access.accessToken, spreadsheetId)
-            if (discovery.weekNumbers.isEmpty()) {
+            if (selectedSpreadsheetId == null) {
+                val lookup = dbQuery(db) { repository.importProvenance(source) }
+                val provenance = lookup.provenance
+                if (provenance != null) {
+                    try {
+                        return resolveImported(source, provenance, access.accessToken)
+                    } catch (ex: IllegalArgumentException) {
+                        return startSelection(source, access.accessToken, provenance.spreadsheetId, ex.message)
+                    }
+                }
+                if (lookup.resolutionFailure != null) {
+                    val linked = dbQuery(db) { repository.linkedSheet(ownerUserId, source.programId) }
+                        ?: return TrainingWriteResult.Invalid("Choose a Google Sheet for this workout.")
+                    return startSelection(source, access.accessToken, linked.first, lookup.resolutionFailure)
+                }
+            }
+            val linked = dbQuery(db) { repository.linkedSheet(ownerUserId, source.programId) }
+            val spreadsheetId = selectedSpreadsheetId ?: linked?.first
+                ?: return TrainingWriteResult.Invalid("Choose a Google Sheet for this workout.")
+            startSelection(source, access.accessToken, spreadsheetId, null)
+        } catch (ex: GoogleIntegrationException) {
+            TrainingWriteResult.Unavailable(ex.message.orEmpty())
+        }
+    }
+
+    suspend fun beginSelection(
+        ownerUserId: String,
+        attemptId: UUID,
+    ): TrainingWriteResult<TrainingWriteResponse> {
+        val attempt = dbQuery(db) { repository.attempt(ownerUserId, attemptId) }
+            ?: return TrainingWriteResult.NotFound
+        if (attempt.status != "RESOLVED") {
+            return TrainingWriteResult.Conflict("Only a resolved import destination can be edited in place.")
+        }
+        return try {
+            val access = google.accessToken(ownerUserId)
+            val discovery = sheets.discover(access.accessToken, attempt.spreadsheetId)
+            val snapshot = discoverySnapshot(discovery)
+            if (snapshot.tabs.isEmpty()) {
                 return TrainingWriteResult.Invalid("No visible Week or Minggu labels were found in this Sheet.")
             }
-            val snapshot = WriteDiscoverySnapshot(discovery.spreadsheetTitle, discovery.weekNumbers)
-            val attemptId = dbQuery(db) {
-                repository.createAttempt(
-                    source = source,
-                    spreadsheetId = spreadsheetId,
-                    spreadsheetTitle = discovery.spreadsheetTitle,
-                    availableWeeks = discovery.weekNumbers,
+            dbQuery(db) {
+                repository.resetSelection(
+                    attemptId = attemptId,
                     discoverySnapshot = json.encodeToString(snapshot),
+                    detail = null,
                     now = now(),
                 )
             }
@@ -84,6 +118,24 @@ class TrainingWriteService(
         } catch (ex: GoogleIntegrationException) {
             TrainingWriteResult.Unavailable(ex.message.orEmpty())
         }
+    }
+
+    suspend fun chooseTab(
+        ownerUserId: String,
+        attemptId: UUID,
+        tabKey: String,
+    ): TrainingWriteResult<TrainingWriteResponse> {
+        val attempt = dbQuery(db) { repository.attempt(ownerUserId, attemptId) }
+            ?: return TrainingWriteResult.NotFound
+        if (attempt.status != "NEEDS_TAB") {
+            return TrainingWriteResult.Conflict("Start a new destination selection before changing the Sheet tab.")
+        }
+        val snapshot = decodeDiscovery(attempt)
+            ?: return TrainingWriteResult.Invalid("The Sheet tab list is missing. Scan the Sheet again.")
+        val tab = snapshot.tabs.singleOrNull { it.key == tabKey }
+            ?: return TrainingWriteResult.Invalid("Choose one of the scanned Sheet tabs.")
+        dbQuery(db) { repository.chooseTab(attemptId, tab, now()) }
+        return get(ownerUserId, attemptId)
     }
 
     suspend fun chooseWeek(
@@ -106,37 +158,47 @@ class TrainingWriteService(
             dbQuery(db) { repository.beginMatching(attemptId, weekNumber, now()) }
             val access = google.accessToken(ownerUserId)
             val discovery = sheets.discover(access.accessToken, attempt.spreadsheetId)
-            if (weekNumber !in discovery.weekNumbers) {
-                dbQuery(db) { repository.transition(attemptId, "NEEDS_WEEK", "Sheet Week $weekNumber is no longer available.", now()) }
-                return TrainingWriteResult.Invalid("Sheet Week $weekNumber is no longer available. Scan the Sheet again.")
+            val selectedTab = discovery.tabs.singleOrNull { it.sheetId == attempt.targetGoogleSheetId }
+            if (selectedTab == null) {
+                val snapshot = discoverySnapshot(discovery)
+                dbQuery(db) {
+                    repository.resetSelection(
+                        attemptId, json.encodeToString(snapshot), "The selected Sheet tab is no longer available.", now(),
+                    )
+                }
+                return get(ownerUserId, attemptId)
             }
-            val proposals = discovery.proposalsFor(weekNumber).filter(WeekRangeProposal::present)
-            if (proposals.isEmpty()) {
+            if (weekNumber !in selectedTab.weekLabels().keys) {
+                dbQuery(db) { repository.transition(attemptId, "NEEDS_WEEK", "Sheet Week $weekNumber is no longer available.", now()) }
+                return TrainingWriteResult.Invalid("Sheet Week $weekNumber is no longer available in ${selectedTab.title}.")
+            }
+            val proposal = discovery.proposalsFor(weekNumber).singleOrNull {
+                it.present && it.sheetId == selectedTab.sheetId
+            }
+            if (proposal == null) {
                 return matchingFailure(attemptId, "No workout range was found for Sheet Week $weekNumber.")
             }
-            val ambiguous = proposals.firstOrNull {
-                it.boundaryAmbiguous || it.startRow == null || it.endRow == null ||
-                    it.executionBoundaryColumn == null || it.executionHeaderAddress == null ||
-                    it.weekHeaderAddress == null
+            if (proposal.boundaryAmbiguous || proposal.startRow == null || proposal.endRow == null ||
+                proposal.executionBoundaryColumn == null || proposal.executionHeaderAddress == null ||
+                proposal.weekHeaderAddress == null
+            ) {
+                val message = "No clear execution column in ${proposal.tabTitle} for Sheet Week $weekNumber."
+                val snapshot = discoverySnapshot(discovery)
+                dbQuery(db) {
+                    repository.resetSelection(attemptId, json.encodeToString(snapshot), message, now())
+                }
+                return get(ownerUserId, attemptId)
             }
-            if (ambiguous != null) {
-                return matchingFailure(
-                    attemptId,
-                    "${ambiguous.tabTitle} does not have one clear execution boundary for Sheet Week $weekNumber.",
-                )
-            }
-            val candidates = proposals.map { proposal ->
-                val grid = sheets.readSelectedRange(
-                    accessToken = access.accessToken,
-                    spreadsheetId = attempt.spreadsheetId,
-                    sheetId = proposal.sheetId,
-                    tabTitle = proposal.tabTitle,
-                    startRow = checkNotNull(proposal.startRow),
-                    endRow = checkNotNull(proposal.endRow),
-                    executionBoundaryColumn = checkNotNull(proposal.executionBoundaryColumn),
-                )
-                candidate(proposal, grid)
-            }
+            val grid = sheets.readSelectedRange(
+                accessToken = access.accessToken,
+                spreadsheetId = attempt.spreadsheetId,
+                sheetId = proposal.sheetId,
+                tabTitle = proposal.tabTitle,
+                startRow = checkNotNull(proposal.startRow),
+                endRow = checkNotNull(proposal.endRow),
+                executionBoundaryColumn = checkNotNull(proposal.executionBoundaryColumn),
+            )
+            val candidates = listOf(candidate(proposal, grid))
             val matched = matcher.match(source, candidates)
             val selected = matched.output.matchedTabKey?.let { key -> candidates.single { it.key == key } }
             val proposed = if (selected == null) emptyList() else matched.output.movements.mapNotNull { result ->
@@ -251,7 +313,7 @@ class TrainingWriteService(
     ): TrainingWriteResult<TrainingWriteResponse> {
         val attempt = dbQuery(db) { repository.attempt(ownerUserId, attemptId) }
             ?: return TrainingWriteResult.NotFound
-        if (attempt.status != "REVIEW") {
+        if (attempt.status !in setOf("REVIEW", "RESOLVED")) {
             return TrainingWriteResult.Conflict("Review every match before previewing execution.")
         }
         val source = dbQuery(db) { repository.source(ownerUserId, attempt.sessionId) }
@@ -398,6 +460,7 @@ class TrainingWriteService(
         val storedMovements = dbQuery(db) { repository.movements(attemptId) }
         val storedBySource = storedMovements.associateBy(WriteMovementRecord::performedExerciseId)
         val snapshot = decodeMatching(attempt)
+        val discovery = decodeDiscovery(attempt)
         val candidateTabs = snapshot?.candidates.orEmpty().map { candidate ->
             TrainingWriteCandidateTabResponse(
                 key = candidate.key,
@@ -422,9 +485,14 @@ class TrainingWriteService(
                 targetTabTitle = attempt.targetTabTitle,
                 selectedTabKey = snapshot?.candidates?.singleOrNull {
                     it.googleSheetId == attempt.targetGoogleSheetId
+                }?.key ?: discovery?.tabs?.singleOrNull {
+                    it.googleSheetId == attempt.targetGoogleSheetId
                 }?.key,
                 status = attempt.status,
                 detail = attempt.detail,
+                availableTabs = discovery?.tabs.orEmpty().map {
+                    TrainingWriteTabResponse(key = it.key, title = it.title)
+                },
                 candidateTabs = candidateTabs,
                 matches = source.movements.map { movement ->
                     val stored = storedBySource[movement.performedExerciseId]
@@ -463,6 +531,169 @@ class TrainingWriteService(
             ),
         )
     }
+
+    private suspend fun startSelection(
+        source: WriteSource,
+        accessToken: String,
+        spreadsheetId: String,
+        detail: String?,
+    ): TrainingWriteResult<TrainingWriteResponse> {
+        val discovery = sheets.discover(accessToken, spreadsheetId)
+        val snapshot = discoverySnapshot(discovery)
+        if (snapshot.tabs.isEmpty()) {
+            return TrainingWriteResult.Invalid("No visible Week or Minggu labels were found in this Sheet.")
+        }
+        val attemptId = dbQuery(db) {
+            repository.createAttempt(
+                source = source,
+                spreadsheetId = spreadsheetId,
+                spreadsheetTitle = discovery.spreadsheetTitle,
+                availableWeeks = emptyList(),
+                discoverySnapshot = json.encodeToString(snapshot),
+                status = "NEEDS_TAB",
+                detail = detail,
+                now = now(),
+            )
+        }
+        return get(source.ownerUserId, attemptId)
+    }
+
+    private suspend fun resolveImported(
+        source: WriteSource,
+        provenance: WriteImportProvenance,
+        accessToken: String,
+    ): TrainingWriteResult<TrainingWriteResponse> {
+        require(provenance.movements.size == source.movements.size) {
+            "A workout movement no longer has an imported Sheet row."
+        }
+        require(provenance.movements.map(WriteImportMovementProvenance::movementAddress).distinct().size ==
+            provenance.movements.size
+        ) { "Two workout movements point to the same imported Sheet row." }
+        val grid = sheets.readSelectedRange(
+            accessToken = accessToken,
+            spreadsheetId = provenance.spreadsheetId,
+            sheetId = provenance.googleSheetId,
+            tabTitle = provenance.tabTitle,
+            startRow = provenance.startRow,
+            endRow = provenance.endRow,
+            executionBoundaryColumn = provenance.executionBoundaryColumn,
+        )
+        require(grid.sheetId == provenance.googleSheetId) { "The imported Sheet tab is no longer available." }
+        val weekHeader = grid.cells
+            .filter {
+                it.row in provenance.startRow..provenance.endRow &&
+                    it.column < provenance.executionBoundaryColumn && it.weekNumber() != null
+            }
+            .minWithOrNull(compareBy(SheetCell::row, SheetCell::column))
+            ?: throw IllegalArgumentException("The imported Sheet range no longer has a Week or Minggu label.")
+        val targetWeek = checkNotNull(weekHeader.weekNumber())
+        val proposal = WeekRangeProposal(
+            sheetId = provenance.googleSheetId,
+            tabTitle = provenance.tabTitle,
+            tabPosition = grid.position,
+            present = true,
+            startRow = provenance.startRow,
+            endRow = provenance.endRow,
+            weekHeaderAddress = weekHeader.address,
+            weekHeaderValue = weekHeader.display,
+            executionBoundaryColumn = provenance.executionBoundaryColumn,
+            executionHeaderAddress = provenance.executionHeaderAddress,
+            executionHeaderValue = provenance.executionHeaderValue,
+            boundaryAmbiguous = false,
+        )
+        val candidate = candidate(proposal, grid)
+        val movements = provenance.movements.map { movement ->
+            WriteMovementRecord(
+                id = UUID.randomUUID(),
+                performedExerciseId = movement.performedExerciseId,
+                position = movement.position,
+                sheetMovementAddress = movement.movementAddress,
+                sheetMovementText = movement.movementText,
+                matchSource = "IMPORT",
+                confirmed = true,
+            )
+        }
+        validateAnchors(candidate, movements, grid)
+        val output = WriteMatchOutput(
+            matchedTabKey = candidate.key,
+            movements = movements.map { movement ->
+                WriteMatchMovementOutput(
+                    sourceMovementKey = movement.performedExerciseId.toString(),
+                    sheetMovementAddress = movement.sheetMovementAddress,
+                    sheetMovementText = movement.sheetMovementText,
+                )
+            },
+        )
+        val matchingSnapshot = WriteMatchingSnapshot(
+            candidates = listOf(candidate),
+            output = output,
+            provenance = WriteResolvedProvenanceSnapshot(
+                tabTitle = provenance.tabTitle,
+                googleSheetId = provenance.googleSheetId,
+                startRow = provenance.startRow,
+                endRow = provenance.endRow,
+                sourceHash = provenance.sourceHash,
+            ),
+        )
+        val serializedMatching = json.encodeToString(matchingSnapshot)
+        val discovery = WriteDiscoverySnapshot(
+            spreadsheetTitle = provenance.spreadsheetTitle,
+            availableWeekNumbers = listOf(targetWeek),
+            tabs = listOf(
+                WriteDiscoveryTab(
+                    key = candidate.key,
+                    googleSheetId = provenance.googleSheetId,
+                    title = provenance.tabTitle,
+                    position = grid.position,
+                    availableWeekNumbers = listOf(targetWeek),
+                ),
+            ),
+        )
+        val attemptId = dbQuery(db) {
+            val created = repository.createAttempt(
+                source = source,
+                spreadsheetId = provenance.spreadsheetId,
+                spreadsheetTitle = provenance.spreadsheetTitle,
+                availableWeeks = listOf(targetWeek),
+                discoverySnapshot = json.encodeToString(discovery),
+                status = "SCANNING",
+                detail = null,
+                now = now(),
+            )
+            repository.saveResolved(
+                attemptId = created,
+                targetWeek = targetWeek,
+                candidate = candidate,
+                snapshot = serializedMatching,
+                sourceHash = provenance.sourceHash,
+                movements = movements,
+                now = now(),
+            )
+            created
+        }
+        return get(source.ownerUserId, attemptId)
+    }
+
+    private fun discoverySnapshot(discovery: SheetDiscovery): WriteDiscoverySnapshot {
+        val tabs = discovery.tabs.mapNotNull { tab ->
+            val weeks = tab.weekLabels().keys.sorted()
+            if (weeks.isEmpty()) null else WriteDiscoveryTab(
+                key = "tab-${tab.sheetId}",
+                googleSheetId = tab.sheetId,
+                title = tab.title,
+                position = tab.position,
+                availableWeekNumbers = weeks,
+            )
+        }.sortedBy(WriteDiscoveryTab::position)
+        return WriteDiscoverySnapshot(
+            spreadsheetTitle = discovery.spreadsheetTitle,
+            availableWeekNumbers = tabs.flatMap(WriteDiscoveryTab::availableWeekNumbers).distinct().sorted(),
+            tabs = tabs,
+        )
+    }
+
+    private fun decodeDiscovery(attempt: WriteAttemptRecord): WriteDiscoverySnapshot? =
+        runCatching { json.decodeFromString(WriteDiscoverySnapshot.serializer(), attempt.discoverySnapshot) }.getOrNull()
 
     private suspend fun verifyAfterSend(
         ownerUserId: String,

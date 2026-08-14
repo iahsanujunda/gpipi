@@ -54,6 +54,19 @@ fun Route.trainingWriteApiRoutes(
             call.respondWrite(writes.get(actor, write))
         }
 
+        post("/writes/{writeId}/selection") {
+            val actor = call.writeActorId() ?: return@post
+            val write = call.writeUuid("writeId") ?: return@post
+            call.respondWrite(writes.beginSelection(actor, write))
+        }
+
+        put("/writes/{writeId}/tab") {
+            val actor = call.writeActorId() ?: return@put
+            val write = call.writeUuid("writeId") ?: return@put
+            val request = call.receive<ChooseTrainingWriteTabRequest>()
+            call.respondWrite(writes.chooseTab(actor, write, request.tabKey))
+        }
+
         put("/writes/{writeId}/week") {
             val actor = call.writeActorId() ?: return@put
             val write = call.writeUuid("writeId") ?: return@put

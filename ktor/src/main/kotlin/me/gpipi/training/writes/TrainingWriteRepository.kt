@@ -22,7 +22,8 @@ class TrainingWriteRepository(
         val header = rows(
             """
             select p.id as program_id, p.name as program_name, s.id as session_id,
-                   s.status, s.execution_updated_at, ww.week_number, w.name as workout_name
+                   s.status, s.execution_updated_at, ww.id as week_id, ww.week_number,
+                   w.name as workout_name
             from training_session s
             join workout_week ww on ww.id = s.week_id
             join workout w on w.id = ww.workout_id
@@ -35,6 +36,7 @@ class TrainingWriteRepository(
                 programId = rs.getObject("program_id", UUID::class.java),
                 programName = rs.getString("program_name"),
                 sessionId = rs.getObject("session_id", UUID::class.java),
+                weekId = rs.getObject("week_id", UUID::class.java),
                 status = rs.getString("status"),
                 executionUpdatedAt = rs.getObject("execution_updated_at", OffsetDateTime::class.java),
                 weekNumber = rs.getInt("week_number"),
@@ -44,7 +46,7 @@ class TrainingWriteRepository(
 
         val movements = rows(
             """
-            select pe.id, pe.position, pe.target_group_label, pe.target_group_kind,
+            select pe.id, pe.prescription_id, pe.position, pe.target_group_label, pe.target_group_kind,
                    pe.target_exercise_name, pe.target_execution_type, pe.target_sets,
                    pe.target_rest, pe.target_reps, pe.target_load, pe.target_rir,
                    pe.target_tempo, pe.target_note
@@ -56,6 +58,7 @@ class TrainingWriteRepository(
         ) { rs ->
             WriteSourceMovement(
                 performedExerciseId = rs.getObject("id", UUID::class.java),
+                prescriptionId = rs.getObject("prescription_id", UUID::class.java),
                 position = rs.getInt("position"),
                 groupLabel = rs.getString("target_group_label"),
                 groupKind = rs.getString("target_group_kind"),
@@ -97,6 +100,7 @@ class TrainingWriteRepository(
             programId = header.programId,
             programName = header.programName,
             sessionId = header.sessionId,
+            weekId = header.weekId,
             sessionStatus = header.status,
             weekNumber = header.weekNumber,
             workoutName = header.workoutName,
@@ -115,28 +119,174 @@ class TrainingWriteRepository(
         listOf(uuid(programId), text(ownerUserId)),
     ) { it.getString("spreadsheet_id") to it.getString("spreadsheet_title") }.singleOrNull()
 
+    fun importProvenance(source: WriteSource): WriteImportProvenanceLookup {
+        val header = rows(
+            """
+            select sl.spreadsheet_id, sl.spreadsheet_title, swl.google_sheet_id, swl.tab_title,
+                   swl.week_start_row, swl.week_end_row, swl.execution_boundary_col,
+                   swl.execution_header_address, swl.execution_header_value, swl.source_hash
+            from sheet_week_link swl
+            join sheet_link sl on sl.id = swl.sheet_link_id
+            join program p on p.id = sl.program_id
+            where swl.week_id = ? and sl.program_id = ? and p.owner_user_id = ?
+            """.trimIndent(),
+            listOf(uuid(source.weekId), uuid(source.programId), text(source.ownerUserId)),
+        ) { rs ->
+            WriteImportProvenance(
+                spreadsheetId = rs.getString("spreadsheet_id"),
+                spreadsheetTitle = rs.getString("spreadsheet_title"),
+                googleSheetId = rs.getLong("google_sheet_id"),
+                tabTitle = rs.getString("tab_title"),
+                startRow = rs.getInt("week_start_row"),
+                endRow = rs.getInt("week_end_row"),
+                executionBoundaryColumn = rs.getInt("execution_boundary_col"),
+                executionHeaderAddress = rs.getString("execution_header_address"),
+                executionHeaderValue = rs.getString("execution_header_value"),
+                sourceHash = rs.getString("source_hash"),
+                movements = emptyList(),
+            )
+        }.singleOrNull() ?: return WriteImportProvenanceLookup()
+        val linked = rows(
+            """
+            select pe.id as performed_exercise_id, pe.position, spl.sheet_week_id,
+                   spl.movement_address, spl.movement_text
+            from performed_exercise pe
+            left join sheet_prescription_link spl on spl.prescription_id = pe.prescription_id
+            where pe.session_id = ?
+            order by pe.position
+            """.trimIndent(),
+            listOf(uuid(source.sessionId)),
+        ) { rs ->
+            val sheetWeekId = rs.getObject("sheet_week_id", UUID::class.java)
+            if (sheetWeekId == null) null else Pair(
+                sheetWeekId,
+                WriteImportMovementProvenance(
+                    performedExerciseId = rs.getObject("performed_exercise_id", UUID::class.java),
+                    position = rs.getInt("position"),
+                    movementAddress = rs.getString("movement_address"),
+                    movementText = rs.getString("movement_text"),
+                ),
+            )
+        }
+        if (linked.size != source.movements.size || linked.any { it == null || it.first != source.weekId }) {
+            return WriteImportProvenanceLookup(
+                resolutionFailure = "A workout movement no longer has an imported Sheet row.",
+            )
+        }
+        return WriteImportProvenanceLookup(
+            provenance = header.copy(movements = linked.map { checkNotNull(it).second }),
+        )
+    }
+
     fun createAttempt(
         source: WriteSource,
         spreadsheetId: String,
         spreadsheetTitle: String,
         availableWeeks: List<Int>,
         discoverySnapshot: String,
+        status: String,
+        detail: String?,
         now: OffsetDateTime,
     ): UUID = rows(
         """
         insert into sheet_write (
             program_id, session_id, source_week_number, source_workout_name,
             spreadsheet_id, spreadsheet_title, available_week_numbers, discovery_snapshot,
-            written_by_user_id, idempotency_key, status, created_at, status_updated_at
-        ) values (?, ?, ?, ?, ?, ?, ?::integer[], ?::jsonb, ?, ?, 'NEEDS_WEEK', ?, ?)
+            written_by_user_id, idempotency_key, status, detail, created_at, status_updated_at
+        ) values (?, ?, ?, ?, ?, ?, ?::integer[], ?::jsonb, ?, ?, ?, ?, ?, ?)
         returning id
         """.trimIndent(),
         listOf(
             uuid(source.programId), uuid(source.sessionId), integer(source.weekNumber), text(source.workoutName),
             text(spreadsheetId), text(spreadsheetTitle), integerArray(availableWeeks), text(discoverySnapshot),
-            text(source.ownerUserId), uuid(UUID.randomUUID()), timestamp(now), timestamp(now),
+            text(source.ownerUserId), uuid(UUID.randomUUID()), text(status), nullableText(detail),
+            timestamp(now), timestamp(now),
         ),
     ) { it.getObject("id", UUID::class.java) }.single()
+
+    fun chooseTab(
+        attemptId: UUID,
+        tab: WriteDiscoveryTab,
+        now: OffsetDateTime,
+    ) {
+        execute("delete from sheet_write_cell where sheet_write_movement_id in (select id from sheet_write_movement where sheet_write_id = ?)", listOf(uuid(attemptId)))
+        execute("delete from sheet_write_movement where sheet_write_id = ?", listOf(uuid(attemptId)))
+        execute(
+            """
+            update sheet_write set available_week_numbers = ?::integer[],
+                target_week_number = null, target_google_sheet_id = ?, target_tab_title = ?,
+                target_week_start_row = null, target_week_end_row = null,
+                target_week_header_address = null, target_week_header_value = null,
+                execution_boundary_col = null, execution_header_address = null,
+                execution_header_value = null, matching_contract_version = null,
+                matching_model = null, matching_source_snapshot = null,
+                matching_source_hash = null, execution_projection_hash = null,
+                payload_hash = null, status = 'NEEDS_WEEK', detail = null,
+                status_updated_at = ? where id = ?
+            """.trimIndent(),
+            listOf(
+                integerArray(tab.availableWeekNumbers), long(tab.googleSheetId), text(tab.title),
+                timestamp(now), uuid(attemptId),
+            ),
+        )
+    }
+
+    fun resetSelection(
+        attemptId: UUID,
+        discoverySnapshot: String,
+        detail: String?,
+        now: OffsetDateTime,
+    ) {
+        execute("delete from sheet_write_cell where sheet_write_movement_id in (select id from sheet_write_movement where sheet_write_id = ?)", listOf(uuid(attemptId)))
+        execute("delete from sheet_write_movement where sheet_write_id = ?", listOf(uuid(attemptId)))
+        execute(
+            """
+            update sheet_write set available_week_numbers = '{}', discovery_snapshot = ?::jsonb,
+                target_week_number = null, target_google_sheet_id = null, target_tab_title = null,
+                target_week_start_row = null, target_week_end_row = null,
+                target_week_header_address = null, target_week_header_value = null,
+                execution_boundary_col = null, execution_header_address = null,
+                execution_header_value = null, matching_contract_version = null,
+                matching_model = null, matching_source_snapshot = null,
+                matching_source_hash = null, execution_projection_hash = null,
+                payload_hash = null, status = 'NEEDS_TAB', detail = ?, status_updated_at = ?
+            where id = ?
+            """.trimIndent(),
+            listOf(text(discoverySnapshot), nullableText(detail), timestamp(now), uuid(attemptId)),
+        )
+    }
+
+    fun saveResolved(
+        attemptId: UUID,
+        targetWeek: Int,
+        candidate: WriteCandidateTab,
+        snapshot: String,
+        sourceHash: String,
+        movements: List<WriteMovementRecord>,
+        now: OffsetDateTime,
+    ) {
+        execute("delete from sheet_write_movement where sheet_write_id = ?", listOf(uuid(attemptId)))
+        movements.forEach { insertMovement(attemptId, it.copy(confirmed = true)) }
+        execute(
+            """
+            update sheet_write set available_week_numbers = ?::integer[], target_week_number = ?,
+                target_google_sheet_id = ?, target_tab_title = ?, target_week_start_row = ?,
+                target_week_end_row = ?, target_week_header_address = ?, target_week_header_value = ?,
+                execution_boundary_col = ?, execution_header_address = ?, execution_header_value = ?,
+                matching_contract_version = null, matching_model = null,
+                matching_source_snapshot = ?::jsonb, matching_source_hash = ?,
+                status = 'RESOLVED', detail = null, status_updated_at = ? where id = ?
+            """.trimIndent(),
+            listOf(
+                integerArray(listOf(targetWeek)), integer(targetWeek), long(candidate.googleSheetId),
+                text(candidate.title), integer(candidate.startRow), integer(candidate.endRow),
+                text(candidate.weekHeaderAddress), text(candidate.weekHeaderValue),
+                integer(candidate.executionBoundaryColumn), text(candidate.executionHeaderAddress),
+                text(candidate.executionHeaderValue), text(snapshot), text(sourceHash), timestamp(now),
+                uuid(attemptId),
+            ),
+        )
+    }
 
     fun attempt(ownerUserId: String, attemptId: UUID): WriteAttemptRecord? = rows(
         """
@@ -524,6 +674,7 @@ private data class SourceHeader(
     val programId: UUID,
     val programName: String,
     val sessionId: UUID,
+    val weekId: UUID,
     val status: String,
     val executionUpdatedAt: OffsetDateTime?,
     val weekNumber: Int,

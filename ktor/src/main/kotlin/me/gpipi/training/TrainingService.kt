@@ -276,16 +276,12 @@ class TrainingService(
                 if (activeProgram.id != programId) return@dbQuery WorkoutCreateResult.NotFound
 
                 val authoredWeeks = repository.weekNumbers(programId)
-                val currentWeek = repository.currentWeekNumber(programId)
-                    ?: if (authoredWeeks.isEmpty()) 1 else null
-                if (currentWeek == null) {
+                val authoringWeek = repository.currentWeekNumber(programId)
+                    ?: authoredWeeks.lastOrNull()?.plus(1)
+                    ?: 1
+                if (weekNumber != authoringWeek) {
                     return@dbQuery WorkoutCreateResult.Invalid(
-                        "This program has no unresolved current week.",
-                    )
-                }
-                if (weekNumber != currentWeek) {
-                    return@dbQuery WorkoutCreateResult.Invalid(
-                        "Workouts can only be added to current Week $currentWeek.",
+                        "Workouts can only be added to Week $authoringWeek.",
                     )
                 }
 

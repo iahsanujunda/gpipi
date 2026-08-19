@@ -161,4 +161,47 @@ describe('training manual authoring flow', () => {
       }),
     })
   })
+
+  it('adds the first workout to the next week after the plan is resolved', async () => {
+    const user = userEvent.setup()
+    const create = mutation()
+    mockCreateWorkout.mockReturnValue(create)
+    mockOverview.mockReturnValue({
+      data: {
+        program: { id: 'program-1', name: 'M2', active: true },
+        currentWeekNumber: null,
+        selectedWeekNumber: 4,
+        availableWeekNumbers: [1, 2, 3, 4],
+        workouts: [],
+      },
+      isPending: false,
+      isError: false,
+    })
+    mockExercises.mockReturnValue({
+      data: [{ id: 'exercise-1', name: 'Goblet squat', demoUrl: null }],
+      isPending: false,
+      isError: false,
+    })
+
+    renderWithProviders(
+      <Routes>
+        <Route path="training/weeks/:weekNumber/workouts/new" element={<TrainingWorkoutAuthoringPage />} />
+      </Routes>,
+      { route: '/training/weeks/5/workouts/new' },
+    )
+
+    expect(screen.getByText('Week 5')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Training' })).toHaveAttribute('href', '/training/weeks/4')
+    await user.type(screen.getByRole('textbox', { name: /Workout name/ }), 'Full Body 3')
+    await user.click(screen.getByRole('combobox', { name: /Exercise — select or create/ }))
+    await user.click(screen.getByRole('option', { name: 'Goblet squat' }))
+    await user.click(screen.getByRole('combobox', { name: /Execution type — confirm/ }))
+    await user.click(screen.getByRole('option', { name: 'Reps', exact: true }))
+    await user.click(screen.getAllByRole('button', { name: 'Save Workout' })[0])
+
+    expect(create.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+      programId: 'program-1',
+      weekNumber: 5,
+    }))
+  })
 })

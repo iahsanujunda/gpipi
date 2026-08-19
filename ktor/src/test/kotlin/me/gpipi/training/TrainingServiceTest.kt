@@ -105,6 +105,46 @@ class TrainingServiceTest : PersistenceTest() {
     }
 
     @Test
+    fun `manual workout creation starts the next week after the authored plan is resolved`() = runBlocking {
+        val program = assertIs<ProgramCreateResult.Created>(
+            service.createProgram(
+                OWNER,
+                ProgramAuthoringInput(
+                    name = "M2",
+                    workouts = listOf(
+                        WorkoutAuthoringInput(
+                            name = "Full Body 1",
+                            weeks = listOf(WeekAuthoringInput(1, workoutInput().groups)),
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val weekOne = found(service.overview(OWNER, 1))
+        assertEquals(TrainingMutationResult.Updated, service.finish(OWNER, weekOne.workouts.single().weekId))
+        assertNull(found(service.overview(OWNER, null)).currentWeekNumber)
+
+        val existingExerciseId = service.exercises(OWNER).single().id
+        val nextWorkout = workoutInput().copy(
+            name = "Full Body 2",
+            groups = workoutInput().groups.map { group ->
+                group.copy(
+                    prescriptions = group.prescriptions.map { prescription ->
+                        prescription.copy(exerciseId = existingExerciseId, createExercise = false)
+                    },
+                )
+            },
+        )
+        assertIs<WorkoutCreateResult.Invalid>(service.createWorkout(OWNER, program.id, 3, nextWorkout))
+        assertIs<WorkoutCreateResult.Created>(service.createWorkout(OWNER, program.id, 2, nextWorkout))
+
+        val weekTwo = found(service.overview(OWNER, null))
+        assertEquals(2, weekTwo.currentWeekNumber)
+        assertEquals(2, weekTwo.selectedWeekNumber)
+        assertEquals(listOf(1, 2), weekTwo.availableWeekNumbers)
+    }
+
+    @Test
     fun `current week advances only after every workout in the week is resolved`() = runBlocking {
         createProgram()
         val weekOne = found(service.overview(OWNER, null))

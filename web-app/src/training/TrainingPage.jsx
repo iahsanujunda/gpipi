@@ -148,6 +148,10 @@ export default function TrainingPage() {
   const previous = data.availableWeekNumbers[index - 1]
   const next = data.availableWeekNumbers[index + 1]
   const isCurrent = data.selectedWeekNumber === data.currentWeekNumber
+  const latestWeekNumber = Math.max(...data.availableWeekNumbers)
+  const isLatestResolvedWeek = !data.currentWeekNumber && data.selectedWeekNumber === latestWeekNumber
+  const canAddWorkout = isCurrent || isLatestResolvedWeek
+  const addWorkoutWeekNumber = data.currentWeekNumber ?? latestWeekNumber + 1
   const resolved = data.workouts.filter((item) => ['COMPLETED', 'SKIPPED'].includes(item.status)).length
 
   async function lifecycle(action, workout) {
@@ -204,7 +208,7 @@ export default function TrainingPage() {
         </Stack>
       </Paper>
 
-      {isCurrent && (
+      {canAddWorkout && (
         <Button
           onClick={() => setAddWorkoutOpen(true)}
           startIcon={<AddIcon />}
@@ -250,10 +254,6 @@ export default function TrainingPage() {
         )}
       </Box>
 
-      {!data.currentWeekNumber && (
-        <Alert severity="info">No next week is authored. Your training history remains available.</Alert>
-      )}
-
       <AnimatedBottomSheet
         aria-labelledby="add-workout-title"
         open={addWorkoutOpen}
@@ -264,7 +264,7 @@ export default function TrainingPage() {
           <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
             <Stack spacing={0.5}>
               <Typography id="add-workout-title" component="h2" variant="h5">Add workout</Typography>
-              <Typography color="text.secondary" variant="body2">Current · Week {data.selectedWeekNumber}</Typography>
+              <Typography color="text.secondary" variant="body2">Week {addWorkoutWeekNumber}</Typography>
             </Stack>
             <IconButton aria-label="Close add workout" onClick={() => setAddWorkoutOpen(false)}>
               <CloseIcon />
@@ -272,7 +272,7 @@ export default function TrainingPage() {
           </Stack>
           <Button
             component={Link}
-            to={`/training/weeks/${data.selectedWeekNumber}/workouts/new`}
+            to={`/training/weeks/${addWorkoutWeekNumber}/workouts/new`}
             variant="contained"
             size="large"
           >

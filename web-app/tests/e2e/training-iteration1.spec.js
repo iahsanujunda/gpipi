@@ -56,6 +56,43 @@ for (const workoutNames of [
   })
 }
 
+test('a resolved plan keeps Add workout at the top and targets the next week', async ({ page }) => {
+  const resolved = cadenceOverview(['Full Body 1', 'Full Body 2'])
+  resolved.currentWeekNumber = null
+  resolved.selectedWeekNumber = 4
+  resolved.availableWeekNumbers = [1, 2, 3, 4]
+  resolved.workouts = resolved.workouts.map((workout) => ({
+    ...workout,
+    status: 'COMPLETED',
+    performedOn: '2026-08-16',
+    setCount: 15,
+  }))
+
+  await page.route(/\/api\/training\?week=4$/, (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify(resolved),
+  }))
+
+  await page.goto('/training/weeks/4')
+
+  const addWorkout = page.getByRole('button', { name: 'Add workout' })
+  const workoutsHeading = page.getByRole('heading', { name: 'Week 4 workouts' })
+  await expect(addWorkout).toBeVisible()
+  expect((await addWorkout.boundingBox()).y).toBeLessThan((await workoutsHeading.boundingBox()).y)
+
+  await addWorkout.click()
+  await expect(page.getByRole('dialog', { name: 'Add workout' })).toContainText('Week 5')
+  await expect(page.getByRole('link', { name: 'Create manually' })).toHaveAttribute(
+    'href',
+    '/training/weeks/5/workouts/new',
+  )
+  await expect(page.getByRole('link', { name: 'Import from Google Sheet' })).toHaveAttribute(
+    'href',
+    '/training/program/import',
+  )
+  await expectNoHorizontalOverflow(page)
+})
+
 test('navigation opens the derived current week and preserves week history return paths', async ({ page }) => {
   await page.goto('/wallets')
   await page.getByRole('button', { name: 'Open navigation' }).click()

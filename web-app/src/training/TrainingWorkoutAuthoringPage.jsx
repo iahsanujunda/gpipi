@@ -77,7 +77,7 @@ export default function TrainingWorkoutAuthoringPage() {
   const { weekNumber: routeWeek } = useParams()
   const weekNumber = Number.parseInt(routeWeek, 10)
   const navigate = useNavigate()
-  const overview = useTrainingOverview(Number.isInteger(weekNumber) ? weekNumber : undefined)
+  const overview = useTrainingOverview()
   const exercises = useTrainingExercises()
   const create = useCreateTrainingWorkout()
   const [error, setError] = useState(null)
@@ -135,12 +135,14 @@ export default function TrainingWorkoutAuthoringPage() {
   if (overview.isPending) return <Typography role="status">Loading workout editor…</Typography>
   if (overview.isError) return <Alert severity="error">{overview.error.message}</Alert>
   if (!overview.data) return <Alert severity="error">Create an active program before adding a workout.</Alert>
-  if (overview.data.currentWeekNumber !== weekNumber) {
+  const latestWeekNumber = Math.max(...overview.data.availableWeekNumbers)
+  const addWorkoutWeekNumber = overview.data.currentWeekNumber ?? latestWeekNumber + 1
+  if (addWorkoutWeekNumber !== weekNumber) {
     return (
       <Stack spacing={2}>
-        <Alert severity="info">Workouts can only be added to the current week.</Alert>
-        <Button component={Link} to={`/training/weeks/${overview.data.currentWeekNumber ?? overview.data.selectedWeekNumber}`}>
-          Return to current week
+        <Alert severity="info">Add workouts to Week {addWorkoutWeekNumber}.</Alert>
+        <Button component={Link} to={`/training/weeks/${overview.data.selectedWeekNumber}`}>
+          Return to training
         </Button>
       </Stack>
     )
@@ -152,9 +154,9 @@ export default function TrainingWorkoutAuthoringPage() {
         component={Link}
         startIcon={<ArrowBackIcon />}
         sx={{ alignSelf: 'flex-start' }}
-        to={`/training/weeks/${weekNumber}`}
+        to={`/training/weeks/${overview.data.selectedWeekNumber}`}
       >
-        Week {weekNumber}
+        Training
       </Button>
 
       <Stack
@@ -165,7 +167,7 @@ export default function TrainingWorkoutAuthoringPage() {
         <Stack spacing={0.5}>
           <Typography color="text.secondary" variant="overline">{overview.data.program.name}</Typography>
           <Typography component="h1" variant="h4">Add Workout</Typography>
-          <Typography color="text.secondary" variant="body2">Current · Week {weekNumber}</Typography>
+          <Typography color="text.secondary" variant="body2">Week {weekNumber}</Typography>
         </Stack>
         <Button disabled={create.isPending} type="submit" variant="contained" size="large">
           {create.isPending ? 'Saving…' : 'Save Workout'}

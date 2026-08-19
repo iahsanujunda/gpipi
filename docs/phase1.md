@@ -1,31 +1,46 @@
-# Household Budget Bot — Iteration Plan
+# Household Assistant — Phase 1: Slack Expense Capture Plan
 
-_Slack-Native Expense Capture · Stack: Slack · Ktor · Supabase (Postgres) via Exposed (JDBC) · Flyway · OpenRouter (Qwen3) · Render (Starter web service + static site)_
+_Roadmap and delivery record · Slack · Ktor · Supabase PostgreSQL · Exposed/JDBC · Flyway · OpenRouter · Fly.io_
 
 ---
 
 ## Overview
 
+> **Document role:** this file preserves the original Phase 1 iteration plan and records what shipped, what was superseded, and what remains. See [architecture.md](architecture.md) for the current whole-system architecture.
+
 A private Slack workspace for the household. Either spouse posts a natural-language expense — `@ai just paid 1500jpy for ramen` — and the bot records the amount, assigns the correct budget category, and timestamps it. No spreadsheet, no nightly recap.
 
-The core loop: **Slack message → Ktor acks within 3s → single LLM extraction (retrieval-then-generate) → confidence gate → auto-record or editable confirmation card → atomic write + hint upsert → the feedback loop improves the next categorization.**
+The target core loop was: **Slack message → Ktor acks within 3s → single LLM extraction (retrieval-then-generate) → confidence gate → auto-record or editable confirmation card → atomic write + hint upsert → the feedback loop improves the next categorization.**
+
+The shipped loop currently stops at mandatory human review: **Slack message → fast ack → strict extraction → pending draft → editable confirmation card → atomic confirm/reject**. Merchant hints and confidence-based auto-recording remain unimplemented.
 
 Categorization is the only part that needs a model. The amount is trivially parseable; the value is in mapping messy JP/EN merchant text (`ito yokado`, `イトーヨーカドー`, `conbini`, `セブン`) to the right budget line, and in disambiguating cases like ¥510 at a konbini (weekly food) vs ¥7,500 at Tokyu Store (monthly groceries).
 
 ### Iteration Order Rationale
 
-| # | Scope | Why This Order |
-|---|-------|----------------|
-| 1 | Walking Skeleton — Slack signing + async ack (Ktor) | Prove the 3s-ack/cold-start reality before anything else depends on it |
-| 2 | Thinnest Extraction — one LLM call → Supabase → text reply | Kills the Google Sheet on day one; starts generating real messages |
-| 3 | Config-Driven Categories | Move categories to DB, inject descriptions — enables the konbini-vs-Tokyu disambiguation |
-| 4 | Inline Confirmation Card + Labeled Events | One-tap correction; every confirm/correct becomes a labeled pair |
-| 5 | Merchant Hints Feedback Loop | Only possible once iter 4 has been logging confirmations |
-| 6 | Confidence Gate | "High confidence" is meaningless until hints exist and the real distribution is visible |
-| 7 | Frontend → **see Phase 2** | Full frontend (auth, expenses, payday, budgets, savings) is a separate document — Phase 2 |
-| 8 | Query Path (post-MVP) | Read side; deliberately last, deterministic SQL over agent loops |
+| # | Scope | Delivery status | Why This Order |
+|---|-------|-----------------|----------------|
+| 1 | Walking Skeleton — Slack signing + async ack (Ktor) | **Shipped** | Prove the 3s-ack/cold-start reality before anything else depends on it |
+| 2 | Thinnest Extraction — one LLM call → Supabase → text reply | **Shipped, then superseded by review cards** | Kills the Google Sheet on day one; starts generating real messages |
+| 3 | Config-Driven Categories | **Shipped** | Move categories to DB, inject descriptions — enables the konbini-vs-Tokyu disambiguation |
+| 4 | Inline Confirmation Card + Labeled Events | **Shipped** | One-tap correction; every confirm/correct becomes a labeled pair |
+| 5 | Merchant Hints Feedback Loop | **Not started** | Only possible once iter 4 has been logging confirmations |
+| 6 | Confidence Gate | **Not started** | "High confidence" is meaningless until hints exist and the real distribution is visible |
+| 7 | Frontend → **see Phase 2** | **Core frontend shipped; savings still deferred** | Full frontend (auth, expenses, payday, budgets, savings) is a separate document — Phase 2 |
+| 8 | Query Path (post-MVP) | **Not started** | Read side; deliberately last, deterministic SQL over agent loops |
 
 **Capture-first, not schema-first.** Unlike a seed-driven app, the data this system learns from (merchant→category hints) is *manufactured by dogfooding*. Stand up the loop that produces confirmed labels before building the thing that consumes them — same instinct as the PokeOps silver-label path.
+
+## Current delivery status
+
+| State | Meaning in this document |
+| --- | --- |
+| **Shipped** | Present in the current code and covered by the repository's tests |
+| **Superseded** | Built as a stepping stone, but the current flow deliberately uses a later design |
+| **Not started** | No production schema or execution path exists yet |
+| **Operational verification** | Code exists, but a real-workspace/mobile acceptance check is still intentionally unchecked |
+
+The current implementation, security boundaries, state machines, and known failure windows live in [architecture.md](architecture.md). The checklists below are updated against the repository, while real-device or production-only acceptance items remain open when the code cannot prove them.
 
 ---
 
@@ -55,11 +70,11 @@ Every `@ai` message is captured to `inbound_message` (see 2.1) — including the
 | `FAILED_COMMAND` | A deterministic command failed — reason retained for diagnosis | no |
 | `FAILED_PARSE` | LLM returned invalid/unusable output — raw text kept for debugging | no |
 | `NON_EXPENSE` | Classified or explicitly rejected by a member as not an expense | no |
-| `SKIPPED` | Duplicate retry — row already existed, never reprocessed | — |
+| `SKIPPED` | Enum value only; current duplicate handling creates no new row and leaves the original status unchanged | — |
 
 `FAILED_PARSE` rows are the goldmine for prompt work; `NON_EXPENSE` rows become the training set for the iter-8 intent classifier.
 
-### Confidence Gate Reference (Iteration 6)
+### Planned Confidence Gate Reference (Iteration 6 — not shipped)
 
 | Condition | Action | Slack surface |
 |-----------|--------|---------------|
@@ -76,7 +91,15 @@ The routine ¥510 conbini spend just records. Only genuinely ambiguous ones stop
 
 No DB, no AI. Verify the signing secret, ack within 3s, echo the text back via `chat.postMessage`. The entire point is to hit the cold-start reality immediately and make the hosting decision with real feel.
 
+**Status: shipped.** The echo was the walking-skeleton proof and was later replaced by real command responses. Production now runs as an always-on Fly Machine in Tokyo rather than the originally evaluated Render service.
+
 ### 1.1 Architecture
+
+<p align="center">
+  <a href="diagram/phase1-system-architecture.svg">
+    <img src="diagram/phase1-system-architecture.svg" alt="Phase 1 Slack expense-capture architecture across Slack, Ktor, OpenRouter, and PostgreSQL" width="100%" />
+  </a>
+</p>
 
 ```
 Slack Events API
@@ -136,16 +159,11 @@ post("/slack/events") {
 
 > Use an application-scoped `CoroutineScope`, not the request's scope — otherwise the work is cancelled when the response returns.
 
-### 1.4 Hosting Decision (make it here)
+### 1.4 Hosting Decision — shipped on Fly.io
 
-Slack disables an event subscription after repeated ack failures. Render **free** web services spin down after 15 min idle with a 30–60s cold start — a household bot used a few times a day is almost always cold, so the `@ai` mention times out and Slack retries or gives up.
+Slack disables an event subscription after repeated ack failures, so the backend must not sleep between household messages. The original plan compared Render tiers; the shipped decision is encoded in [`ktor/fly.toml`](../ktor/fly.toml): one always-on Fly Machine in `nrt`, with auto-stop disabled and a blue/green deployment strategy.
 
-| Option | Cost | Verdict |
-|--------|------|---------|
-| Render Starter (always-on) | $7/mo | Recommended. No cold starts, done. |
-| Render Free + UptimeRobot 5-min ping | $0 | Consumes ~744 of 750 free instance-hours/mo; unsupported, flaky. Prototype only. |
-
-> Supabase free Postgres does not pause with daily use (only after ~7 days idle), so it's fine. Render's 30-day free-DB deletion is irrelevant — the DB is on Supabase.
+Supabase remains the hosted PostgreSQL provider. Fly runs the Ktor process only; it does not own application data.
 
 ### 1.5 Socket Mode Note
 
@@ -153,7 +171,7 @@ Socket Mode (WebSocket initiated from the server) avoids needing a public URL, b
 
 ### 1.6 Health Check (Liveness)
 
-`/health` is infrastructure, not a feature — it lives in its own `health/` package, **outside** the Slack signature verification. It must be cheap and dependency-free (no DB, no external calls): Render pings it for deploy gating, and a free-tier keep-alive pinger hits it every few minutes, so a DB round-trip here would hammer Supabase and let a transient blip cycle the instance.
+`/health` is infrastructure, not a feature — it lives in its own `health/` package, **outside** the Slack signature verification. It must be cheap and dependency-free (no DB, no external calls): Fly probes it frequently for deploy gating, so a DB round-trip here would hammer Postgres and let a transient dependency blip cycle the instance.
 
 ```kotlin
 // health/HealthRoutes.kt
@@ -174,25 +192,27 @@ routing {
 }
 ```
 
-Point Render's **Health Check Path** at `/health` for zero-downtime deploy gating (confirm current behavior in Render docs at deploy time).
+Fly's HTTP service health check points at `/health`. `/health/ready` is available for dependency diagnosis but is intentionally not the machine liveness probe.
 
 ### Definition of Done
 
-- [ ] Slack app created, event subscription pointed at `/slack/events`
-- [ ] `url_verification` challenge passes in Slack app config
-- [ ] Signature verification rejects bad signatures and stale timestamps
-- [ ] Endpoint acks 200 within 3s under a cold-start test
-- [ ] Async echo posts back via `chat.postMessage`
-- [ ] Retry requests (`X-Slack-Retry-Num`) short-circuit to 200
-- [ ] `/health` liveness returns 200 with no DB/external dependency, reachable without a Slack signature
-- [ ] Render Health Check Path set to `/health` at deploy
-- [ ] Hosting tier chosen and deployed (Starter recommended)
+- [x] Slack app created, event subscription pointed at `/slack/events`
+- [x] `url_verification` challenge is implemented and route-tested
+- [x] Signature verification rejects bad signatures and stale timestamps
+- [x] Endpoint acknowledges before database, AI, or Slack Web API work; production avoids cold starts with an always-on machine
+- [x] Async response path proved by the echo and now used by real command handlers
+- [x] Retry requests (`X-Slack-Retry-Num`) short-circuit to 200
+- [x] `/health` liveness returns 200 with no DB/external dependency, reachable without a Slack signature
+- [x] Fly liveness check points to `/health`
+- [x] Always-on Fly deployment selected and configured
 
 ---
 
 # Iteration 2 — Thinnest Extraction: One LLM Call → Supabase → Text Reply
 
 The moment this ships, the nightly recap dies. Categories are hardcoded in the prompt for now — DB-driven categories come in iteration 3.
+
+**Status: shipped as the extraction and persistence foundation, then superseded at the final step.** The current flow stores an `expense_draft` and posts an editable review card; it does not insert an expense or mark the inbound message `RECORDED` until the member confirms. The schema and direct-write snippets below describe the iteration's original stepping stone, not current control flow.
 
 ### 2.0 Persistence Setup (Exposed + Flyway)
 
@@ -336,17 +356,17 @@ object Expenses : UUIDTable("expense") {
 >
 > **`inbound_message` is the single source of truth for raw text** — `expense` (and later `categorization_event`) reference it by FK rather than copying the string around. Storing every message, not just successful ones, is what makes prompt tuning and model swaps measurable later: re-run the stored inputs against a new pipeline and compare.
 >
-> **Dedup and capture are the same write**, and Exposed makes this a one-liner: `insertIgnoreAndGetId { }` returns `null` when the unique `event_id` already exists (a Slack retry), so a null return *is* the skip signal — no separate existence check.
+> **Dedup and capture are the same write.** The current repository uses `insertIgnore { }` and treats an inserted count of zero as the retry signal when the unique `event_id` already exists — no separate existence check.
 >
 > ```kotlin
-> // status effectively SKIPPED on a retry (null id → return early)
-> val id: EntityID<UUID>? = InboundMessages.insertIgnoreAndGetId {
+> // Conceptual shape: zero rows inserted means this event already exists.
+> val inserted = InboundMessages.insertIgnore {
 >     it[eventId]   = e.eventId
 >     it[userId]    = e.user
 >     it[channelId] = e.channel
 >     it[text]      = e.text
 >     it[slackTs]   = e.ts
-> }
+> }.insertedCount
 > ```
 > Same idempotency discipline as PokeOps `processed_mutation_ids`, now doing double duty as the audit log.
 
@@ -397,7 +417,7 @@ val x = try {
 }
 ```
 
-> **Model:** Qwen3 leads for CJK among the cheap OpenRouter options. Use `temperature: 0` and, if the slug is a reasoning variant, disable thinking — extraction gains nothing from chain-of-thought. Prefer a **paid** variant over `:free` for a service you rely on daily (`:free` is rate-limited and can be pulled without notice; your volume is trivial either way). Validate the parsed JSON server-side regardless of strict mode.
+> **Model:** the provider and model are configuration, not an architectural dependency. The current default is `deepseek/deepseek-v4-flash`; the request uses `temperature: 0`, strict JSON Schema output, and OpenRouter response healing. Validate the parsed JSON server-side regardless of provider guarantees.
 
 > **`ai/` is the home for all LLM clients.** When you pull in a Google, OpenAI, or Koog SDK, add it here. Each client exposes its own method(s) returning primitives (`String`, `JsonObject`) — never domain types. Feature packages own the mapping from raw LLM output to their domain.
 
@@ -461,11 +481,10 @@ suspend fun handle(payload: SlackEnvelope) {
         return
     }
 
-    dbQuery(db) {                                                        // one transaction for the write pair
-        expenseRepo.insert(x, inboundMessageId = msgId, userId = user, categoryId = categoryId)
-        inboundRepo.markRecorded(msgId)                                  // status = RECORDED
+    dbQuery(db) {                                                        // current flow persists a pending proposal
+        expenseDraftRepo.insert(x, inboundMessageId = msgId, userId = user, categoryId = categoryId)
     }
-    slack.postMessage(channel, "Recorded ✓  ¥${x.amount} · ${x.category}")
+    slack.postMessage(channel, expenseReviewCard(x))                     // expense is written on Confirm
 }
 ```
 
@@ -478,13 +497,13 @@ suspend fun handle(payload: SlackEnvelope) {
 - [x] `inbound_message` + `expense` tables created in Supabase
 - [x] `/health/ready` added — cheap `SELECT 1` via `dbQuery`; liveness `/health` stays dependency-free
 - [x] Every `@ai` message captured to `inbound_message` before processing
-- [x] Capture + dedup is a single `insertIgnore` write (null inserted count → skip); retries skip
+- [x] Capture + dedup is a single `insertIgnore` write (zero inserted rows → skip); retries skip
 - [x] OpenRouter call returns schema-valid JSON for the reference inputs
 - [ ] JP, EN, and mixed input all extract correctly (test `イトーヨーカドー`, `conbini`, `¥1,500`)
-- [x] Expense row written referencing `inbound_message_id`, with amount/category/merchant/spent_at
+- [x] Confirmed expense row references `inbound_message_id` and records amount/category/merchant/spent_at
 - [x] Failed extractions mark `status = FAILED_PARSE` with `fail_reason` and keep the raw text
-- [x] Successful extractions mark `status = RECORDED`
-- [x] Plain-text `Recorded ✓` confirmation posted
+- [x] Successful, confirmed extractions mark `status = RECORDED`
+- [x] The original plain-text confirmation shipped, then was replaced by the editable review card from iteration 4
 - [ ] Both spouses can log an expense end-to-end from mobile Slack
 
 ---
@@ -492,6 +511,8 @@ suspend fun handle(payload: SlackEnvelope) {
 # Iteration 3 — Config-Driven Categories
 
 Categories move to the DB and become the budget line itself. Descriptions are injected into the prompt so categorization is config-driven, not baked into a string — this is what makes konbini-vs-Tokyu disambiguation tunable.
+
+**Status: shipped.** Categories are database-backed, the extraction projection filters to active Slack-loggable lines, and the generation-aware catalog cache is rebuilt after browser mutations. Real household caps and fixed-obligation flags remain deployment data rather than repository-verifiable acceptance criteria.
 
 > **A category *is* a budget line.** An earlier draft split this into `budget_envelope` (the cap) and `category` (the label), on the theory that several categories might roll up into one capped envelope. Real household data disproved it: every category pointed at a single "General" envelope, because the budget is flat — the thing that has a name is the thing that has a cap. The two tables expressed a 1:1 relationship, so they are merged. `category` carries `period` and `amount` directly.
 
@@ -520,7 +541,7 @@ alter table expense add column category_id uuid references category(id);
 If an earlier `budget_envelope` table already exists, the merge migration is:
 
 ```sql
--- V4__merge_envelope_into_category.sql
+-- V7__drop_budget_envelope.sql
 alter table category add column period text   not null default 'MONTHLY';
 alter table category add column amount bigint not null default 0;
 alter table category add column slack_loggable boolean not null default true;
@@ -584,11 +605,11 @@ Same table, two projections, each seeing only what it needs.
 
 - [x] `category` table created (`V2__categories.sql`)
 - [x] Initial categories seeded (`V3__seed_categories.sql`)
-- [ ] `budget_envelope` merged into `category` (`V4__merge_envelope_into_category.sql`): `period`, `amount`, `slack_loggable` added; `envelope_id` and `budget_envelope` dropped
+- [x] `budget_envelope` merged into `category` (`V7__drop_budget_envelope.sql`): `period`, `amount`, `slack_loggable` added; `envelope_id` and `budget_envelope` dropped
 - [ ] Real `period` + `amount` set per budget line; `slack_loggable = false` on fixed obligations
-- [ ] `findActive()` filters `slack_loggable = true` so the extraction enum offers only typeable categories
+- [x] `findActive()` filters `active = true` and `slack_loggable = true` so the extraction enum offers only typeable categories
 - [x] `expense.category_id` FK written on every new expense
-- [ ] Old `expense.category` text column dropped after backfill (backfill + `DROP COLUMN` in a V4 migration)
+- [x] Old `expense.category` text column dropped after backfill (`V4__drop_expense_category_text.sql`)
 - [x] Active categories + descriptions injected into the prompt at request time (`ExtractionService`)
 - [x] Category list cached for five minutes in the generation-keyed `ActiveCategoryCatalog`
 - [x] Successful web mutations advance and eagerly rebuild the cache; out-of-band DB edits appear after TTL without a redeploy
@@ -599,6 +620,8 @@ Same table, two projections, each seeing only what it needs.
 # Iteration 4 — Inline Confirmation Card + Labeled Events
 
 Replace the passive text reply with an editable Block Kit card. This is where correction becomes one tap and — critically — where every confirm/correct becomes a labeled pair that later iterations depend on.
+
+**Status: shipped and currently mandatory for every extracted expense.** `V5` adds the labeled event table, `V6` adds persisted drafts, and `V12` adds the guarded cancel path. Confirm and rejection behavior is covered by handler and repository tests.
 
 ### 4.1 Schema — the labeled dataset
 
@@ -675,14 +698,14 @@ suspend fun onConfirm(draft: ExpenseDraft, finalCategoryId: UUID, db: Database) 
 
 ### Definition of Done
 
-- [ ] `categorization_event` table created, referencing `inbound_message_id`
-- [ ] Extraction posts an editable card (category dropdown pre-filled with the prediction)
-- [ ] Changing the dropdown + Confirm records the corrected category
-- [ ] Confirm with no change records the prediction as-is
-- [ ] Expense + categorization_event + `inbound_message` status flip written in one transaction
-- [ ] Slack confirmation posted only after commit returns
-- [ ] `was_corrected` correctly reflects prediction vs final
-- [ ] Card updates in place (or is replaced) on confirm — no dangling draft
+- [x] `categorization_event` table created, referencing `inbound_message_id`
+- [x] Extraction posts an editable card (category dropdown pre-filled with the prediction)
+- [x] Changing the dropdown + Confirm records the corrected category
+- [x] Confirm with no change records the prediction as-is
+- [x] Expense + categorization_event + `inbound_message` status flip written in one transaction
+- [x] Slack confirmation posted only after commit returns
+- [x] `was_corrected` correctly reflects prediction vs final
+- [x] Card is replaced on confirm so no actionable draft remains in Slack
 - [x] `Not an expense` atomically cancels the draft and marks the inbound row `NON_EXPENSE`, without producing a categorization label
 
 ---
@@ -690,6 +713,8 @@ suspend fun onConfirm(draft: ExpenseDraft, finalCategoryId: UUID, db: Database) 
 # Iteration 5 — Merchant Hints Feedback Loop
 
 Now that confirmations are flowing, learn from them. A household-shared `merchant_category_hint` table upserts on every confirm; recent hints inject as few-shot examples so frequented merchants stop being guessed.
+
+**Status: not started.** No merchant-hint table, upsert, prompt injection, or prediction override exists in the current schema or runtime.
 
 ### 5.1 Schema
 
@@ -755,6 +780,8 @@ Over time "Tokyu Store → Monthly Groceries" is a learned mapping, not a guess.
 
 Remove the tap from cases that don't need it. Deliberately last of the bot work: "high confidence" only becomes meaningful once hints exist and the real distribution of confidently-correct predictions is visible.
 
+**Status: not started.** Confidence is stored with the draft and label event, but it does not control routing. Every successful extraction currently produces the mandatory iteration-4 review card, and recorded expenses cannot be reopened for editing.
+
 ### 6.1 Gate Logic
 
 ```kotlin
@@ -790,7 +817,9 @@ Threshold starts at `0.80`; adjust against `categorization_event` after real usa
 
 The web frontend is specified in its own document, **Phase 2: Frontend & Magic-Link Auth**. It covers Slack-brokered magic-link authentication, the expense list, wallets and payday money movement, budget management, and savings goals — each an independently deployable iteration.
 
-Through phase 1, budgets and categories are editable directly in Supabase, so no frontend is needed to run the bot. Phase 2 begins once the bot is in daily use and its real requirements are understood.
+**Status: substantially shipped in later phases.** Slack-brokered authentication, activity, wallets, money movements, budget CRUD, and carry-forward are present. Savings goals remain deferred. The web app has also grown shared shopping and private training surfaces beyond the original Phase 2 scope.
+
+The original handoff assumption was that budgets and categories would be edited directly in Supabase until Phase 2. That is historical context only; current operations use the authenticated browser UI.
 
 > **Auth note:** phase 2 authenticates the frontend with a magic-link → HttpOnly session flow, **not** a shared passphrase or ad-hoc login. Do not build frontend auth in phase 1 — the Slack signature covers the bot; the session cookie covers the frontend, and both are specified in phase 2.
 
@@ -799,6 +828,8 @@ Through phase 1, budgets and categories are editable directly in Supabase, so no
 # Iteration 8 — Query Path (Post-MVP)
 
 The read side. Kept last and deliberately **not** agentic.
+
+**Status: not started.** The deterministic Slack command dispatcher exists, but it currently routes help, browser-open, shopping, and expense commands only. No budget-query classifier or predefined finance query templates are exposed through Slack.
 
 ### 8.1 Intent Split
 
@@ -825,27 +856,31 @@ Reserve genuine text-to-SQL (read-only role, LIMIT-capped) for the long tail, if
 ## Appendix — Cross-Cutting Notes
 
 ### Project organization (package-by-feature)
-Ktor has no required structure — no component scan to satisfy. Keep your Spring by-feature instinct (not package-by-layer): each feature is a package of plain classes plus a `Route` extension function, wired by hand in `Application.module()`.
+Ktor has no required structure and no component scan to satisfy. The current repository follows package-by-feature: feature classes and `Route` extensions are wired by hand in [`Routing.kt`](../ktor/src/main/kotlin/me/gpipi/Routing.kt). See the [architecture package map](architecture.md#runtime-composition) for the maintained whole-system view.
 
 ```
 src/main/kotlin/
-├── Application.kt          # EngineMain → module(); builds the object graph
-├── plugins/               # install() config: Serialization, Monitoring, Security (signature)
+├── main.kt                 # EngineMain entry point
+├── Routing.kt              # composition root and route registration
+├── Security.kt             # signed sessions and authentication
+├── OriginProtection.kt     # exact-Origin protection for browser writes
+├── Observability.kt         # request IDs and call logging
+├── plugins/                # Slack signature verification
 ├── health/                # liveness/readiness (infra, not a feature)
-├── ai/                    # LLM clients + AiException — no feature-domain deps (iter 2+)
-│                          #   OpenRouterClient.chat(): String; add Google/OpenAI/Koog SDKs here
-├── slack/                 # envelope DTOs, signature verify, client, routes
-│                          #   + command dispatch: SlackEventHandler (dispatcher), SlackCommand,
-│                          #     SlackMessage (parse/guard), one class per command (iter 4+)
-├── inbound/               # inbound_message capture/dedup/status (iter 2)
-├── expense/               # domain: routes, service, repository, Exposed tables
-├── extraction/            # ExtractionService, ExtractionException, prompt template (iter 2)
-│                          #   owns: category fetch, prompt build, AI call, JSON parse, category_id resolve
-├── category/              # CategoryRepository, CategoryRow (iter 3)
-└── config/                # Hikari + Flyway.migrate() + Database.connect
+├── ai/                    # provider-neutral structured extraction client
+├── slack/                 # signed adapters, commands, dispatch, and Block Kit
+├── auth/                  # Slack-brokered browser authentication
+├── inbound/               # message capture, deduplication, and statuses
+├── extraction/            # expense prompt/schema and result validation
+├── expense/               # drafts, final expenses, and activity reads
+├── category/              # budget lines, periods, and carry-forward
+├── account/               # wallets, balances, and money movements
+├── shopping/              # shared list and mutation history
+├── training/              # private programs, imports, and Sheet writes
+└── config/                # Hikari, Flyway, Exposed, and dbQuery
 ```
 
-What differs from Spring and will trip muscle memory: there's no `@Repository`/`@Service`/`@RestController` — a repo/service is a plain class, and a "controller" is `fun Route.xRoutes(deps)`, an extension function grouped by feature. You wire the whole object graph by hand in `module()` (no scanning), which is exactly what makes it test-injectable — `module` takes its collaborators as params, per the testing harness. Enforce boundaries with Kotlin `internal`, or — only if domains grow large — separate Gradle modules (`:slack`, `:expense`); there's no ArchUnit/Modulith equivalent shipped, and multi-module isn't warranted at this size. Don't reach for a DI framework (Koin) yet — hand-wiring is clearer here; revisit only if the graph balloons around iter 3+. And don't pre-create empty feature packages: let each appear with its iteration (iter 1 needs only `Application.kt`, `plugins/`, `slack/`, `health/`).
+Repositories and services are plain classes, while route adapters are `fun Route.xRoutes(deps)` extensions. Explicit construction keeps dependencies testable without a DI framework. The application is one Gradle backend module; package boundaries are conventions rather than separately compiled modules.
 
 ### Slack command dispatch (how `@ai <verb>` messages are routed)
 Every `@ai` message is not just "an expense" — it's a **command**. Rather than growing an `if/else` chain inside one handler, `SlackEventHandler` is a thin **dispatcher** over a hand-wired command list. This seam was introduced the moment a second behavior appeared (the phase-2 `@ai open` magic-link command alongside expense capture), and it's what iteration 8 (query path, chat-driven budget edits) plugs into without touching the dispatcher.
@@ -853,7 +888,7 @@ Every `@ai` message is not just "an expense" — it's a **command**. Rather than
 ```kotlin
 interface SlackCommand {
     fun matches(body: String): Boolean               // does this verb belong to me?
-    suspend fun handle(msg: SlackMessage, inboundMessageId: UUID)
+    suspend fun handle(msg: SlackMessage, inboundMessageId: UUID): SlackCommandOutcome
 }
 
 class SlackEventHandler(
@@ -875,26 +910,26 @@ class SlackEventHandler(
 Four disciplines make this hold up:
 - **Parse is a pure function.** `SlackMessage.from(payload)` does the `app_mention`/null/blank guarding and strips the bot mention (`body` = text after `>`, trimmed). No DB, no mocks — trivially unit-tested, and the dispatcher stays about routing.
 - **Capture/dedup lives in the dispatcher, not the commands.** `inbound_message` is the single record of *every* `@ai` message, so capturing (and its `event_id` unique-constraint dedup) is a cross-cutting concern that runs once, before routing. Consequence: **every command inherits idempotency for free** — a Slack retry can't double-fire a command (e.g. mint two magic-link nonces). Commands receive the resulting `inboundMessageId` and never open their own capture.
-  - Corollary: every deterministically matched command returns a typed outcome. The dispatcher moves it from `RECEIVED` to `COMMAND` or `FAILED_COMMAND`; an accidental pending result is itself terminalized as a command failure. The expense default bypasses this finalizer because it legitimately remains `RECEIVED` while awaiting confirmation.
+    - Corollary: every deterministically matched command returns a typed outcome. The dispatcher moves it from `RECEIVED` to `COMMAND` or `FAILED_COMMAND`; an accidental pending result is itself terminalized as a command failure. The expense default bypasses this finalizer because it legitimately remains `RECEIVED` while awaiting confirmation.
 - **Explicit `default`, not a catch-all `matches`.** The expense flow is passed as a named `default` argument (its `matches` returns `false`), rather than being a last list element that matches everything. This states intent and removes the "forgot to put it last, it ate every command" footgun.
 - **Each command owns its deps and is tested in isolation.** A command is a plain class taking its collaborators in the constructor (same hand-wiring as everything else); its test constructs it with mocks and calls `handle(msg, id)` directly — no envelope, no dispatcher, no sibling commands. The dispatcher is tested separately with *fake* commands asserting first-match-wins, fallback, dedup, and terminal status transitions. N commands → N small tests + one stable dispatcher test.
 
 Don't build a framework around this (priorities, annotations, auto-discovery, a context object wrapping the client) — a `List<SlackCommand>` + explicit `default`, wired in `module()`, is the whole thing, and matches the "plain classes, hand-wired" philosophy above. When you eventually want an LLM to disambiguate log-vs-query, that logic lives in the dispatcher's *matching* step, never inside a command — so commands never learn about intent classification.
 
 ### Idempotency
-Slack retries on any non-200 within 3s and includes `X-Slack-Retry-Num`. Dedup on `inbound_message.event_id` via Exposed's `insertIgnoreAndGetId { }` at capture time — a `null` return means the unique `event_id` already exists (a retry), so skip. The header check in iter 1 is a fast early-out; the DB unique constraint is the real guarantee. Same discipline as PokeOps `processed_mutation_ids` / `SELECT FOR UPDATE`.
+Slack retries on any non-200 within 3s and includes `X-Slack-Retry-Num`. Dedup uses Exposed's `insertIgnore { }` against unique `inbound_message.event_id`; zero inserted rows makes `captureOrSkip` return `null`. The retry header is a fast early-out and the database constraint is the durable guarantee.
 
 ### Message capture (store everything)
 Every `@ai` message is persisted to `inbound_message`, including failures. Rationale: `FAILED_PARSE` rows are the debugging corpus for prompt tuning; the full set is a replay corpus for evaluating a new prompt or model against real historical inputs; `NON_EXPENSE` rows (iter 8) become intent-classifier training data. `inbound_message` is the single source of truth for raw text — `expense` and `categorization_event` reference it by FK rather than duplicating the string.
 
 ### Privacy & scope
-This is defensible where the corporate equivalent isn't, and it's worth being precise why: the only data subjects are the two consenting account holders, on infrastructure they control, for personal/household use (which Japan's APPI explicitly carves out). Three residual considerations, all cheap:
-- **Supabase is a third-party processor** — raw text leaves your control. Acceptable for household budget notes; it's why capture isn't literally free.
-- **Scope capture to a dedicated expense channel.** "All `@ai` mentions" only stays clean if the channel is expense-only; a general household channel would persist conversation you didn't mean to keep.
-- **The consent property is temporary.** When the child eventually joins the household, they're a data subject who can't consent — keep this scoped to the two adults, or revisit capture at that point.
+The intended deployment contains personal household data for two participating adults. This is an operating assumption, not a legal determination. Three residual considerations remain:
+- **Third-party processing is part of the design.** Supabase stores raw messages and OpenRouter receives content submitted for structured extraction.
+- **Scope capture to a dedicated assistant channel.** A general household channel can persist conversation that members did not intend to retain whenever the bot is mentioned.
+- **Revisit access and consent when membership changes.** The current two-adult operating assumption should not silently extend to additional household members.
 
 ### Retention (TTL on raw text)
-Keep structured `expense` rows forever — that's the value. Null out `inbound_message.text` after ~6 months: long enough for prompt tuning and replay, short enough to avoid sitting on a years-long transcript of household chatter. A nightly Supabase scheduled job (`update inbound_message set text = null, fail_reason = null where received_at < now() - interval '6 months' and text is not null`). Status rows and structure survive; only the free text ages out.
+**Status: planned, not implemented.** The proposal is to keep structured `expense` rows while nulling `inbound_message.text` and `fail_reason` after roughly six months. No scheduled job or application cleanup currently enforces that policy.
 
 ### Persistence & concurrency (Exposed on JDBC)
 All DB access goes through one `dbQuery(db)` helper — `withContext(Dispatchers.IO) { suspendTransaction(db) { ... } }`. (Exposed v1 **deprecated `newSuspendedTransaction`**; `suspendTransaction` is the replacement, and since it runs on the current context, the `Dispatchers.IO` wrapper is ours to add, not the API's.) Two disciplines, both because Exposed's transaction model has sharp edges the Spring version hid:
@@ -913,7 +948,7 @@ Test persistence against real Postgres with **Testcontainers** — the Ktor-worl
 DB writes inside a single `dbQuery { }`; `chat.postMessage` only after it returns. There is no event bus, transaction manager, or commit-phase listener in this stack — the Spring `@Transactional`/`AFTER_COMMIT` machinery that made this fiddly simply isn't present. The boundary is just: writes inside the block, network side-effect after it returns.
 
 ### AI client config (OpenRouter)
-`OpenRouterClient` in `ai/` wraps the OpenRouter HTTP API. Model: `qwen/qwen3-instruct` class (confirm exact slug on openrouter.ai/models — version slugs drift). `temperature: 0`, `response_format: json_schema` strict, `response-healing` plugin as a fallback, thinking disabled if a reasoning variant. Paid variant over `:free` for reliability. Volume (~300–600 calls/mo) makes cost negligible — optimize for CJK handling and JSON reliability, not price. When adding another LLM provider (Google, OpenAI, Koog), add its client to `ai/` alongside `OpenRouterClient`; the calling feature service (`ExtractionService`, etc.) decides which client to use.
+`OpenRouterClient` in `ai/` wraps the OpenRouter HTTP API. The current configurable default is `deepseek/deepseek-v4-flash`, with `temperature: 0`, strict JSON Schema output, and the `response-healing` plugin. The calling feature owns its prompt, schema, and domain validation; model choice remains configuration.
 
 ### Hosting floor
-Render Starter $7/mo (always-on) is the realistic floor for clean 3s acks. Supabase free tier is sufficient; it won't pause under daily use.
+The shipped backend runs on an always-on Fly Machine in `nrt`; [`fly.toml`](../ktor/fly.toml) disables auto-stop and uses blue/green deployment. Supabase hosts PostgreSQL, and Cloudflare serves the static web app.

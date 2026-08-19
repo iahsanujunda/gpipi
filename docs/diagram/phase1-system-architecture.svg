@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title description">
+  <title id="title">Phase 1 system architecture</title>
+  <desc id="description">Draw.io-style architecture diagram showing Slack and browser clients, the Ktor backend on Fly.io, OpenRouter, and Supabase PostgreSQL.</desc>
+
+  <defs>
+    <filter id="shadow" x="-15%" y="-15%" width="140%" height="150%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#334155" flood-opacity="0.22" />
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10Z" fill="#4A86E8" />
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10Z" fill="#94A3B8" />
+    </marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; }
+      .title { fill: #FFFFFF; font-size: 20px; font-weight: 700; }
+      .zone-title { fill: #667085; font-size: 18px; font-weight: 700; }
+      .card-title { fill: #172033; font-size: 16px; font-weight: 700; }
+      .cross-title { fill: #172033; font-size: 14px; font-weight: 700; }
+      .card-body { fill: #667085; font-size: 13px; }
+      .small { fill: #667085; font-size: 12px; }
+      .label { fill: #475467; font-size: 12px; font-weight: 700; }
+      .card { fill: #FFFFFF; stroke: #C8CCD2; stroke-width: 1.4; filter: url(#shadow); }
+      .line { fill: none; stroke: #4A86E8; stroke-width: 2.2; marker-end: url(#arrow); }
+      .line-bi { fill: none; stroke: #4A86E8; stroke-width: 2.2; marker-start: url(#arrow); marker-end: url(#arrow); }
+      .line-muted { fill: none; stroke: #94A3B8; stroke-width: 1.8; marker-end: url(#arrow-muted); }
+      .dashed { stroke-dasharray: 4 6; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" fill="#FFFFFF" />
+  <rect x="14" y="14" width="1572" height="58" rx="2" fill="#4AA3E8" filter="url(#shadow)" />
+  <text x="78" y="50" class="title">Architecture: Household Assistant &gt; Phase 1 Slack Expense Capture</text>
+
+  <!-- Client boundary -->
+  <rect x="54" y="112" width="270" height="728" rx="4" fill="#F7F8FA" stroke="#D9DDE3" />
+  <text x="78" y="147" class="zone-title">Household surfaces</text>
+
+  <g transform="translate(88 194)">
+    <rect width="200" height="116" rx="3" class="card" />
+    <circle cx="42" cy="45" r="22" fill="#4A154B" />
+    <path d="M31 45h22M42 34v22" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" />
+    <text x="78" y="39" class="card-title">Slack workspace</text>
+    <text x="78" y="61" class="card-body">App mentions</text>
+    <line x1="24" y1="80" x2="176" y2="80" stroke="#D7DAE0" />
+    <text x="100" y="101" text-anchor="middle" class="small">Events + Block Kit actions</text>
+  </g>
+
+  <g transform="translate(88 406)">
+    <rect width="200" height="116" rx="3" class="card" />
+    <rect x="22" y="25" width="45" height="38" rx="4" fill="#F38020" />
+    <path d="M29 33h31v22H29Z" fill="none" stroke="#FFFFFF" stroke-width="3" />
+    <text x="82" y="39" class="card-title">React web app</text>
+    <text x="82" y="61" class="card-body">Cloudflare assets</text>
+    <line x1="24" y1="80" x2="176" y2="80" stroke="#D7DAE0" />
+    <text x="100" y="101" text-anchor="middle" class="small">Phase 2+ session APIs</text>
+  </g>
+
+  <g transform="translate(88 636)">
+    <rect width="200" height="112" rx="3" class="card" />
+    <circle cx="45" cy="43" r="23" fill="#EAF2FE" />
+    <path d="M34 50c2-11 20-11 22 0M45 39a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" fill="none" stroke="#4A86E8" stroke-width="3" stroke-linecap="round" />
+    <text x="82" y="38" class="card-title">Household member</text>
+    <text x="82" y="60" class="card-body">Trusted Slack identity</text>
+    <line x1="24" y1="78" x2="176" y2="78" stroke="#D7DAE0" />
+    <text x="100" y="99" text-anchor="middle" class="small">Single-household boundary</text>
+  </g>
+
+  <path d="M188 636V310" class="line-muted" />
+  <path d="M188 636V522" class="line-muted" />
+
+  <!-- Fly boundary -->
+  <rect x="374" y="112" width="830" height="728" rx="4" fill="#F7F8FA" stroke="#D9DDE3" />
+  <g transform="translate(402 126)">
+    <path d="M0 10 13 0h22l13 10-13 10H13Z" fill="#7B61FF" />
+    <text x="61" y="17" class="zone-title">Fly.io · Tokyo · always-on Ktor application</text>
+  </g>
+
+  <!-- Ingress -->
+  <g transform="translate(422 194)">
+    <rect width="230" height="126" rx="3" class="card" />
+    <circle cx="43" cy="48" r="24" fill="#4A86E8" />
+    <path d="M30 48h26M43 35v26M34 39l18 18M52 39 34 57" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" />
+    <text x="82" y="39" class="card-title">Slack HTTP adapters</text>
+    <text x="82" y="60" class="card-body">/slack/events</text>
+    <text x="82" y="80" class="card-body">/slack/interactions</text>
+    <line x1="24" y1="94" x2="206" y2="94" stroke="#D7DAE0" />
+    <text x="115" y="115" text-anchor="middle" class="small">Raw-body HMAC · fast 200 ACK</text>
+  </g>
+
+  <g transform="translate(716 194)">
+    <rect width="230" height="126" rx="3" class="card" />
+    <circle cx="43" cy="48" r="24" fill="#5B8DEF" />
+    <circle cx="36" cy="43" r="4" fill="#FFFFFF" />
+    <circle cx="50" cy="43" r="4" fill="#FFFFFF" />
+    <circle cx="43" cy="56" r="4" fill="#FFFFFF" />
+    <path d="M39 46l3 7m7-7-3 7" stroke="#FFFFFF" stroke-width="2" />
+    <text x="82" y="39" class="card-title">Inbound dispatcher</text>
+    <text x="82" y="60" class="card-body">Capture + event dedup</text>
+    <text x="82" y="80" class="card-body">First matching command</text>
+    <line x1="24" y1="94" x2="206" y2="94" stroke="#D7DAE0" />
+    <text x="115" y="115" text-anchor="middle" class="small">Expense is the explicit fallback</text>
+  </g>
+
+  <g transform="translate(422 398)">
+    <rect width="230" height="132" rx="3" class="card" />
+    <circle cx="43" cy="48" r="24" fill="#00A67E" />
+    <path d="m31 48 8 8 17-18" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <text x="82" y="39" class="card-title">Deterministic commands</text>
+    <text x="82" y="60" class="card-body">help · open · list</text>
+    <text x="82" y="80" class="card-body">Synchronous matching</text>
+    <line x1="24" y1="98" x2="206" y2="98" stroke="#D7DAE0" />
+    <text x="115" y="120" text-anchor="middle" class="small">COMMAND / FAILED_COMMAND</text>
+  </g>
+
+  <g transform="translate(716 398)">
+    <rect width="230" height="132" rx="3" class="card" />
+    <circle cx="43" cy="48" r="24" fill="#8B5CF6" />
+    <path d="M32 55h22M36 48h14M39 41h8" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+    <text x="82" y="39" class="card-title">Expense extraction</text>
+    <text x="82" y="60" class="card-body">Live category prompt</text>
+    <text x="82" y="80" class="card-body">Strict JSON Schema</text>
+    <line x1="24" y1="98" x2="206" y2="98" stroke="#D7DAE0" />
+    <text x="115" y="120" text-anchor="middle" class="small">Proposal only · no auto-write</text>
+  </g>
+
+  <g transform="translate(422 616)">
+    <rect width="230" height="132" rx="3" class="card" />
+    <circle cx="43" cy="48" r="24" fill="#F59E0B" />
+    <rect x="32" y="37" width="22" height="22" rx="2" fill="none" stroke="#FFFFFF" stroke-width="3" />
+    <path d="m36 48 5 5 10-11" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+    <text x="82" y="39" class="card-title">Human review</text>
+    <text x="82" y="60" class="card-body">Pending expense draft</text>
+    <text x="82" y="80" class="card-body">Confirm or reject</text>
+    <line x1="24" y1="98" x2="206" y2="98" stroke="#D7DAE0" />
+    <text x="115" y="120" text-anchor="middle" class="small">One PENDING transition wins</text>
+  </g>
+
+  <g transform="translate(716 616)">
+    <rect width="230" height="132" rx="3" class="card" />
+    <circle cx="43" cy="48" r="24" fill="#4A86E8" />
+    <path d="M31 41h24M31 48h24M31 55h24" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+    <text x="82" y="39" class="card-title">Persistence boundary</text>
+    <text x="82" y="60" class="card-body">dbQuery + Exposed JDBC</text>
+    <text x="82" y="80" class="card-body">Hikari + Flyway</text>
+    <line x1="24" y1="98" x2="206" y2="98" stroke="#D7DAE0" />
+    <text x="115" y="120" text-anchor="middle" class="small">Flat atomic transactions</text>
+  </g>
+
+  <g transform="translate(1000 194)">
+    <rect width="158" height="554" rx="3" fill="#FFFFFF" stroke="#4A86E8" stroke-width="1.6" stroke-dasharray="4 6" />
+    <text x="79" y="32" text-anchor="middle" class="label">CROSS-CUTTING</text>
+    <line x1="20" y1="45" x2="138" y2="45" stroke="#D7DAE0" />
+    <circle cx="79" cy="94" r="27" fill="#EAF2FE" />
+    <path d="M66 94h26M79 81v26" stroke="#4A86E8" stroke-width="3" />
+    <text x="79" y="138" text-anchor="middle" class="cross-title">Composition root</text>
+    <text x="79" y="160" text-anchor="middle" class="small">Hand-wired services</text>
+    <circle cx="79" cy="224" r="27" fill="#EAF2FE" />
+    <path d="M65 230h28M68 222h22M72 214h14" stroke="#4A86E8" stroke-width="3" stroke-linecap="round" />
+    <text x="79" y="268" text-anchor="middle" class="cross-title">Observability</text>
+    <text x="79" y="290" text-anchor="middle" class="small">Request + event IDs</text>
+    <circle cx="79" cy="355" r="27" fill="#EAF2FE" />
+    <path d="M65 355h28M79 341v28" stroke="#4A86E8" stroke-width="3" />
+    <text x="79" y="399" text-anchor="middle" class="cross-title">Health</text>
+    <text x="79" y="421" text-anchor="middle" class="small">Liveness + readiness</text>
+    <circle cx="79" cy="486" r="27" fill="#EAF2FE" />
+    <path d="m66 486 9 9 18-20" fill="none" stroke="#4A86E8" stroke-width="3" />
+    <text x="79" y="530" text-anchor="middle" class="cross-title">Sessions / origin</text>
+    <text x="79" y="552" text-anchor="middle" class="small">Browser boundary</text>
+  </g>
+
+  <!-- External services -->
+  <rect x="1252" y="112" width="294" height="728" rx="4" fill="#F7F8FA" stroke="#D9DDE3" />
+  <text x="1278" y="147" class="zone-title">Managed services</text>
+
+  <g transform="translate(1288 232)">
+    <rect width="222" height="126" rx="3" class="card" />
+    <circle cx="46" cy="48" r="25" fill="#111827" />
+    <path d="m34 55 12-28 12 28-12-7Z" fill="#FFFFFF" />
+    <text x="86" y="43" class="card-title">OpenRouter</text>
+    <text x="86" y="65" class="card-body">Chat completions</text>
+    <line x1="24" y1="91" x2="198" y2="91" stroke="#D7DAE0" />
+    <text x="111" y="113" text-anchor="middle" class="small">Strict structured extraction</text>
+  </g>
+
+  <g transform="translate(1288 500)">
+    <rect width="222" height="146" rx="3" class="card" />
+    <ellipse cx="47" cy="37" rx="25" ry="11" fill="#3ECF8E" />
+    <path d="M22 37v35c0 6 11 11 25 11s25-5 25-11V37" fill="#3ECF8E" />
+    <ellipse cx="47" cy="72" rx="25" ry="11" fill="#2EAD77" />
+    <text x="88" y="42" class="card-title">Supabase</text>
+    <text x="88" y="64" class="card-body">PostgreSQL</text>
+    <line x1="24" y1="101" x2="198" y2="101" stroke="#D7DAE0" />
+    <text x="111" y="123" text-anchor="middle" class="small">Flyway schema authority</text>
+    <text x="111" y="140" text-anchor="middle" class="small">pgen-derived query types</text>
+  </g>
+
+  <!-- Architecture connectors -->
+  <path d="M288 252H422" class="line-bi" />
+  <text x="355" y="240" text-anchor="middle" class="label">signed HTTP</text>
+  <path d="M652 257H716" class="line" />
+  <text x="684" y="245" text-anchor="middle" class="label">async</text>
+  <path d="M831 320V398" class="line" />
+  <path d="M776 320v40H537v38" class="line" />
+  <text x="682" y="351" text-anchor="middle" class="label">matched command</text>
+  <path d="M946 464h26V168h268v129h48" class="line-bi" />
+  <text x="1106" y="158" text-anchor="middle" class="label">strict JSON schema request / response</text>
+  <path d="M831 530v40H537v46" class="line" />
+  <text x="684" y="559" text-anchor="middle" class="label">proposal + category list</text>
+  <path d="M537 616v-44H344V286H288" class="line" />
+  <text x="411" y="559" text-anchor="middle" class="label">confirmation card</text>
+  <path d="M652 682H716" class="line" />
+  <text x="684" y="670" text-anchor="middle" class="label">decision</text>
+  <path d="M946 682h270V573h72" class="line-bi" />
+  <text x="1232" y="562" text-anchor="middle" class="label">JDBC</text>
+  <path d="M288 464h78v332h644v-74" class="line-muted dashed" />
+  <text x="507" y="815" class="label">session-authenticated /api</text>
+
+  <!-- Bottom notes -->
+  <rect x="54" y="876" width="1492" height="66" rx="3" fill="#F8FAFC" stroke="#D9DDE3" />
+  <circle cx="84" cy="909" r="16" fill="#EAF2FE" />
+  <text x="84" y="915" text-anchor="middle" fill="#4A86E8" font-size="18" font-weight="700">i</text>
+  <text x="112" y="902" class="label">Runtime invariant</text>
+  <text x="112" y="922" class="card-body">Slack is acknowledged before slow work. Database state transitions are durable and idempotent; outbound Slack feedback remains best effort.</text>
+</svg>

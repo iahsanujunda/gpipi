@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title description">
+  <title id="title">Phase 1 persistence model</title>
+  <desc id="description">Entity relationship diagram for inbound messages, expense drafts, expenses, categorization events, categories, and accounts.</desc>
+  <defs>
+    <filter id="shadow" x="-15%" y="-15%" width="140%" height="150%"><feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#334155" flood-opacity="0.2" /></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#4A86E8" /></marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; }
+      .title { fill: #FFFFFF; font-size: 20px; font-weight: 700; }
+      .zone-title { fill: #667085; font-size: 17px; font-weight: 700; }
+      .table-title { fill: #FFFFFF; font-size: 16px; font-weight: 700; }
+      .field { fill: #344054; font-size: 13px; }
+      .key { fill: #175CD3; font-size: 12px; font-weight: 700; }
+      .note { fill: #667085; font-size: 12px; }
+      .relation { fill: none; stroke: #4A86E8; stroke-width: 2; marker-end: url(#arrow); }
+      .relation-muted { fill: none; stroke: #94A3B8; stroke-width: 1.8; stroke-dasharray: 5 5; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#FFFFFF" />
+  <rect x="14" y="14" width="1572" height="58" rx="2" fill="#4AA3E8" filter="url(#shadow)" />
+  <text x="78" y="50" class="title">Data: Phase 1 &gt; Current persistence model</text>
+  <rect x="54" y="112" width="1492" height="704" rx="4" fill="#F7F8FA" stroke="#D9DDE3" />
+  <text x="80" y="148" class="zone-title">Supabase PostgreSQL · schema managed only by Flyway</text>
+
+  <!-- inbound_message -->
+  <g transform="translate(98 206)">
+    <rect width="310" height="242" rx="3" fill="#FFFFFF" stroke="#C8CCD2" filter="url(#shadow)" />
+    <rect width="310" height="44" rx="3" fill="#4A86E8" /><rect y="41" width="310" height="3" fill="#4A86E8" />
+    <text x="18" y="28" class="table-title">inbound_message</text>
+    <text x="18" y="68" class="key">PK</text><text x="54" y="68" class="field">id · uuid</text>
+    <text x="18" y="94" class="key">UQ</text><text x="54" y="94" class="field">event_id · Slack dedup key</text>
+    <text x="54" y="120" class="field">user_id · channel_id · slack_ts</text>
+    <text x="54" y="146" class="field">text · nullable raw message</text>
+    <text x="54" y="172" class="field">status · fail_reason</text>
+    <text x="54" y="198" class="field">received_at</text>
+    <line x1="18" y1="216" x2="292" y2="216" stroke="#D7DAE0" />
+    <text x="155" y="234" text-anchor="middle" class="note">One row per accepted Slack event</text>
+  </g>
+
+  <!-- expense_draft -->
+  <g transform="translate(542 176)">
+    <rect width="340" height="278" rx="3" fill="#FFFFFF" stroke="#C8CCD2" filter="url(#shadow)" />
+    <rect width="340" height="44" rx="3" fill="#F59E0B" /><rect y="41" width="340" height="3" fill="#F59E0B" />
+    <text x="18" y="28" class="table-title">expense_draft</text>
+    <text x="18" y="68" class="key">PK</text><text x="54" y="68" class="field">id · uuid</text>
+    <text x="18" y="94" class="key">FK</text><text x="54" y="94" class="field">inbound_message_id</text>
+    <text x="18" y="120" class="key">FK</text><text x="54" y="120" class="field">predicted_category_id</text>
+    <text x="54" y="146" class="field">user_id · channel_id</text>
+    <text x="54" y="172" class="field">amount · currency · merchant · note</text>
+    <text x="54" y="198" class="field">confidence · model</text>
+    <text x="54" y="224" class="field">status · created_at</text>
+    <line x1="18" y1="244" x2="322" y2="244" stroke="#D7DAE0" />
+    <text x="170" y="264" text-anchor="middle" class="note">PENDING · CONFIRMED · CANCELLED</text>
+  </g>
+
+  <!-- expense -->
+  <g transform="translate(542 526)">
+    <rect width="340" height="248" rx="3" fill="#FFFFFF" stroke="#C8CCD2" filter="url(#shadow)" />
+    <rect width="340" height="44" rx="3" fill="#22A06B" /><rect y="41" width="340" height="3" fill="#22A06B" />
+    <text x="18" y="28" class="table-title">expense</text>
+    <text x="18" y="68" class="key">PK</text><text x="54" y="68" class="field">id · uuid</text>
+    <text x="18" y="94" class="key">FK</text><text x="54" y="94" class="field">inbound_message_id</text>
+    <text x="18" y="120" class="key">FK</text><text x="54" y="120" class="field">category_id · account_id</text>
+    <text x="54" y="146" class="field">user_id · amount · currency</text>
+    <text x="54" y="172" class="field">merchant · note · source</text>
+    <text x="54" y="198" class="field">spent_at · created_at</text>
+    <line x1="18" y1="218" x2="322" y2="218" stroke="#D7DAE0" />
+    <text x="170" y="238" text-anchor="middle" class="note">Final financial fact</text>
+  </g>
+
+  <!-- categorization event -->
+  <g transform="translate(1016 176)">
+    <rect width="382" height="278" rx="3" fill="#FFFFFF" stroke="#C8CCD2" filter="url(#shadow)" />
+    <rect width="382" height="44" rx="3" fill="#8B5CF6" /><rect y="41" width="382" height="3" fill="#8B5CF6" />
+    <text x="18" y="28" class="table-title">categorization_event</text>
+    <text x="18" y="68" class="key">PK</text><text x="54" y="68" class="field">id · uuid</text>
+    <text x="18" y="94" class="key">FK</text><text x="54" y="94" class="field">inbound_message_id · expense_id</text>
+    <text x="18" y="120" class="key">FK</text><text x="54" y="120" class="field">predicted_category_id</text>
+    <text x="18" y="146" class="key">FK</text><text x="54" y="146" class="field">final_category_id</text>
+    <text x="54" y="172" class="field">was_corrected</text>
+    <text x="54" y="198" class="field">confidence · model · created_at</text>
+    <line x1="18" y1="244" x2="364" y2="244" stroke="#D7DAE0" />
+    <text x="191" y="264" text-anchor="middle" class="note">Model prediction beside human decision</text>
+  </g>
+
+  <!-- category -->
+  <g transform="translate(1016 526)">
+    <rect width="250" height="248" rx="3" fill="#FFFFFF" stroke="#C8CCD2" filter="url(#shadow)" />
+    <rect width="250" height="44" rx="3" fill="#5B8DEF" /><rect y="41" width="250" height="3" fill="#5B8DEF" />
+    <text x="18" y="28" class="table-title">category</text>
+    <text x="18" y="68" class="key">PK</text><text x="54" y="68" class="field">id · uuid</text>
+    <text x="18" y="94" class="key">FK</text><text x="54" y="94" class="field">account_id</text>
+    <text x="54" y="120" class="field">name · description</text>
+    <text x="54" y="146" class="field">active · slack_loggable</text>
+    <text x="54" y="172" class="field">period · amount</text>
+    <text x="54" y="198" class="field">created_at</text>
+    <line x1="18" y1="218" x2="232" y2="218" stroke="#D7DAE0" />
+    <text x="125" y="238" text-anchor="middle" class="note">Budget line + extraction label</text>
+  </g>
+
+  <!-- account -->
+  <g transform="translate(1320 526)">
+    <rect width="180" height="180" rx="3" fill="#FFFFFF" stroke="#C8CCD2" filter="url(#shadow)" />
+    <rect width="180" height="44" rx="3" fill="#00A67E" /><rect y="41" width="180" height="3" fill="#00A67E" />
+    <text x="18" y="28" class="table-title">account</text>
+    <text x="18" y="68" class="key">PK</text><text x="54" y="68" class="field">id · uuid</text>
+    <text x="54" y="94" class="field">name</text>
+    <text x="54" y="120" class="field">description</text>
+    <text x="54" y="146" class="field">timestamps</text>
+    <text x="90" y="170" text-anchor="middle" class="note">Wallet</text>
+  </g>
+
+  <!-- Relationships -->
+  <path d="M408 278h134" class="relation" /><text x="475" y="266" text-anchor="middle" class="note">proposes 0..1</text>
+  <path d="M253 448v202h289" class="relation" /><text x="349" y="638" text-anchor="middle" class="note">produces 0..1</text>
+  <path d="M408 330h304v150h495v-26" class="relation-muted" /><text x="812" y="469" text-anchor="middle" class="note">labels 0..1</text>
+  <path d="M882 650h134" class="relation" /><text x="949" y="638" text-anchor="middle" class="note">final category</text>
+  <path d="M1141 526v-72" class="relation" /><text x="1155" y="495" class="note">predicted / final</text>
+  <path d="M712 526v-42h495v-30" class="relation" /><text x="926" y="474" text-anchor="middle" class="note">audited by</text>
+  <path d="M1320 615h-54" class="relation" /><text x="1293" y="603" text-anchor="middle" class="note">funds</text>
+  <path d="M1410 706v82H930v-138h-48" class="relation-muted" /><text x="1154" y="806" text-anchor="middle" class="note">expense snapshots category account at confirmation</text>
+
+  <rect x="98" y="838" width="1402" height="34" rx="3" fill="#EAF2FE" />
+  <text x="799" y="860" text-anchor="middle" class="note">Generated Exposed mappings mirror this schema; Flyway migrations remain the only DDL authority.</text>
+</svg>

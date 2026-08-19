@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title description">
+  <title id="title">Gpipi whole-system architecture</title>
+  <desc id="description">Draw.io-style architecture diagram showing Slack and browser surfaces, the Ktor application and feature domains on Fly.io, Cloudflare, OpenRouter, Google APIs, and Supabase PostgreSQL.</desc>
+  <defs>
+    <filter id="shadow" x="-15%" y="-15%" width="140%" height="150%"><feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#334155" flood-opacity="0.2" /></filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#4A86E8" /></marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#94A3B8" /></marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; }
+      .title { fill: #FFFFFF; font-size: 20px; font-weight: 700; }
+      .zone { fill: #667085; font-size: 18px; font-weight: 700; }
+      .card-title { fill: #172033; font-size: 15px; font-weight: 700; }
+      .body { fill: #667085; font-size: 12px; }
+      .label { fill: #475467; font-size: 11px; font-weight: 700; }
+      .card { fill: #FFFFFF; stroke: #C8CCD2; stroke-width: 1.4; filter: url(#shadow); }
+      .flow { fill: none; stroke: #4A86E8; stroke-width: 2.1; marker-end: url(#arrow); }
+      .flow-bi { fill: none; stroke: #4A86E8; stroke-width: 2.1; marker-start: url(#arrow); marker-end: url(#arrow); }
+      .muted { fill: none; stroke: #94A3B8; stroke-width: 1.7; stroke-dasharray: 5 5; marker-end: url(#arrow-muted); }
+    </style>
+  </defs>
+  <rect width="1600" height="1000" fill="#FFFFFF" />
+  <rect x="14" y="14" width="1572" height="58" rx="2" fill="#4AA3E8" filter="url(#shadow)" />
+  <text x="78" y="50" class="title">Architecture: gpipi Household Assistant &gt; Current deployed system</text>
+
+  <!-- Surfaces -->
+  <rect x="52" y="112" width="270" height="748" rx="4" fill="#F7F8FA" stroke="#D9DDE3" />
+  <text x="78" y="147" class="zone">User surfaces</text>
+  <g transform="translate(86 204)">
+    <rect width="202" height="124" rx="3" class="card" />
+    <circle cx="42" cy="43" r="22" fill="#4A154B" /><path d="M31 43h22M42 32v22" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" />
+    <text x="77" y="37" class="card-title">Slack workspace</text>
+    <text x="77" y="58" class="body">Expense capture</text><text x="77" y="76" class="body">Shopping · help · open</text>
+    <line x1="20" y1="92" x2="182" y2="92" stroke="#D7DAE0" /><text x="101" y="114" text-anchor="middle" class="body">Events + Block Kit</text>
+  </g>
+  <g transform="translate(86 442)">
+    <rect width="202" height="154" rx="3" class="card" />
+    <rect x="21" y="22" width="43" height="37" rx="4" fill="#F38020" /><rect x="29" y="30" width="27" height="20" fill="none" stroke="#FFFFFF" stroke-width="3" />
+    <text x="78" y="34" class="card-title">React web app</text>
+    <text x="78" y="55" class="body">Cloudflare static assets</text>
+    <text x="24" y="86" class="body">Wallets · Budgets · Activity</text>
+    <text x="24" y="106" class="body">Shopping · Training</text>
+    <line x1="20" y1="121" x2="182" y2="121" stroke="#D7DAE0" /><text x="101" y="143" text-anchor="middle" class="body">Responsive browser UI</text>
+  </g>
+  <g transform="translate(86 698)">
+    <rect width="202" height="94" rx="3" class="card" />
+    <circle cx="42" cy="40" r="22" fill="#EAF2FE" /><path d="M31 48c2-10 20-10 22 0M42 37a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z" fill="none" stroke="#4A86E8" stroke-width="3" />
+    <text x="77" y="35" class="card-title">Household member</text>
+    <text x="77" y="57" class="body">Slack user ID identity</text>
+    <text x="101" y="82" text-anchor="middle" class="body">Shared + private domains</text>
+  </g>
+  <path d="M187 698V596" class="muted" /><path d="M187 698V328" class="muted" />
+
+  <!-- Ktor deployment -->
+  <rect x="374" y="112" width="836" height="748" rx="4" fill="#F7F8FA" stroke="#D9DDE3" />
+  <path d="M403 135 416 125h22l13 10-13 10h-22Z" fill="#7B61FF" />
+  <text x="466" y="142" class="zone">Fly.io · Tokyo · Ktor / Kotlin / JVM 21</text>
+
+  <!-- ingress row -->
+  <g transform="translate(414 186)">
+    <rect width="228" height="110" rx="3" class="card" /><circle cx="38" cy="42" r="22" fill="#4A86E8" /><path d="M27 42h22M38 31v22" stroke="#FFFFFF" stroke-width="3" />
+    <text x="74" y="34" class="card-title">Slack door</text><text x="74" y="55" class="body">Signature + replay guard</text><text x="74" y="74" class="body">Fast ACK + async handler</text>
+    <line x1="20" y1="86" x2="208" y2="86" stroke="#D7DAE0" /><text x="114" y="103" text-anchor="middle" class="body">/slack/*</text>
+  </g>
+  <g transform="translate(680 186)">
+    <rect width="228" height="110" rx="3" class="card" /><circle cx="38" cy="42" r="22" fill="#00A67E" /><path d="m27 42 7 7 15-16" fill="none" stroke="#FFFFFF" stroke-width="3" />
+    <text x="74" y="34" class="card-title">Browser door</text><text x="74" y="55" class="body">Nonce redemption</text><text x="74" y="74" class="body">Signed session + Origin check</text>
+    <line x1="20" y1="86" x2="208" y2="86" stroke="#D7DAE0" /><text x="114" y="103" text-anchor="middle" class="body">/api/*</text>
+  </g>
+  <g transform="translate(946 186)">
+    <rect width="224" height="110" rx="3" class="card" /><circle cx="38" cy="42" r="22" fill="#64748B" /><path d="M26 42h24M38 30v24" stroke="#FFFFFF" stroke-width="3" />
+    <text x="74" y="34" class="card-title">Infrastructure door</text><text x="74" y="55" class="body">Liveness + readiness</text><text x="74" y="74" class="body">DEV extraction diagnostic</text>
+    <line x1="20" y1="86" x2="204" y2="86" stroke="#D7DAE0" /><text x="112" y="103" text-anchor="middle" class="body">/health · /dev</text>
+  </g>
+
+  <!-- feature modules -->
+  <rect x="414" y="338" width="756" height="300" rx="3" fill="#FFFFFF" stroke="#4A86E8" stroke-width="1.5" stroke-dasharray="4 6" />
+  <text x="438" y="369" class="label">PACKAGE-BY-FEATURE SERVICES · HAND-WIRED IN Routing.kt</text>
+  <g transform="translate(440 398)"><rect width="210" height="96" rx="3" class="card" /><rect width="7" height="96" fill="#8B5CF6" /><text x="26" y="31" class="card-title">Expense + extraction</text><text x="26" y="53" class="body">Inbound · drafts · categories</text><text x="26" y="73" class="body">Human-reviewed final write</text></g>
+  <g transform="translate(687 398)"><rect width="210" height="96" rx="3" class="card" /><rect width="7" height="96" fill="#5B8DEF" /><text x="26" y="31" class="card-title">Budgets + wallets</text><text x="26" y="53" class="body">Caps · carry-forward</text><text x="26" y="73" class="body">Balances · money movements</text></g>
+  <g transform="translate(934 398)"><rect width="210" height="96" rx="3" class="card" /><rect width="7" height="96" fill="#F59E0B" /><text x="26" y="31" class="card-title">Shopping</text><text x="26" y="53" class="body">Shared items + drafts</text><text x="26" y="73" class="body">Versioned mutations + undo</text></g>
+  <g transform="translate(440 522)"><rect width="210" height="96" rx="3" class="card" /><rect width="7" height="96" fill="#22A06B" /><text x="26" y="31" class="card-title">Training</text><text x="26" y="53" class="body">Private programs + sessions</text><text x="26" y="73" class="body">Exercises · sets · history</text></g>
+  <g transform="translate(687 522)"><rect width="210" height="96" rx="3" class="card" /><rect width="7" height="96" fill="#EA4335" /><text x="26" y="31" class="card-title">Google integration</text><text x="26" y="53" class="body">OAuth · Drive discovery</text><text x="26" y="73" class="body">Sheet import + write-back</text></g>
+  <g transform="translate(934 522)"><rect width="210" height="96" rx="3" class="card" /><rect width="7" height="96" fill="#64748B" /><text x="26" y="31" class="card-title">Shared platform</text><text x="26" y="53" class="body">dbQuery · HTTP clients</text><text x="26" y="73" class="body">Status pages · observability</text></g>
+
+  <!-- persistence -->
+  <g transform="translate(548 696)">
+    <rect width="488" height="112" rx="3" class="card" /><circle cx="48" cy="46" r="25" fill="#4A86E8" /><path d="M34 39h28M34 47h28M34 55h28" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+    <text x="91" y="36" class="card-title">Persistence boundary</text><text x="91" y="58" class="body">Exposed JDBC repositories · Hikari pool · flat dbQuery transactions</text>
+    <line x1="24" y1="76" x2="464" y2="76" stroke="#D7DAE0" /><text x="244" y="99" text-anchor="middle" class="body">Flyway migrates on boot · pgen generates table mappings</text>
+  </g>
+  <path d="M792 638v58" class="flow" />
+
+  <!-- external services -->
+  <rect x="1254" y="112" width="292" height="748" rx="4" fill="#F7F8FA" stroke="#D9DDE3" />
+  <text x="1280" y="147" class="zone">Managed services</text>
+  <g transform="translate(1287 203)"><rect width="226" height="116" rx="3" class="card" /><circle cx="46" cy="43" r="24" fill="#111827" /><path d="m35 51 11-27 11 27-11-7Z" fill="#FFFFFF" /><text x="86" y="38" class="card-title">OpenRouter</text><text x="86" y="59" class="body">Strict JSON extraction</text><line x1="22" y1="82" x2="204" y2="82" stroke="#D7DAE0" /><text x="113" y="104" text-anchor="middle" class="body">Expense · shopping · training</text></g>
+  <g transform="translate(1287 406)"><rect width="226" height="134" rx="3" class="card" /><circle cx="46" cy="43" r="24" fill="#FFFFFF" stroke="#D9DDE3" /><path d="M46 24v38M27 43h38" stroke="#4285F4" stroke-width="6" /><text x="86" y="35" class="card-title">Google APIs</text><text x="86" y="56" class="body">OAuth · Drive · Sheets</text><line x1="22" y1="82" x2="204" y2="82" stroke="#D7DAE0" /><text x="113" y="104" text-anchor="middle" class="body">Trainer-owned spreadsheets</text><text x="113" y="122" text-anchor="middle" class="body">Import + guarded write-back</text></g>
+  <g transform="translate(1287 652)"><rect width="226" height="142" rx="3" class="card" /><ellipse cx="47" cy="34" rx="24" ry="10" fill="#3ECF8E" /><path d="M23 34v34c0 6 11 10 24 10s24-4 24-10V34" fill="#3ECF8E" /><ellipse cx="47" cy="68" rx="24" ry="10" fill="#2EAD77" /><text x="88" y="38" class="card-title">Supabase</text><text x="88" y="59" class="body">PostgreSQL</text><line x1="22" y1="91" x2="204" y2="91" stroke="#D7DAE0" /><text x="113" y="113" text-anchor="middle" class="body">Shared household state</text><text x="113" y="132" text-anchor="middle" class="body">Per-user training ownership</text></g>
+
+  <!-- connectors -->
+  <path d="M288 266h126" class="flow-bi" /><text x="351" y="254" text-anchor="middle" class="label">signed Slack HTTP</text>
+  <path d="M288 519h392" class="flow-bi" /><text x="474" y="507" text-anchor="middle" class="label">session-authenticated /api</text>
+  <path d="M528 296v42" class="flow" /><path d="M794 296v42" class="flow" />
+  <path d="M650 446h37" class="flow" /><path d="M897 446h37" class="flow" />
+  <path d="M1144 446h46v-185h97" class="flow-bi" /><text x="1221" y="250" text-anchor="middle" class="label">model calls</text>
+  <path d="M897 570h293v-97h97" class="flow-bi" /><text x="1189" y="462" text-anchor="end" class="label">Google APIs</text>
+  <path d="M1036 752h251" class="flow-bi" /><text x="1161" y="740" text-anchor="middle" class="label">JDBC</text>
+
+  <rect x="52" y="893" width="1494" height="62" rx="3" fill="#F8FAFC" stroke="#D9DDE3" />
+  <circle cx="82" cy="924" r="16" fill="#EAF2FE" /><text x="82" y="930" text-anchor="middle" fill="#4A86E8" font-size="18" font-weight="700">i</text>
+  <text x="110" y="917" class="label">Deployment boundary</text>
+  <text x="110" y="937" class="body">One Fly application and one database represent one household. Shared finance/shopping data is household-scoped; training and Google credentials are scoped by Slack user ID.</text>
+</svg>

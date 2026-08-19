@@ -111,7 +111,7 @@ Each door is middleware producing an authenticated `user_id`. Everything behind 
 
 ## Reference: A Category *Is* a Budget Line
 
-Phase 1 iteration 3 merged `budget_envelope` into `category`. There is one table of budget lines; each starts with a `name`, `description`, `period`, `amount` (the cap), `active`, and `slack_loggable`. Iteration 2 adds the required `account_id`.
+Phase 1's schema evolution merged `budget_envelope` into `category`. There is one table of budget lines; each starts with a `name`, `description`, `period`, `amount` (the cap), `active`, and `slack_loggable`. Phase 2 iteration 2 adds the required `account_id`; see the [current persistence architecture](architecture.md#persistence-architecture).
 
 That last flag matters here. Fixed obligations — mortgage, insurance, recurring transfers, investment contributions — are `slack_loggable = false`: nobody types them into Slack, but they still need a wallet association so the budget screen and future recorded activity have one consistent destination. So:
 
@@ -151,7 +151,7 @@ React  /enter#<nonce>
   → render sortable/filterable data table
 
 Slack (phase-1 bot): "@ai open" / "@ai open budget"
-  → OpenBudgetCommand (a SlackCommand in the phase-1 dispatcher, see phase 1 appendix)
+  → OpenBudgetCommand (a SlackCommand in the current [command dispatcher](architecture.md#event-capture-and-command-dispatch))
   → mint auth_nonce (store hash) → post magic link EPHEMERALLY to the issuer
 ```
 
@@ -442,7 +442,7 @@ Editing `description` here directly tunes phase-1 categorization (it is the LLM 
 | GET | `/api/budgets/spend?date=` | session | Spend, base cap, applied carry, effective allowance, and previous-balance status per line for the bucket containing `date` (defaults to today's date in Tokyo) |
 | POST | `/api/budgets/categories/{id}/carry-forward` | session + trusted Origin | Apply the immediately previous period's signed balance to the category's current Tokyo period after stale-state validation |
 
-**Spend-vs-cap bucketing (`3.2a`).** A category's `period` is its own — WEEKLY or MONTHLY — so a single `?period=YYYY-MM` param (the original spec) can't cleanly cover weekly lines: comparing a weekly ¥3,000 cap against a full month's spend would always read as over budget. Instead, `?date=YYYY-MM-DD` (default today's date in Tokyo) is bucketed **per category**, using that category's own period. A WEEKLY line uses the ISO week (Monday–Sunday) containing `date`. A MONTHLY line uses the household payday cycle: it starts on the 25th, except a Saturday or Sunday 25th moves to the preceding Friday, and ends **exclusively** at the following month's adjusted payday. Thus July 2026 is `[2026-07-24, 2026-08-25)`: an expense at midnight on 25 August belongs to the next cycle, never both. Each spend row returns `windowStart` and the half-open `windowEndExclusive` as local ISO dates so the frontend displays the same authoritative window used by the calculation. Both layers use the shared `DEFAULT_BUDGET_ZONE` (`Asia/Tokyo`): `budgetApiRoutes` converts its injectable clock to that zone before resolving an omitted date, and `BudgetService` uses it for bucket boundaries. This makes the household's actual "today" explicit instead of inheriting the server's local zone or UTC. At household scale (a handful of budget lines), `BudgetService.spendVsCap` computes this as one small per-category loop (`listBudgets()` then `ExpenseRepository.sumAmount(categoryId, from, to)` per row) rather than one clever aggregate query — consistent with this project's general preference for deterministic, simple queries (see phase 1's iteration-8 stance on deterministic SQL over agent loops).
+**Spend-vs-cap bucketing (`3.2a`).** A category's `period` is its own — WEEKLY or MONTHLY — so a single `?period=YYYY-MM` param (the original spec) can't cleanly cover weekly lines: comparing a weekly ¥3,000 cap against a full month's spend would always read as over budget. Instead, `?date=YYYY-MM-DD` (default today's date in Tokyo) is bucketed **per category**, using that category's own period. A WEEKLY line uses the ISO week (Monday–Sunday) containing `date`. A MONTHLY line uses the household payday cycle: it starts on the 25th, except a Saturday or Sunday 25th moves to the preceding Friday, and ends **exclusively** at the following month's adjusted payday. Thus July 2026 is `[2026-07-24, 2026-08-25)`: an expense at midnight on 25 August belongs to the next cycle, never both. Each spend row returns `windowStart` and the half-open `windowEndExclusive` as local ISO dates so the frontend displays the same authoritative window used by the calculation. Both layers use the shared `DEFAULT_BUDGET_ZONE` (`Asia/Tokyo`): `budgetApiRoutes` converts its injectable clock to that zone before resolving an omitted date, and `BudgetService` uses it for bucket boundaries. This makes the household's actual "today" explicit instead of inheriting the server's local zone or UTC. At household scale (a handful of budget lines), `BudgetService.spendVsCap` computes this as one small per-category loop (`listBudgets()` then `ExpenseRepository.sumAmount(categoryId, from, to)` per row) rather than one clever aggregate query — consistent with this project's general preference for deterministic, simple queries.
 
 The frontend maintains **independent weekly and monthly query anchors**. Moving to a previous ISO week never changes the selected payday period, and moving to a previous payday period never changes the selected week. Future navigation is disabled and each historical section offers a direct return to its current period. A range that crosses a month boundary renders both endpoint months on one line (`29 JUN – 5 JUL`) in a selectively wider period control rather than wrapping the ending month. Category configuration is not versioned yet, so historical spending is explicitly labelled against the line's **current cap**; it must not be presented as the cap that was necessarily in force during that past period.
 
@@ -509,7 +509,7 @@ One cross-feature integration test is mandatory: record a wallet balance, observ
 
 ### 3.7 Cross-door note
 
-Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) are the **same mutation over the same data**, through the Slack door instead of the web door — they belong to phase 1's bot/intent surface (iteration 8) as a new `SlackCommand` in the dispatcher (see phase 1 appendix), not here. Both doors resolve to the same authorized write; this iteration is the web door for it.
+Chat-driven budget edits (e.g. `@ai set the weekend-eat budget to 40000`) would be the **same mutation over the same data**, through the Slack door instead of the web door. They are [not currently implemented](phase1.md#current-delivery-status); this iteration is the web door for that write.
 
 ### Definition of Done
 
@@ -563,7 +563,7 @@ alter table account add column goal_amount bigint;   -- nullable; set only on ac
 
 ### 4.4 Cross-door note
 
-A chat query (e.g. `@ai how much in the travel account`) is the same derived-balance read through the Slack door — an intent for phase 1's iteration-8 query path. This iteration is the web view of the same computation.
+A chat query (e.g. `@ai how much in the travel account`) would be the same derived-balance read through the Slack door. That query path is [not currently implemented](phase1.md#current-delivery-status); this iteration is the web view of the computation.
 
 ### 4.5 Frontend
 

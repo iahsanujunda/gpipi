@@ -62,6 +62,8 @@ The fixed launcher keeps navigation out of the way until it is needed. It always
 | Frontend | React, Vite, Material UI, and TanStack Query |
 | Runtime | Ktor on Fly.io in Tokyo; static frontend assets and same-origin `/api` proxy on Cloudflare |
 
+For the maintained system boundaries, data ownership, runtime flows, state machines, and known limits, see the [architecture reference](docs/architecture.md). Phase documents under `docs/` retain the delivery plans and remaining work.
+
 ## How it works
 
 ### One authoritative database schema
